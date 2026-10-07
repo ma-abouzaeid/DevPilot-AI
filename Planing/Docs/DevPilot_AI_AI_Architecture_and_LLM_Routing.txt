@@ -1,0 +1,1161 @@
+DEVPILOT AI
+AI ARCHITECTURE & LLM ROUTING SPECIFICATION
+============================================================
+
+Document Version: 1.0
+Project: DevPilot AI
+
+Backend:
+ASP.NET Core Web API
+
+Database:
+SQL Server
+
+Backend Hosting:
+MonsterASP
+
+Frontend:
+Undefined Yet
+
+Frontend Hosting:
+Cloudflare Pages
+
+Email:
+Brevo
+
+============================================================
+1. PURPOSE
+============================================================
+
+This document defines the AI architecture for DevPilot AI.
+
+The AI layer is responsible for:
+
+- Developer problem debugging.
+- Root-cause explanation.
+- Step-by-step solutions.
+- Solution adaptation.
+- Educational article generation.
+- Article improvement.
+- Challenge generation.
+- Challenge evaluation.
+- GitHub repository analysis.
+- AI code review.
+- Solution synthesis.
+- Telegram AI fallback.
+
+The system must not depend on one LLM provider.
+
+Instead, DevPilot AI uses an internal AI Gateway that can route requests across
+multiple free/free-tier providers and models.
+
+============================================================
+2. CORE AI ARCHITECTURE
+============================================================
+
+Developer
+    |
+    v
+ASP.NET Core API
+    |
+    v
+AI Orchestration Layer
+    |
+    +--> Request Validation
+    |
+    +--> Problem / Context Normalization
+    |
+    +--> Similarity Search
+    |
+    +--> Reusable Solution Retrieval
+    |
+    +--> Prompt Selection
+    |
+    v
+AI Gateway
+    |
+    +--> Provider Selection
+    +--> Model Selection
+    +--> Quota / Health Check
+    +--> Retry
+    +--> Failover
+    +--> Response Normalization
+    +--> Usage Tracking
+    |
+    +------------+------------+------------+
+    |            |            |            |
+    v            v            v            v
+ Gemini       Groq       OpenRouter    Other Providers
+    |            |            |            |
+    +------------+------------+------------+
+                         |
+                         v
+                    AI Response
+                         |
+                         v
+                 Response Validation
+                         |
+                         v
+                      Database
+
+============================================================
+3. IMPORTANT DESIGN DECISION
+============================================================
+
+The application must never call a provider directly from business services.
+
+Incorrect:
+
+ProblemService
+    -> Gemini API
+
+Correct:
+
+ProblemService
+    -> AI Gateway
+        -> Provider Router
+            -> Selected Provider
+
+This prevents the application from becoming dependent on any one provider.
+
+============================================================
+4. PROVIDER TYPES
+============================================================
+
+The AI Gateway should support two provider categories.
+
+4.1 Direct Providers
+
+The application communicates directly with the provider API.
+
+Examples to evaluate:
+- Google Gemini API
+- Groq
+- GitHub Models
+- Cerebras
+- Mistral
+- NVIDIA NIM
+- Cloudflare Workers AI
+- Hugging Face Inference Providers
+
+4.2 Aggregator / Unified Providers
+
+One API may expose multiple models.
+
+Examples:
+- OpenRouter
+- CodeCraft API
+
+The architecture should treat both categories as AI providers.
+
+============================================================
+5. CURRENT FREE-API SOURCES TO USE AS THE PROVIDER CATALOG
+============================================================
+
+The project team will use these sources as discovery/catalog resources:
+
+A. awesome-free-llm-apis
+Maintains a frequently refreshed directory of free LLM APIs, providers,
+models, rate limits and related configuration information.
+
+B. free-llm-api-resources
+Lists services providing free access or credits for API-based LLM usage and
+currently includes providers such as OpenRouter, Google AI Studio, NVIDIA NIM,
+Mistral, Hugging Face, Cerebras, Groq, Cohere, GitHub Models and Cloudflare
+Workers AI.
+
+C. CodeCraft API
+Provides an OpenAI-compatible endpoint and currently advertises a free tier
+with a monthly token allowance.
+
+The team must re-check the provider catalogs before deployment because free
+plans, limits and model availability can change.
+
+============================================================
+6. RECOMMENDED INITIAL PROVIDER POOL
+============================================================
+
+Recommended candidates for the first implementation:
+
+PRIMARY / DIRECT:
+1. Google Gemini
+2. Groq
+3. GitHub Models
+4. Cerebras
+5. Mistral
+6. NVIDIA NIM
+
+AGGREGATORS:
+7. OpenRouter
+8. CodeCraft API
+
+ADDITIONAL:
+9. Cloudflare Workers AI
+10. Hugging Face Inference Providers
+11. Cohere
+
+The exact active model list must be stored in configuration/database and must
+not be hard-coded permanently.
+
+============================================================
+7. GOOGLE GEMINI
+============================================================
+
+Google Gemini should be included as a major provider.
+
+Current Google documentation provides a free developer tier with free input and
+output tokens for eligible models and access through Google AI Studio.
+
+The current pricing page also lists multiple Flash-family models with
+free-of-charge standard input/output pricing.
+
+Gemini should be considered for:
+- Debugging.
+- Root-cause analysis.
+- Article generation.
+- Code review.
+- Repository analysis when the context is within model limits.
+
+Important privacy consideration:
+Google's current pricing documentation states that content in the free tier is
+used to improve Google's products.
+
+Therefore:
+
+- Do not silently send sensitive/private code to the free Gemini tier.
+- Provider privacy policy must be part of provider configuration.
+- Private-code routing must be controlled by policy.
+
+============================================================
+8. GROQ
+============================================================
+
+Groq is a strong candidate for fast coding/debugging requests.
+
+Current Groq documentation exposes rate-limit dimensions such as:
+- RPM
+- RPD
+- TPM
+- TPD
+
+Groq also returns rate-limit headers that can be used by the AI Gateway to
+understand remaining request/token capacity and reset timing.
+
+Therefore the AI Gateway should prefer runtime quota headers over hard-coded
+numbers.
+
+Suitable use cases:
+- Short debugging.
+- Fast explanations.
+- Code review.
+- Interactive developer conversations.
+
+============================================================
+9. OPENROUTER
+============================================================
+
+OpenRouter should be treated as a provider/aggregator.
+
+Its free-model collection currently contains multiple $0 models, and the
+OpenRouter free-model router can select from available free models.
+
+Advantages:
+- Many models behind one API.
+- Useful fallback when a direct provider is unavailable.
+- OpenAI-compatible API shape.
+
+Important:
+- OpenRouter free models do not all have identical privacy/retention terms.
+- The provider/model metadata must store privacy and usage policies.
+- A free model may disappear or move away from the free tier.
+
+============================================================
+10. CODECRAFT API
+============================================================
+
+CodeCraft API provides an OpenAI-compatible endpoint.
+
+Its current site advertises:
+- Free monthly token allowance.
+- Multiple models.
+- Streaming.
+- Tool calling.
+- Vision input for capable models.
+- Usage analytics.
+
+For DevPilot AI it can be used as:
+- A fallback provider.
+- A specialized provider for model capabilities.
+- A compatibility-friendly provider because of its OpenAI-style API.
+
+The free tier should be treated as limited quota, not unlimited free usage.
+
+============================================================
+11. PROVIDER CONFIGURATION MODEL
+============================================================
+
+Each provider should have configuration such as:
+
+AIProvider
+- ProviderId
+- Name
+- Type
+  Direct / Aggregator
+- BaseUrl
+- Priority
+- IsActive
+- RequiresApiKey
+- SupportsStreaming
+- SupportsVision
+- SupportsToolCalling
+- SupportsStructuredOutput
+- AllowsPrivateCode
+- DataRetentionPolicy
+- TrainingUsePolicy
+- HealthStatus
+
+AIModel
+- ModelId
+- ProviderId
+- ModelName
+- Priority
+- IsActive
+- IsAvailable
+- SupportsReasoning
+- SupportsVision
+- SupportsToolCalling
+- ContextWindow
+- RequestsUsed
+- TokensUsed
+- RateLimitInformation
+- LastError
+- CooldownUntil
+
+============================================================
+12. AI REQUEST ROUTING
+============================================================
+
+Every AI request follows this process:
+
+1. Receive request.
+2. Validate request.
+3. Identify operation type.
+4. Identify sensitivity level.
+5. Search reusable knowledge.
+6. Determine whether fresh AI generation is required.
+7. Select eligible providers/models.
+8. Rank providers/models.
+9. Send request.
+10. Validate response.
+11. Store request/response metadata.
+12. Return normalized response.
+
+============================================================
+13. PROVIDER SELECTION RULES
+============================================================
+
+Provider selection should consider:
+
+1. Provider active status.
+2. Model active status.
+3. Current availability.
+4. Rate-limit/usage availability.
+5. Required capabilities.
+6. Data/privacy policy.
+7. Task type.
+8. Context size.
+9. Provider priority.
+10. Recent failure rate.
+
+Example:
+
+Debugging + image screenshot
+    ->
+Requires Vision
+    ->
+Filter non-vision models
+    ->
+Filter unavailable models
+    ->
+Filter providers that do not allow the request's privacy level
+    ->
+Rank remaining models
+    ->
+Send request
+
+============================================================
+14. TASK-BASED MODEL ROUTING
+============================================================
+
+Different operations can prefer different model characteristics.
+
+14.1 Debugging
+Preferred:
+- Strong coding
+- Strong reasoning
+- Good context capacity
+
+14.2 Root Cause Explanation
+Preferred:
+- Strong reasoning
+- Good instruction following
+
+14.3 Article Generation
+Preferred:
+- Good writing
+- Strong technical accuracy
+- Large context
+
+14.4 Challenge Generation
+Preferred:
+- Strong coding
+- Good structured output
+
+14.5 Challenge Evaluation
+Preferred:
+- Strong code reasoning
+- Ability to follow evaluation criteria
+
+14.6 Code Review
+Preferred:
+- Strong coding
+- Long context
+- Good structured output
+
+14.7 Repository Analysis
+Preferred:
+- Large context
+- Strong coding/reasoning
+- Tool support when required
+
+14.8 Simple Rewriting / Adaptation
+Preferred:
+- Fast and efficient model
+
+============================================================
+15. TOKEN OPTIMIZATION PIPELINE
+============================================================
+
+The AI Gateway must not be the first step.
+
+Correct order:
+
+Developer Request
+      |
+      v
+Normalize
+      |
+      v
+Similarity Search
+      |
+      v
+Suitable Known Solution?
+     / \
+   YES  NO
+    |    |
+    |    v
+    |  Fresh AI
+    |
+    v
+Retrieve Successful Solutions
+    |
+    v
+Build Smaller Context
+    |
+    v
+AI Gateway
+    |
+    v
+AI Response
+    |
+    v
+Save Result
+
+This reduces unnecessary token usage.
+
+============================================================
+16. SIMILARITY + SOLUTION REUSE
+============================================================
+
+For every new problem:
+
+Search:
+- Problem description
+- Error message
+- Stack trace
+- Technology
+- Framework
+- Relevant code
+- Existing embeddings
+
+If a sufficiently similar problem is found:
+
+1. Retrieve the most successful solution.
+2. Retrieve supporting article knowledge.
+3. Send only relevant context to the LLM.
+4. Ask the LLM to adapt and validate the old solution.
+5. Return the adapted result.
+6. Store the new request and the successful result.
+
+Do not blindly return historical answers.
+
+============================================================
+17. SOLUTION SYNTHESIS
+============================================================
+
+If multiple successful solution variants exist:
+
+Solution A -> Success
+Solution B -> Success
+Solution C -> Success
+
+The system may send the evidence to the AI Gateway.
+
+The AI produces:
+
+Improved Solution
+      |
+      v
+New Knowledge Article Version
+
+The previous versions remain stored.
+
+============================================================
+18. AI RESPONSE CONTRACT
+============================================================
+
+AI responses should be normalized into a predictable internal structure.
+
+Recommended structure:
+
+{
+  "summary": "...",
+  "rootCause": "...",
+  "confidence": 0.0,
+  "steps": [
+    {
+      "order": 1,
+      "title": "...",
+      "action": "...",
+      "reason": "...",
+      "code": "..."
+    }
+  ],
+  "prevention": [],
+  "warnings": [],
+  "relatedTopics": []
+}
+
+For code review:
+
+{
+  "summary": "...",
+  "findings": [
+    {
+      "file": "...",
+      "severity": "...",
+      "category": "...",
+      "problem": "...",
+      "suggestion": "..."
+    }
+  ]
+}
+
+For challenge evaluation:
+
+{
+  "functionalScore": 0,
+  "codeQualityScore": 0,
+  "securityScore": 0,
+  "performanceScore": 0,
+  "feedback": "..."
+}
+
+============================================================
+19. RESPONSE VALIDATION
+============================================================
+
+The API should not trust raw LLM output.
+
+Validate:
+- Required fields.
+- JSON structure.
+- Maximum sizes.
+- Allowed enum values.
+- Safe content formatting.
+- Unexpected output.
+- Provider-specific response format.
+
+If response is invalid:
+1. Try response normalization.
+2. Retry the same provider if appropriate.
+3. Otherwise fail over.
+4. Record the failure.
+
+============================================================
+20. RETRY / FAILOVER POLICY
+============================================================
+
+Failure categories:
+
+A. Rate limit
+Action:
+- Read provider reset information when available.
+- Put provider/model into cooldown.
+- Select next eligible provider.
+
+B. Temporary network/service error
+Action:
+- Retry with bounded backoff.
+- Then fail over.
+
+C. Invalid provider response
+Action:
+- Attempt normalization.
+- If unsuccessful, fail over.
+
+D. Authentication/configuration error
+Action:
+- Disable provider/model.
+- Alert administrator.
+- Do not repeatedly retry.
+
+E. Content policy rejection
+Action:
+- Do not blindly retry the same request across providers.
+- Return a safe result or request appropriate user changes.
+
+============================================================
+21. DO NOT RANDOMLY ROTATE PROVIDERS
+============================================================
+
+Provider switching must not be random.
+
+Recommended priority model:
+
+Score =
+    ProviderPriority
+    + CapabilityMatch
+    + AvailabilityScore
+    + QuotaScore
+    + ReliabilityScore
+    + PrivacyCompatibility
+
+The provider with the best eligible score receives the request.
+
+Randomization may be used only when two providers are intentionally tied.
+
+============================================================
+22. PROVIDER COOLDOWN
+============================================================
+
+When a provider reaches a rate limit:
+
+Provider A
+    ->
+CooldownUntil = reset time
+
+The provider router excludes it until:
+- Reset time passes, or
+- Administrator manually re-enables it.
+
+This prevents repeated failures.
+
+============================================================
+23. PROVIDER HEALTH MONITORING
+============================================================
+
+The system should maintain:
+
+- Last successful request.
+- Last failed request.
+- Failure count.
+- Rate-limit count.
+- Average latency.
+- Current cooldown.
+- Current availability.
+- Model-level health.
+
+Possible states:
+
+Healthy
+Degraded
+RateLimited
+Unavailable
+Disabled
+
+============================================================
+24. AI REQUEST CACHING
+============================================================
+
+Cache can be used for repeated identical/sufficiently identical requests.
+
+Candidate cache key components:
+
+- OperationType
+- Normalized request
+- Relevant technology
+- Model/prompt version
+- Knowledge version
+
+Never cache private information in a shared public cache.
+
+============================================================
+25. PROMPT MANAGEMENT
+============================================================
+
+Prompts must be maintained by operation.
+
+Examples:
+
+DebuggingPrompt
+RootCausePrompt
+SolutionPrompt
+ArticleGenerationPrompt
+ArticleImprovementPrompt
+ChallengeGenerationPrompt
+ChallengeEvaluationPrompt
+RepositoryAnalysisPrompt
+CodeReviewPrompt
+SolutionSynthesisPrompt
+TelegramFallbackPrompt
+
+Each prompt can have:
+- PromptId
+- Name
+- Version
+- Template
+- IsActive
+- CreatedAt
+
+============================================================
+26. PRIVATE CODE / DATA PROTECTION
+============================================================
+
+AI requests may contain private repository content.
+
+Therefore the platform should classify requests:
+
+PUBLIC
+INTERNAL
+PRIVATE
+SENSITIVE
+
+Provider eligibility should depend on policy.
+
+Example:
+
+Private Repository
+    ->
+Provider.AllowsPrivateCode = true
+    ->
+Provider allowed
+
+Private Repository
+    ->
+Provider.AllowsPrivateCode = false
+    ->
+Provider rejected
+
+The application must never assume that every free LLM provider has the same
+privacy policy.
+
+============================================================
+27. GITHUB REPOSITORY CONTEXT OPTIMIZATION
+============================================================
+
+Do not send an entire repository by default.
+
+Preferred pipeline:
+
+Repository
+   |
+   v
+Select branch
+   |
+   v
+Identify relevant files
+   |
+   v
+Read relevant files
+   |
+   v
+Build compact context
+   |
+   v
+Similarity Search
+   |
+   v
+AI Gateway
+
+Possible context sources:
+- Problem description.
+- Selected files.
+- Related imports/usages.
+- Relevant stack trace.
+- Recent commit.
+- Pull request diff.
+
+============================================================
+28. IMAGE / SCREENSHOT DEBUGGING
+============================================================
+
+When the developer uploads a screenshot:
+
+1. Detect whether the selected model supports vision.
+2. Filter providers/models.
+3. Compress/normalize image when appropriate.
+4. Send image plus only necessary technical context.
+5. Store metadata.
+6. Return structured debugging response.
+
+Do not send screenshots to text-only models.
+
+============================================================
+29. TELEGRAM AI FLOW
+============================================================
+
+Telegram message
+      |
+      v
+Knowledge Search
+      |
+      +---- High-confidence known solution
+      |             |
+      |             v
+      |       Return solution
+      |       + Article Link
+      |
+      +---- No suitable solution
+                    |
+                    v
+              AI Gateway
+                    |
+                    v
+              Return answer
+                    |
+                    v
+             Save new knowledge
+
+This flow intentionally prioritizes database knowledge before LLM usage.
+
+============================================================
+30. ARTICLE GENERATION FLOW
+============================================================
+
+Solved Problem
+      |
+      v
+Collect:
+- Original request
+- Successful attempts
+- Successful solutions
+- Developer feedback
+- Related knowledge
+      |
+      v
+AI Gateway
+      |
+      v
+Article Generation
+      |
+      v
+Validate
+      |
+      v
+Create ArticleVersion
+      |
+      v
+Update CurrentVersionId
+
+============================================================
+31. CHALLENGE GENERATION FLOW
+============================================================
+
+Solved Problem
+      |
+      v
+AI Gateway
+      |
+      v
+Generate:
+- Title
+- Requirements
+- Constraints
+- Expected behavior
+- Difficulty
+- Technology
+- Evaluation criteria
+      |
+      v
+Validate
+      |
+      v
+Create Challenge
+
+============================================================
+32. CHALLENGE EVALUATION FLOW
+============================================================
+
+Developer Solution
+      |
+      v
+GitHub Repository
+      |
+      v
+Build / Tests
+      |
+      v
+Collect relevant code
+      |
+      v
+AI Gateway
+      |
+      v
+Evaluate
+      |
+      v
+ChallengeEvaluation
+      |
+      v
+Developer Feedback
+
+============================================================
+33. CODE REVIEW FLOW
+============================================================
+
+Repository / Branch / PR
+      |
+      v
+Select relevant files
+      |
+      v
+AI Gateway
+      |
+      v
+Code Review
+      |
+      v
+Structured Findings
+      |
+      v
+Save CodeReviewFindings
+      |
+      v
+Display Report
+
+============================================================
+34. AI USAGE TRACKING
+============================================================
+
+For each AI request, track where available:
+
+- Provider.
+- Model.
+- Operation type.
+- User.
+- Problem.
+- Request status.
+- Input tokens.
+- Output tokens.
+- Total tokens.
+- Latency.
+- Retry count.
+- Final provider used.
+- CreatedAt.
+
+This data powers:
+- Token optimization.
+- Provider comparison.
+- Failover.
+- Admin analytics.
+
+============================================================
+35. FREE-TIER SAFETY RULE
+============================================================
+
+"Free" must never be interpreted as:
+- Unlimited.
+- Permanently available.
+- Identical across providers.
+- Safe for every type of data.
+- Guaranteed to remain free.
+
+The provider catalog and limits must be configurable.
+
+============================================================
+36. ADMIN AI DASHBOARD
+============================================================
+
+The Admin area should display:
+
+Provider:
+- Active/Inactive
+- Health
+- Cooldown
+- Priority
+- Model count
+
+Usage:
+- Requests
+- Tokens
+- Success rate
+- Failures
+- Rate limits
+- Average latency
+
+Routing:
+- Current preferred providers
+- Fallback order
+- Disabled providers
+
+Privacy:
+- Whether provider permits private code
+- Retention/training policy metadata
+
+============================================================
+37. RECOMMENDED INITIAL ROUTING STRATEGY
+============================================================
+
+For MVP, start with a small provider pool instead of integrating every
+provider immediately.
+
+Suggested first wave:
+
+1. Gemini
+2. Groq
+3. OpenRouter
+4. CodeCraft
+
+Then evaluate and add:
+
+5. GitHub Models
+6. Cerebras
+7. Mistral
+8. NVIDIA NIM
+9. Cloudflare Workers AI
+10. Hugging Face
+
+Reason:
+A smaller first pool is easier to test, monitor, secure and debug.
+
+============================================================
+38. DEVELOPMENT IMPLEMENTATION ORDER
+============================================================
+
+Phase 1:
+Create AIProvider + AIModel configuration.
+
+Phase 2:
+Create IAIGateway.
+
+Phase 3:
+Implement one provider adapter.
+
+Phase 4:
+Implement a second provider adapter.
+
+Phase 5:
+Implement provider health and failover.
+
+Phase 6:
+Implement AI request logging.
+
+Phase 7:
+Implement prompt management.
+
+Phase 8:
+Implement similarity search integration.
+
+Phase 9:
+Implement debugging pipeline.
+
+Phase 10:
+Reuse the same AI Gateway for:
+- Articles
+- Challenges
+- Code Review
+- Repository Analysis
+- Challenge Evaluation
+- Telegram
+
+============================================================
+39. FINAL AI ARCHITECTURE
+============================================================
+
+                     DEV-PILOT AI
+                           |
+                           v
+                  ASP.NET Core API
+                           |
+                           v
+                 AI Orchestration
+                           |
+          +----------------+----------------+
+          |                                 |
+          v                                 v
+   Similarity Search                  Prompt Manager
+          |                                 |
+          +---------------+-----------------+
+                          |
+                          v
+                     AI Gateway
+                          |
+            +-------------+-------------+
+            |                           |
+            v                           v
+      Provider Router             Usage Tracker
+            |
+            +---- Health / Quota
+            +---- Capability
+            +---- Privacy
+            +---- Priority
+            +---- Retry
+            +---- Cooldown
+            |
+      +-----+------+-------+--------+
+      |            |       |        |
+      v            v       v        v
+   Gemini        Groq  OpenRouter CodeCraft
+      |
+      +---- Additional Providers
+            GitHub Models
+            Cerebras
+            Mistral
+            NVIDIA NIM
+            Cloudflare Workers AI
+            Hugging Face
+            Cohere
+            ...
+            |
+            v
+       Validated AI Response
+            |
+            +---- Store AI Request/Response
+            +---- Update Knowledge
+            +---- Return Result
+
+============================================================
+40. FINAL DESIGN GOAL
+============================================================
+
+The AI layer must be:
+
+- Provider-independent.
+- Free-tier aware.
+- Token-efficient.
+- Privacy-aware.
+- Fault tolerant.
+- Configurable.
+- Observable.
+- Reusable across all DevPilot AI modules.
+
+The key architecture principle is:
+
+"Search existing proven knowledge first, use the smallest appropriate AI
+context second, and use the best available eligible free model through one
+central AI Gateway."
+
+============================================================
+END OF AI ARCHITECTURE & LLM ROUTING SPECIFICATION
+============================================================

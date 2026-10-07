@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DevPilotAI.API/DevPilotAI.API.csproj" />
+    <Project Path="src/DevPilotAI.Application/DevPilotAI.Application.csproj" />
+    <Project Path="src/DevPilotAI.Domain/DevPilotAI.Domain.csproj" />
+    <Project Path="src/DevPilotAI.Infrastructure/DevPilotAI.Infrastructure.csproj" />
+  </Folder>
+</Solution>

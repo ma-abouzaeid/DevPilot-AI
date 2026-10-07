@@ -1,0 +1,173 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.1.2 Chrome/138.0.7204.243 Electron/37.4.0 Safari/537.36" version="28.1.2">
+  <diagram id="devpilot-activity" name="DevPilot AI Activity Diagram">
+    <mxGraphModel dx="1603" dy="963" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="DevPilot AI — Activity Diagram" style="text;html=1;align=center;verticalAlign=middle;fontSize=26;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="470" y="15" width="650" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="lane1" value="Developer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontStyle=1;fontSize=15;" parent="1" vertex="1">
+          <mxGeometry x="30" y="80" width="250" height="760" as="geometry" />
+        </mxCell>
+        <mxCell id="lane2" value="DevPilot AI Platform" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontStyle=1;fontSize=15;" parent="1" vertex="1">
+          <mxGeometry x="280" y="80" width="760" height="760" as="geometry" />
+        </mxCell>
+        <mxCell id="lane3" value="External Services" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontStyle=1;fontSize=15;" parent="1" vertex="1">
+          <mxGeometry x="1040" y="80" width="390" height="760" as="geometry" />
+        </mxCell>
+        <mxCell id="start" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#000000;fontColor=#FFFFFF;" parent="1" vertex="1">
+          <mxGeometry x="140" y="110" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n1" value="Submit Problem (description / error / code / logs / screenshot)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="65" y="170" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="Create Problem + Debugging Session" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="520" y="110" width="250" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="Normalize Input &amp; Extract technology / error / context" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="520" y="240" width="250" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d1" value="Similar Solved Problem Found?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="585" y="335" width="120" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="Retrieve Relevant Successful Solutions + Article Context" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="310" y="468" width="260" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="Build Optimized AI Context" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="520" y="545" width="250" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="Select Available Provider / Model (AI Gateway)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="800" y="545" width="210" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="Run AI Debugging" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="520" y="635" width="250" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="Store AI Request + Response and Debugging Attempt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="520" y="720" width="250" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="Show Root Cause + Step-by-Step Solution" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="65" y="400" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="d2" value="Solved?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="95" y="505" width="120" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n10" value="Store Successful Solution + Update Statistics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="520" y="810" width="250" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" value="Generate / Improve Educational Article" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="800" y="720" width="210" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n12" value="Create / Update Challenge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="800" y="810" width="210" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="end" value="" style="ellipse;shape=doubleEllipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1140" y="800" width="35" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="merge1" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="635" y="430" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ext1" value="LLM Provider(s)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="1120" y="185" width="210" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ext2" value="GitHub API (optional repository debugging / challenge repo)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="1100" y="350" width="250" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="ext3" value="Telegram Bot (optional knowledge lookup)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="1100" y="505" width="250" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="note1" value="Token optimization is a core requirement: Search reusable knowledge BEFORE making a fresh LLM call. Use only relevant repository context." style="shape=note;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="1085" y="50" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="note2" value="Still Have a Problem → save feedback → repeat AI debugging. The loop continues until the developer confirms the problem is solved." style="shape=note;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="25" y="625" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="note3" value="When similar successful solutions accumulate, the AI can synthesize an improved solution and update the article version." style="shape=note;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="1065" y="640" width="340" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="start" target="n1" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="n1" target="n2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="n2" target="n3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="n3" target="d1" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="YES" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="d1" target="n4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="NO" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="d1" target="n5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="n4" target="merge1" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="n5" target="merge1" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="merge1" target="n5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="n5" target="n6" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" value="LLM request" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" parent="1" source="n6" target="ext1" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" value="AI analysis" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;" parent="1" source="ext1" target="n7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="n7" target="n8" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="n8" target="n9" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="n9" target="d2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" value="YES" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="d2" target="n10" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="215" y="545" as="sourcePoint" />
+            <mxPoint x="645.0434782608697" y="805" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="215" y="540" />
+              <mxPoint x="645" y="540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e17" value="NO / provide more info and re-debug" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" parent="1" source="d2" target="n1" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="n10" target="n11" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="n11" target="n12" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" parent="1" source="n12" target="end" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e21" value="Telegram alternative" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;" parent="1" source="n1" target="ext3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e22" value="search existing knowledge" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;" parent="1" source="ext3" target="n3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e23" value="GitHub-based problem" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;" parent="1" source="n1" target="ext2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e24" value="repository context" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;" parent="1" source="ext2" target="n5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e25" value="create challenge repo" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;" parent="1" source="n12" target="ext2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

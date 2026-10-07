@@ -1,0 +1,574 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-10-02T00:00:00.000Z" agent="DevPilot AI" version="24.7.17" type="device">
+  <diagram id="cover" name="README">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1600" pageHeight="900">
+      <root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="r1" value="DevPilot AI — Sequence Diagrams" style="text;html=1;align=center;verticalAlign=middle;fontSize=28;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="430" y="140" width="740" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="r2" value="1. Main Problem Solving&#xa;2. GitHub Debugging &amp; Challenge&#xa;3. AI Code Review&#xa;4. Telegram Knowledge Search" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=18;" vertex="1" parent="1">
+          <mxGeometry x="500" y="260" width="600" height="230" as="geometry"/>
+        </mxCell>
+        <mxCell id="r3" value="Open each page from the tabs at the bottom of draw.io." style="text;html=1;align=center;verticalAlign=middle;fontSize=16;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="470" y="540" width="660" height="50" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="main-problem-solving" name="Main Problem Solving">
+      <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900"
+        math="0" shadow="0">
+        <root>
+          <mxCell id="0"/>
+          <mxCell id="1" parent="0"/>
+          <mxCell id="a0" value="Developer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="90" y="30" width="130" height="55" as="geometry"/>
+    </mxCell><mxCell id="l0" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="154" y="90" width="2" height="700" as="geometry"/>
+    </mxCell><mxCell id="a1" value="Frontend" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="250" y="30" width="130" height="55" as="geometry"/>
+    </mxCell><mxCell id="l1" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="314" y="90" width="2" height="700" as="geometry"/>
+    </mxCell><mxCell id="a2" value="ASP.NET Core API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="410" y="30" width="130" height="55" as="geometry"/>
+    </mxCell><mxCell id="l2" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="474" y="90" width="2" height="700" as="geometry"/>
+    </mxCell><mxCell id="a3" value="Similarity / Knowledge
+Engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="570" y="30" width="130" height="55" as="geometry"/>
+    </mxCell><mxCell id="l3" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="634" y="90" width="2" height="700" as="geometry"/>
+    </mxCell><mxCell id="a4" value="AI Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="730" y="30" width="130" height="55" as="geometry"/>
+    </mxCell><mxCell id="l4" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="794" y="90" width="2" height="700" as="geometry"/>
+    </mxCell><mxCell id="a5" value="LLM Provider(s)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="890" y="30" width="130" height="55" as="geometry"/>
+    </mxCell><mxCell id="l5" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="954" y="90" width="2" height="700" as="geometry"/>
+    </mxCell><mxCell id="a6" value="SQL Server" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="1050" y="30" width="130" height="55" as="geometry"/>
+    </mxCell><mxCell id="l6" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="1114" y="90" width="2" height="700" as="geometry"/>
+    </mxCell><mxCell id="m130" value="1. Submit problem
+(error/code/logs/screenshot)" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="154" y="130" as="sourcePoint"/>
+        <mxPoint x="314" y="130" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="m172" value="2. POST /api/problems" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="314" y="172" as="sourcePoint"/>
+        <mxPoint x="474" y="172" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="m214" value="3. Create Problem + Request" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="474" y="214" as="sourcePoint"/>
+        <mxPoint x="1114" y="214" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="m256" value="4. Search similar problems
+(semantic + keyword)" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="474" y="256" as="sourcePoint"/>
+        <mxPoint x="634" y="256" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="m298" value="5. Retrieve successful solutions" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="634" y="298" as="sourcePoint"/>
+        <mxPoint x="1114" y="298" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="m340" value="6. Similarity result + confidence" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="634" y="340" as="sourcePoint"/>
+        <mxPoint x="474" y="340" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="m382" value="7. Build optimized AI context" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="474" y="382" as="sourcePoint"/>
+        <mxPoint x="794" y="382" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="m424" value="8. Select available provider/model" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="794" y="424" as="sourcePoint"/>
+        <mxPoint x="954" y="424" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="m466" value="9. AI analysis + root cause + steps" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="954" y="466" as="sourcePoint"/>
+        <mxPoint x="794" y="466" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="m508" value="10. Normalize/store AI response" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="794" y="508" as="sourcePoint"/>
+        <mxPoint x="474" y="508" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="m550" value="11. Save debugging attempt" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="474" y="550" as="sourcePoint"/>
+        <mxPoint x="1114" y="550" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="m592" value="12. Return explanation + solution" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="474" y="592" as="sourcePoint"/>
+        <mxPoint x="314" y="592" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="m634" value="13. Show solution to developer" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="314" y="634" as="sourcePoint"/>
+        <mxPoint x="154" y="634" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="m676" value="14. Feedback: Solved / Still Have Problem" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="154" y="676" as="sourcePoint"/>
+        <mxPoint x="314" y="676" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="m718" value="15. POST feedback" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="314" y="718" as="sourcePoint"/>
+        <mxPoint x="474" y="718" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="n1" value="Decision: Is there a reusable, high-confidence similar solution?
+YES → use it as context and adapt.
+NO → perform fresh debugging." style="shape=note;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#d6b656;" vertex="1" parent="1">
+      <mxGeometry x="1180" y="190" width="280" height="100" as="geometry"/>
+    </mxCell><mxCell id="n2" value="If developer selects &quot;Still Have a Problem&quot;:
+store feedback → re-run debugging → return new steps → ask again.
+Repeat until solved." style="shape=note;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#d6b656;" vertex="1" parent="1">
+      <mxGeometry x="1180" y="360" width="280" height="115" as="geometry"/>
+    </mxCell><mxCell id="s760" value="16. Mark Problem = Solved" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="474" y="760" as="sourcePoint"/>
+        <mxPoint x="1114" y="760" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="s802" value="17. Generate / improve educational article" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="474" y="802" as="sourcePoint"/>
+        <mxPoint x="794" y="802" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="s844" value="18. Return article draft" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="794" y="844" as="sourcePoint"/>
+        <mxPoint x="474" y="844" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="s886" value="19. Save article/version + statistics" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="474" y="886" as="sourcePoint"/>
+        <mxPoint x="1114" y="886" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="s928" value="20. Return finalized result + article" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="474" y="928" as="sourcePoint"/>
+        <mxPoint x="314" y="928" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="s970" value="21. Display success + learning article" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="314" y="970" as="sourcePoint"/>
+        <mxPoint x="154" y="970" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="n3" value="Token optimization:
+New successful adaptations are saved.
+Repeated variants can later be synthesized into an improved solution and article version." style="shape=note;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#d6b656;" vertex="1" parent="1">
+      <mxGeometry x="1180" y="560" width="280" height="120" as="geometry"/>
+    </mxCell>
+        </root>
+      </mxGraphModel>
+    </diagram>
+  <diagram id="github-debugging-&amp;-challenge" name="GitHub Debugging &amp; Challenge">
+      <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900"
+        math="0" shadow="0">
+        <root>
+          <mxCell id="0"/>
+          <mxCell id="1" parent="0"/>
+          <mxCell id="g_a0" value="Developer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="80" y="30" width="140" height="55" as="geometry"/>
+    </mxCell><mxCell id="g_l0" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="150" y="90" width="2" height="720" as="geometry"/>
+    </mxCell><mxCell id="g_a1" value="Frontend" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="260" y="30" width="140" height="55" as="geometry"/>
+    </mxCell><mxCell id="g_l1" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="330" y="90" width="2" height="720" as="geometry"/>
+    </mxCell><mxCell id="g_a2" value="ASP.NET Core API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="440" y="30" width="140" height="55" as="geometry"/>
+    </mxCell><mxCell id="g_l2" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="510" y="90" width="2" height="720" as="geometry"/>
+    </mxCell><mxCell id="g_a3" value="GitHub API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="620" y="30" width="140" height="55" as="geometry"/>
+    </mxCell><mxCell id="g_l3" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#82b366;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="690" y="90" width="2" height="720" as="geometry"/>
+    </mxCell><mxCell id="g_a4" value="Repository /
+Webhook" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="800" y="30" width="140" height="55" as="geometry"/>
+    </mxCell><mxCell id="g_l4" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#82b366;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="870" y="90" width="2" height="720" as="geometry"/>
+    </mxCell><mxCell id="g_a5" value="AI Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="980" y="30" width="140" height="55" as="geometry"/>
+    </mxCell><mxCell id="g_l5" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="1050" y="90" width="2" height="720" as="geometry"/>
+    </mxCell><mxCell id="g_a6" value="SQL Server" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="1160" y="30" width="140" height="55" as="geometry"/>
+    </mxCell><mxCell id="g_l6" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="1230" y="90" width="2" height="720" as="geometry"/>
+    </mxCell><mxCell id="g_m130" value="1. Connect GitHub" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="150" y="130" as="sourcePoint"/>
+        <mxPoint x="330" y="130" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m168" value="2. OAuth callback / token exchange" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="330" y="168" as="sourcePoint"/>
+        <mxPoint x="510" y="168" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m206" value="3. Request repositories" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="510" y="206" as="sourcePoint"/>
+        <mxPoint x="690" y="206" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m244" value="4. Repositories / branches" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="690" y="244" as="sourcePoint"/>
+        <mxPoint x="510" y="244" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m282" value="5. Show repositories" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="510" y="282" as="sourcePoint"/>
+        <mxPoint x="330" y="282" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m320" value="6. Select repo + branch + file/folder" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="150" y="320" as="sourcePoint"/>
+        <mxPoint x="330" y="320" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m358" value="7. Start repository debugging" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="330" y="358" as="sourcePoint"/>
+        <mxPoint x="510" y="358" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m396" value="8. Get only relevant files/context" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="510" y="396" as="sourcePoint"/>
+        <mxPoint x="690" y="396" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m434" value="9. Repository content" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="690" y="434" as="sourcePoint"/>
+        <mxPoint x="870" y="434" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m472" value="10. Analyze selected repository context" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="510" y="472" as="sourcePoint"/>
+        <mxPoint x="1050" y="472" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m510" value="11. Diagnosis + solution" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1050" y="510" as="sourcePoint"/>
+        <mxPoint x="510" y="510" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m548" value="12. Save debugging context" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="510" y="548" as="sourcePoint"/>
+        <mxPoint x="1230" y="548" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m586" value="13. Return findings" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="510" y="586" as="sourcePoint"/>
+        <mxPoint x="330" y="586" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m624" value="14. Display diagnosis" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="330" y="624" as="sourcePoint"/>
+        <mxPoint x="150" y="624" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m662" value="15. Start Practice Challenge" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="150" y="662" as="sourcePoint"/>
+        <mxPoint x="330" y="662" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m700" value="16. Create challenge + GitHub repo request" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="330" y="700" as="sourcePoint"/>
+        <mxPoint x="510" y="700" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m738" value="17. Create challenge repository" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="510" y="738" as="sourcePoint"/>
+        <mxPoint x="690" y="738" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m776" value="18. GitHub repo created" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="690" y="776" as="sourcePoint"/>
+        <mxPoint x="870" y="776" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m814" value="19. Save Challenge + Repository mapping" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="510" y="814" as="sourcePoint"/>
+        <mxPoint x="1230" y="814" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m852" value="20. Return challenge link" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="510" y="852" as="sourcePoint"/>
+        <mxPoint x="330" y="852" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m890" value="21. Developer implements challenge" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="330" y="890" as="sourcePoint"/>
+        <mxPoint x="150" y="890" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m928" value="22. Webhook: push / PR event" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="870" y="928" as="sourcePoint"/>
+        <mxPoint x="510" y="928" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m966" value="23. Evaluate implementation" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="510" y="966" as="sourcePoint"/>
+        <mxPoint x="1050" y="966" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m1004" value="24. Evaluation report" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1050" y="1004" as="sourcePoint"/>
+        <mxPoint x="510" y="1004" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m1042" value="25. Save evaluation" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="510" y="1042" as="sourcePoint"/>
+        <mxPoint x="1230" y="1042" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_m1080" value="26. Return result + feedback" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="510" y="1080" as="sourcePoint"/>
+        <mxPoint x="330" y="1080" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="g_n1" value="Least privilege:
+GitHub access should be limited to permissions required for repository reading, challenge creation, and webhook handling." style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+      <mxGeometry x="1190" y="175" width="300" height="120" as="geometry"/>
+    </mxCell><mxCell id="g_n2" value="Token optimization:
+Do not send the entire repository to the LLM by default. Retrieve and analyze only relevant files/sections." style="shape=note;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#d6b656;" vertex="1" parent="1">
+      <mxGeometry x="1190" y="350" width="300" height="125" as="geometry"/>
+    </mxCell><mxCell id="g_n3" value="Challenge evaluation can be triggered by a GitHub push or pull-request webhook instead of continuous polling." style="shape=note;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#d6b656;" vertex="1" parent="1">
+      <mxGeometry x="1190" y="525" width="300" height="130" as="geometry"/>
+    </mxCell>
+        </root>
+      </mxGraphModel>
+    </diagram>
+  <diagram id="ai-code-review" name="AI Code Review">
+      <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900"
+        math="0" shadow="0">
+        <root>
+          <mxCell id="0"/>
+          <mxCell id="1" parent="0"/>
+          <mxCell id="c_a0" value="Developer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="90" y="30" width="145" height="55" as="geometry"/>
+    </mxCell><mxCell id="c_l0" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="162" y="90" width="2" height="680" as="geometry"/>
+    </mxCell><mxCell id="c_a1" value="Frontend" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="280" y="30" width="145" height="55" as="geometry"/>
+    </mxCell><mxCell id="c_l1" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="352" y="90" width="2" height="680" as="geometry"/>
+    </mxCell><mxCell id="c_a2" value="API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="470" y="30" width="145" height="55" as="geometry"/>
+    </mxCell><mxCell id="c_l2" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="542" y="90" width="2" height="680" as="geometry"/>
+    </mxCell><mxCell id="c_a3" value="GitHub" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="660" y="30" width="145" height="55" as="geometry"/>
+    </mxCell><mxCell id="c_l3" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="732" y="90" width="2" height="680" as="geometry"/>
+    </mxCell><mxCell id="c_a4" value="Code Review
+Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="850" y="30" width="145" height="55" as="geometry"/>
+    </mxCell><mxCell id="c_l4" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#b85450;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="922" y="90" width="2" height="680" as="geometry"/>
+    </mxCell><mxCell id="c_a5" value="AI Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="1040" y="30" width="145" height="55" as="geometry"/>
+    </mxCell><mxCell id="c_l5" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="1112" y="90" width="2" height="680" as="geometry"/>
+    </mxCell><mxCell id="c_a6" value="SQL Server" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="1230" y="30" width="145" height="55" as="geometry"/>
+    </mxCell><mxCell id="c_l6" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="1302" y="90" width="2" height="680" as="geometry"/>
+    </mxCell><mxCell id="c_m130" value="1. Choose Code Review" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="162" y="130" as="sourcePoint"/>
+        <mxPoint x="352" y="130" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="c_m174" value="2. Start review request" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="352" y="174" as="sourcePoint"/>
+        <mxPoint x="542" y="174" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="c_m218" value="3. Get repository / PR / files" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="542" y="218" as="sourcePoint"/>
+        <mxPoint x="732" y="218" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="c_m262" value="4. Repository code context" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="732" y="262" as="sourcePoint"/>
+        <mxPoint x="922" y="262" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="c_m306" value="5. Analyze code" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="922" y="306" as="sourcePoint"/>
+        <mxPoint x="1112" y="306" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="c_m350" value="6. Review findings" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1112" y="350" as="sourcePoint"/>
+        <mxPoint x="922" y="350" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="c_m394" value="7. Structured report" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="922" y="394" as="sourcePoint"/>
+        <mxPoint x="542" y="394" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="c_m438" value="8. Save review + findings" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="542" y="438" as="sourcePoint"/>
+        <mxPoint x="1302" y="438" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="c_m482" value="9. Return report" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="542" y="482" as="sourcePoint"/>
+        <mxPoint x="352" y="482" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="c_m526" value="10. Display findings
+file + section + severity + recommendation" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="352" y="526" as="sourcePoint"/>
+        <mxPoint x="162" y="526" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="c_n1" value="Review dimensions:
+Bugs • Security • Performance • Code Smells • SOLID • Maintainability • Architecture • Best Practices" style="shape=note;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#d6b656;" vertex="1" parent="1">
+      <mxGeometry x="1180" y="200" width="310" height="130" as="geometry"/>
+    </mxCell><mxCell id="c_n2" value="Output should identify:
+File → Code section → Problem → Severity → Explanation → Suggested improvement." style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+      <mxGeometry x="1180" y="380" width="310" height="130" as="geometry"/>
+    </mxCell>
+        </root>
+      </mxGraphModel>
+    </diagram>
+  <diagram id="telegram-knowledge-search" name="Telegram Knowledge Search">
+      <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1"
+        arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900"
+        math="0" shadow="0">
+        <root>
+          <mxCell id="0"/>
+          <mxCell id="1" parent="0"/>
+          <mxCell id="t_a0" value="Developer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="100" y="30" width="145" height="55" as="geometry"/>
+    </mxCell><mxCell id="t_l0" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="172" y="90" width="2" height="620" as="geometry"/>
+    </mxCell><mxCell id="t_a1" value="Telegram" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="300" y="30" width="145" height="55" as="geometry"/>
+    </mxCell><mxCell id="t_l1" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#9673a6;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="372" y="90" width="2" height="620" as="geometry"/>
+    </mxCell><mxCell id="t_a2" value="Telegram Bot
+Webhook" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="500" y="30" width="145" height="55" as="geometry"/>
+    </mxCell><mxCell id="t_l2" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#9673a6;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="572" y="90" width="2" height="620" as="geometry"/>
+    </mxCell><mxCell id="t_a3" value="ASP.NET Core API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="700" y="30" width="145" height="55" as="geometry"/>
+    </mxCell><mxCell id="t_l3" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="772" y="90" width="2" height="620" as="geometry"/>
+    </mxCell><mxCell id="t_a4" value="Knowledge /
+Similarity" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="900" y="30" width="145" height="55" as="geometry"/>
+    </mxCell><mxCell id="t_l4" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="972" y="90" width="2" height="620" as="geometry"/>
+    </mxCell><mxCell id="t_a5" value="AI Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="1100" y="30" width="145" height="55" as="geometry"/>
+    </mxCell><mxCell id="t_l5" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="1172" y="90" width="2" height="620" as="geometry"/>
+    </mxCell><mxCell id="t_a6" value="SQL Server" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="1300" y="30" width="145" height="55" as="geometry"/>
+    </mxCell><mxCell id="t_l6" value="" style="shape=rectangle;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="1372" y="90" width="2" height="620" as="geometry"/>
+    </mxCell><mxCell id="t_m130" value="1. Send problem" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="172" y="130" as="sourcePoint"/>
+        <mxPoint x="372" y="130" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="t_m176" value="2. Bot receives message" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="372" y="176" as="sourcePoint"/>
+        <mxPoint x="572" y="176" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="t_m222" value="3. Forward request" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="572" y="222" as="sourcePoint"/>
+        <mxPoint x="772" y="222" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="t_m268" value="4. Store/query request" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="772" y="268" as="sourcePoint"/>
+        <mxPoint x="1372" y="268" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="t_m314" value="5. Search similar solved problems" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="772" y="314" as="sourcePoint"/>
+        <mxPoint x="972" y="314" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="t_m360" value="6. Similar results" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="972" y="360" as="sourcePoint"/>
+        <mxPoint x="772" y="360" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="t_m406" value="7. Return existing solution + article link" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="772" y="406" as="sourcePoint"/>
+        <mxPoint x="572" y="406" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="t_m452" value="8. Bot response" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="572" y="452" as="sourcePoint"/>
+        <mxPoint x="372" y="452" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="t_m498" value="9. Show solution + link" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="372" y="498" as="sourcePoint"/>
+        <mxPoint x="172" y="498" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="t_m544" value="10. If knowledge is insufficient → AI request" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="772" y="544" as="sourcePoint"/>
+        <mxPoint x="1172" y="544" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="t_m590" value="11. AI response" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1172" y="590" as="sourcePoint"/>
+        <mxPoint x="772" y="590" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="t_m636" value="12. Save AI request/response" style="endArrow=block;html=1;strokeColor=#333333;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="772" y="636" as="sourcePoint"/>
+        <mxPoint x="1372" y="636" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="t_m682" value="13. Return AI-assisted answer + article/search result" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="772" y="682" as="sourcePoint"/>
+        <mxPoint x="572" y="682" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="t_m728" value="14. Bot response" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="572" y="728" as="sourcePoint"/>
+        <mxPoint x="372" y="728" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="t_m774" value="15. Show answer" style="endArrow=block;html=1;strokeColor=#333333;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="372" y="774" as="sourcePoint"/>
+        <mxPoint x="172" y="774" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell><mxCell id="t_n1" value="Primary goal: answer from existing knowledge first.
+This reduces unnecessary LLM requests and helps reuse proven solutions." style="shape=note;whiteSpace=wrap;html=1;fillColor=#e1f5e1;strokeColor=#d6b656;" vertex="1" parent="1">
+      <mxGeometry x="1050" y="210" width="380" height="120" as="geometry"/>
+    </mxCell><mxCell id="t_n2" value="The same AI Gateway used by the web platform should handle provider selection, usage tracking, retries and failover." style="shape=note;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#d6b656;" vertex="1" parent="1">
+      <mxGeometry x="1050" y="390" width="380" height="130" as="geometry"/>
+    </mxCell>
+        </root>
+      </mxGraphModel>
+    </diagram>
+</mxfile>

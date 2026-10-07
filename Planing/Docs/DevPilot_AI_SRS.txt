@@ -1,0 +1,1379 @@
+SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+
+Project Name:
+DevPilot AI
+
+Document Version:
+1.0
+
+Project Type:
+AI-Powered Developer Problem Solving, Knowledge, Practice and Code Review Platform
+
+============================================================
+1. PROJECT OVERVIEW
+============================================================
+
+DevPilot AI is a web-based platform designed exclusively for software developers.
+
+The platform helps developers solve real-world programming problems through AI-powered debugging. The system analyzes the developer's problem, error, code, logs, or screenshots, explains the root cause, and provides a step-by-step solution.
+
+After every solution attempt, the developer can select:
+
+1. Solved
+2. Still Have a Problem
+
+If the problem is not solved, the AI performs another debugging attempt using the new information and provides another solution. This loop continues until the developer confirms that the problem is solved.
+
+When a problem is solved, the system stores the complete problem and solution history in the database and uses the information to generate an educational article.
+
+The platform also builds a public developer knowledge base similar in concept to Stack Overflow, where developers can search and read previously solved problems.
+
+The system continuously improves its knowledge by collecting successful solutions from different developers, identifying similar problems, and synthesizing better solutions and updated educational articles.
+
+DevPilot AI also integrates with GitHub to support repository debugging, AI code review, challenge repository creation, and practical developer training.
+
+============================================================
+2. PROJECT OBJECTIVES
+============================================================
+
+The main objectives are:
+
+- Help developers solve programming problems faster.
+- Provide understandable explanations instead of only giving final answers.
+- Guide developers through debugging step by step.
+- Reuse previously successful solutions.
+- Reduce unnecessary LLM API requests and token consumption.
+- Build a continuously improving developer knowledge base.
+- Convert solved real-world problems into educational articles.
+- Allow developers to practice problems through practical coding challenges.
+- Integrate GitHub into the debugging and learning workflow.
+- Provide AI-powered code review.
+- Provide a Telegram interface for searching existing solutions.
+- Support multiple free LLM providers with automatic failover.
+- Build a scalable architecture while respecting free hosting and API limitations.
+
+============================================================
+3. TARGET USERS
+============================================================
+
+Primary User:
+- Software Developer
+
+Secondary User:
+- Platform Administrator
+
+The platform is intended specifically for developers and technical users.
+
+============================================================
+4. CORE SYSTEM WORKFLOW
+============================================================
+
+The main workflow is:
+
+Developer Problem
+        |
+        v
+Problem Analysis
+        |
+        v
+Similarity Search
+        |
+        +---- Similar Solution Found ----> Reuse Existing Knowledge
+        |                                      |
+        |                                      v
+        |                                  AI Adaptation
+        |
+        +---- No Similar Solution --------> AI Debugging
+                                               |
+                                               v
+                                      Root Cause Explanation
+                                               |
+                                               v
+                                      Step-by-Step Solution
+                                               |
+                                               v
+                                  Developer Feedback
+                                  /              \
+                                 /                \
+                             Solved        Still Have a Problem
+                               |                    |
+                               v                    v
+                        Save Resolution        Re-Debugging
+                               |                    |
+                               v                    |
+                      Generate Article <------------+
+                               |
+                               v
+                      Public Knowledge Base
+                               |
+                               v
+                       Generate Challenge
+                               |
+                               v
+                       GitHub Repository
+                               |
+                               v
+                       Developer Practice
+                               |
+                               v
+                         AI Evaluation
+                               |
+                               v
+                     Improve Knowledge Base
+
+============================================================
+5. FUNCTIONAL REQUIREMENTS
+============================================================
+
+5.1 Developer Account
+
+The system shall allow developers to:
+
+- Register an account.
+- Log in.
+- Log out.
+- Manage their profile.
+- View their previous problems.
+- View their debugging history.
+- View their challenges.
+- View challenge evaluation results.
+- Connect their GitHub account.
+- Manage connected integrations.
+
+The system should support role-based authorization.
+
+Initial roles:
+
+- Developer
+- Administrator
+
+============================================================
+5.2 AI DEBUGGING WORKSPACE
+============================================================
+
+The system shall provide a dedicated workspace for submitting technical problems.
+
+A developer may provide:
+
+- Problem description.
+- Error message.
+- Exception.
+- Stack trace.
+- Source code.
+- Logs.
+- Screenshots.
+- Relevant technical information.
+- Technology/framework information.
+
+The system shall create a Problem record for each new debugging session.
+
+The AI shall:
+
+- Analyze the submitted information.
+- Identify possible causes.
+- Determine the probable root cause.
+- Explain the problem.
+- Provide a step-by-step solution.
+- Explain why each step is required.
+- Provide code examples when appropriate.
+- Avoid presenting unsupported assumptions as confirmed facts.
+
+The solution shall be stored as a debugging attempt.
+
+============================================================
+5.3 SOLUTION FEEDBACK LOOP
+============================================================
+
+After each AI solution, the system shall ask the developer:
+
+"Did this solve your problem?"
+
+Available options:
+
+- Solved
+- Still Have a Problem
+
+If the developer selects "Solved":
+
+- Mark the problem as solved.
+- Store the successful solution.
+- Store the complete debugging history.
+- Generate or update the related educational article.
+- Update problem statistics.
+- Make the successful knowledge available for future similarity searches.
+
+If the developer selects "Still Have a Problem":
+
+- Request additional information when necessary.
+- Store the developer's feedback.
+- Start another debugging attempt.
+- Provide a new or modified solution.
+- Repeat the feedback cycle.
+
+============================================================
+5.4 DEBUGGING HISTORY
+============================================================
+
+Each problem shall maintain all debugging attempts.
+
+Example:
+
+Problem
+ |
+ +-- Attempt 1
+ |    +-- AI Analysis
+ |    +-- Solution
+ |    +-- Developer Feedback
+ |
+ +-- Attempt 2
+ |    +-- AI Analysis
+ |    +-- Solution
+ |    +-- Developer Feedback
+ |
+ +-- Attempt 3
+      +-- AI Analysis
+      +-- Solution
+      +-- Solved
+
+The system shall never lose previous attempts.
+
+The history shall be available for analysis and knowledge generation.
+
+============================================================
+5.5 PROBLEM IDENTIFICATION
+============================================================
+
+Every solved knowledge problem shall receive a unique Problem Code.
+
+Example:
+
+DEV-000001
+DEV-000002
+DEV-000003
+
+The public problem listing shall display:
+
+- Problem title.
+- Problem code.
+- Short description.
+- Technologies/tags.
+- Number of developers who faced the problem.
+- Relevant statistics.
+
+============================================================
+5.6 PUBLIC KNOWLEDGE BASE
+============================================================
+
+The system shall provide a public knowledge base for developers.
+
+The knowledge base shall be similar in concept to a developer Q&A/knowledge platform.
+
+Users shall be able to:
+
+- Browse problems.
+- Search problems.
+- Filter problems.
+- Open problem articles.
+- View solutions.
+- View explanations.
+- View related challenges.
+
+Each article shall contain:
+
+- Problem title.
+- Problem code.
+- Problem description.
+- Error or code context.
+- Root cause.
+- Explanation.
+- Step-by-step solution.
+- Explanation of each step.
+- Technologies/tags.
+- Problem statistics.
+- Related problems.
+- Practice challenge when available.
+
+============================================================
+5.7 PROBLEM STATISTICS
+============================================================
+
+The system shall track statistics for problems.
+
+Possible statistics include:
+
+- Number of developers who reported the problem.
+- Number of successful resolutions.
+- Number of failed attempts.
+- Number of debugging attempts.
+- Number of successful solution variants.
+- Technologies associated with the problem.
+- Challenge participation count.
+
+Statistics shall be used to improve the knowledge base and solution generation.
+
+============================================================
+5.8 SIMILARITY SEARCH
+============================================================
+
+Before sending every new problem directly to an LLM, the system shall search the existing knowledge base for similar problems.
+
+The similarity process should consider:
+
+- Problem description.
+- Error messages.
+- Stack traces.
+- Code context.
+- Technologies.
+- Frameworks.
+- Tags.
+- Previously successful solutions.
+
+The system should use semantic similarity/embeddings where technically feasible.
+
+Possible flow:
+
+New Request
+    |
+    v
+Normalize Request
+    |
+    v
+Semantic Search
+    |
+    v
+Similar Problems?
+   /       \
+ YES       NO
+ |          |
+ v          v
+Reuse      New AI
+Knowledge  Debugging
+
+============================================================
+5.9 TOKEN OPTIMIZATION
+============================================================
+
+The platform shall minimize unnecessary LLM usage.
+
+If a highly similar solved problem exists:
+
+- Retrieve the previous request.
+- Retrieve the successful solution.
+- Provide the previous knowledge as context to the LLM.
+- Ask the LLM to adapt the existing solution to the current case.
+
+The system shall not blindly reuse an old solution without validation/adaptation.
+
+Every new successful adaptation shall be stored.
+
+This creates a growing repository of proven solutions.
+
+============================================================
+5.10 SOLUTION EVOLUTION
+============================================================
+
+When multiple developers solve similar problems using different successful solutions, the system shall be able to collect the successful solution variants.
+
+Example:
+
+Request A -> Solution A -> Success
+Request B -> Solution B -> Success
+Request C -> Solution C -> Success
+
+The AI may synthesize these successful solutions into an improved solution.
+
+The improved solution can be used to update the related knowledge article.
+
+The system should preserve historical versions of the article/solution.
+
+The knowledge base is therefore intended to be continuously improving.
+
+============================================================
+5.11 EDUCATIONAL ARTICLE GENERATION
+============================================================
+
+When a problem is successfully solved, the system shall generate an educational article.
+
+The article should include:
+
+1. Problem
+2. Error/Code
+3. Why the problem happens
+4. Root cause
+5. Step-by-step solution
+6. Explanation of each step
+7. Best practices
+8. Prevention recommendations
+9. Related problems
+10. Practice challenge
+
+The article should be understandable to another developer who has never seen the original problem.
+
+============================================================
+5.12 ARTICLE VERSIONING
+============================================================
+
+The system shall support article updates.
+
+When new successful solutions provide better information:
+
+- Generate a new article version.
+- Preserve the previous version.
+- Store the reason for the update.
+- Keep the latest approved/generated solution as the current version.
+
+The system should allow administrators to review generated knowledge when required.
+
+============================================================
+5.13 DEVELOPER PRACTICE CHALLENGES
+============================================================
+
+After a problem is solved, the system shall be able to generate a small coding challenge based on the same concept.
+
+The challenge should test whether the developer understood the problem.
+
+The challenge may contain:
+
+- Title.
+- Description.
+- Requirements.
+- Constraints.
+- Expected behavior.
+- Starter code.
+- Acceptance criteria.
+- Difficulty.
+- Technology.
+- Evaluation criteria.
+
+The challenge shall not expose the complete solution to the learner.
+
+============================================================
+5.14 GITHUB INTEGRATION
+============================================================
+
+The platform shall support GitHub integration.
+
+A developer shall be able to connect a GitHub account.
+
+The integration may support:
+
+- OAuth authentication.
+- Repository access.
+- Repository listing.
+- Branch selection.
+- File retrieval.
+- Commit information.
+- Pull request information.
+- Webhooks.
+- Repository creation for challenges.
+
+GitHub access shall follow the minimum permissions required by each feature.
+
+============================================================
+5.15 GITHUB-BASED DEBUGGING
+============================================================
+
+A developer shall be able to connect a GitHub repository and identify where the problem exists.
+
+Possible workflow:
+
+Connect GitHub
+      |
+      v
+Select Repository
+      |
+      v
+Select Branch
+      |
+      v
+Select File/Folder or Relevant Code
+      |
+      v
+AI Repository Analysis
+      |
+      v
+Problem Diagnosis
+      |
+      v
+Solution
+
+The AI should identify relevant files and explain relationships between files when enough repository context is available.
+
+The system shall avoid sending unnecessary repository files to the LLM to reduce token usage.
+
+============================================================
+5.16 AI CODE REVIEW
+============================================================
+
+The platform shall provide a Code Review feature.
+
+The developer may select:
+
+- Repository.
+- Branch.
+- Pull Request.
+- Specific files.
+- Relevant code.
+
+The AI shall analyze the selected code.
+
+The report may include:
+
+- Bugs.
+- Security issues.
+- Performance issues.
+- Code smells.
+- SOLID violations.
+- Maintainability problems.
+- Architecture concerns.
+- Best-practice recommendations.
+
+The report should identify:
+
+- File.
+- Relevant code section.
+- Problem.
+- Severity.
+- Explanation.
+- Suggested improvement.
+
+The review should produce an organized report.
+
+============================================================
+5.17 CHALLENGE GITHUB REPOSITORY
+============================================================
+
+When a developer starts a challenge:
+
+- The system shall create a dedicated GitHub repository when permitted.
+- The repository shall contain the challenge description.
+- The repository may contain starter code.
+- The README shall explain requirements and expected behavior.
+
+Example:
+
+DevPilot-Challenge-JWT-Authentication
+
+The challenge repository shall be associated with:
+
+- Developer.
+- Challenge.
+- Problem.
+- Repository.
+- Attempt.
+
+============================================================
+5.18 CHALLENGE SUBMISSION AND EVALUATION
+============================================================
+
+The developer shall implement the challenge and push the solution to GitHub.
+
+The platform shall evaluate the submitted implementation.
+
+Evaluation may consider:
+
+- Functional correctness.
+- Requirement completion.
+- Code quality.
+- Security.
+- Performance.
+- Architecture.
+- Understanding of the original problem.
+- Best practices.
+
+The system shall generate an evaluation report.
+
+Example:
+
+Challenge Result
+
+Understanding: Good
+Implementation: Excellent
+Security: Needs Improvement
+Code Quality: Good
+
+The system shall provide constructive feedback.
+
+============================================================
+5.19 KNOWLEDGE BASE CHALLENGE INTEGRATION
+============================================================
+
+Each relevant article may contain:
+
+Practice Challenge
+
+[ Start Challenge ]
+
+When another developer starts the challenge:
+
+- A challenge attempt is created.
+- A GitHub repository can be created.
+- The developer completes the task.
+- The system evaluates the solution.
+- The result is associated with the challenge attempt.
+
+This transforms the knowledge base from a static documentation system into an interactive learning environment.
+
+============================================================
+5.20 TELEGRAM BOT
+============================================================
+
+The platform shall provide a Telegram Bot.
+
+A developer can send a technical problem to the bot.
+
+The bot shall:
+
+- Search the existing knowledge base.
+- Find similar problems.
+- Return relevant solutions.
+- Provide the related article link.
+- Use the LLM only when existing knowledge is insufficient or when AI assistance is explicitly required.
+
+Possible flow:
+
+Telegram
+   |
+   v
+ASP.NET Core API
+   |
+   v
+Knowledge Search
+   |
+   +---- Found ----> Return Solution + Article
+   |
+   +---- Not Found -> AI Processing
+
+============================================================
+5.21 DISCORD INTEGRATION
+============================================================
+
+The system may provide a Discord community integration.
+
+Possible uses:
+
+- Developer community.
+- Debugging discussions.
+- Technology channels.
+- Challenge announcements.
+- New knowledge articles.
+- Community notifications.
+- AI-assisted bot interactions.
+
+Discord is an optional integration and may be implemented after the core platform is completed.
+
+============================================================
+5.22 CLOUDFLARE TURNSTILE
+============================================================
+
+Cloudflare Turnstile may be used to protect public endpoints and forms from:
+
+- Automated spam.
+- Bot submissions.
+- Abuse.
+- Excessive public requests.
+
+It may be applied to:
+
+- Registration.
+- Public problem submission.
+- Contact/support forms.
+- Other abuse-sensitive endpoints.
+
+============================================================
+5.23 AI GATEWAY
+============================================================
+
+The platform shall use an internal AI Gateway rather than directly coupling application logic to a single LLM provider.
+
+The AI Gateway shall provide:
+
+- Provider selection.
+- Model selection.
+- Request routing.
+- Usage tracking.
+- Error handling.
+- Retry logic.
+- Provider failover.
+- Token/usage tracking.
+- Prompt management.
+- Response normalization.
+
+Concept:
+
+Application
+    |
+    v
+AI Gateway
+    |
+    +---- Provider A
+    |
+    +---- Provider B
+    |
+    +---- Provider C
+
+============================================================
+5.24 FREE LLM PROVIDER FAILOVER
+============================================================
+
+The platform shall support multiple free or free-tier LLM providers.
+
+The system shall maintain provider information such as:
+
+- Provider.
+- Model.
+- Priority.
+- Status.
+- Requests used.
+- Token usage when available.
+- Rate limits when known.
+- Last error.
+- Cooldown period.
+- Availability.
+
+When a provider reaches a rate limit or becomes unavailable:
+
+1. Detect failure.
+2. Mark provider temporarily unavailable.
+3. Select another available provider.
+4. Retry according to configured policy.
+5. Return the result to the user without exposing internal provider switching.
+
+Provider limits shall be treated as dynamic configuration and should not be hard-coded as permanent values.
+
+============================================================
+5.25 AI PROMPT MANAGEMENT
+============================================================
+
+The system should maintain structured prompts for different AI operations.
+
+Examples:
+
+- Debugging Prompt.
+- Root Cause Prompt.
+- Solution Prompt.
+- Article Generation Prompt.
+- Challenge Generation Prompt.
+- Challenge Evaluation Prompt.
+- Code Review Prompt.
+- Repository Analysis Prompt.
+- Solution Synthesis Prompt.
+
+Prompt versions should be tracked where practical.
+
+============================================================
+6. ADMINISTRATOR REQUIREMENTS
+============================================================
+
+Administrators shall be able to:
+
+- Manage users.
+- Manage roles.
+- View problems.
+- View debugging attempts.
+- Review generated articles.
+- Manage article status.
+- View solution versions.
+- View AI usage.
+- View provider health.
+- Manage AI providers/models.
+- View failed AI requests.
+- Manage tags/technologies.
+- Review reported content.
+- Manage platform configuration.
+
+============================================================
+7. NON-FUNCTIONAL REQUIREMENTS
+============================================================
+
+7.1 Performance
+
+The system should:
+
+- Minimize unnecessary LLM calls.
+- Use cached/reusable knowledge when possible.
+- Avoid sending unnecessary repository files to LLMs.
+- Use pagination for large lists.
+- Use asynchronous processing where appropriate.
+- Optimize database queries.
+
+7.2 Security
+
+The system shall:
+
+- Use secure authentication.
+- Use authorization.
+- Protect API endpoints.
+- Validate user input.
+- Protect GitHub tokens.
+- Never expose provider API keys to the frontend.
+- Store secrets securely.
+- Apply rate limiting where required.
+- Protect against common web vulnerabilities.
+- Use HTTPS.
+
+7.3 Privacy
+
+The system shall:
+
+- Clearly define how submitted code and logs are stored.
+- Avoid exposing private repository data publicly.
+- Respect GitHub permissions.
+- Restrict private data to authorized users.
+- Avoid placing sensitive credentials inside LLM prompts.
+
+7.4 Reliability
+
+The system should:
+
+- Handle LLM provider failures.
+- Support provider failover.
+- Preserve debugging history.
+- Avoid losing successful solutions.
+- Log important system errors.
+
+7.5 Maintainability
+
+The backend should follow:
+
+- Clean architecture principles where practical.
+- SOLID principles.
+- Dependency Injection.
+- Separation of concerns.
+- Repository pattern where justified.
+- Unit of Work where justified.
+- DTOs.
+- Service layer.
+- Centralized exception handling.
+- Centralized logging.
+
+============================================================
+8. PROPOSED BACKEND ARCHITECTURE
+============================================================
+
+Frontend:
+Undefined Yet
+
+Backend:
+
+ASP.NET Core Web API
+
+Suggested logical layers:
+
+Presentation/API
+    |
+Application
+    |
+Domain
+    |
+Infrastructure
+    |
+Database
+
+Suggested modules/services:
+
+- Authentication Service
+- User Service
+- Problem Service
+- Debugging Service
+- Similarity Search Service
+- Knowledge Service
+- Article Service
+- Challenge Service
+- GitHub Service
+- Code Review Service
+- Telegram Service
+- Discord Service
+- AI Gateway
+- Provider Management Service
+- Usage Tracking Service
+- Notification Service
+
+============================================================
+9. PROPOSED DATABASE ENTITIES
+============================================================
+
+Initial entity list:
+
+Users
+Roles
+UserRoles
+DeveloperProfiles
+
+Problems
+ProblemRequests
+ProblemAttachments
+DebuggingSessions
+DebuggingAttempts
+DeveloperFeedback
+Solutions
+SolutionVersions
+SuccessfulSolutions
+
+KnowledgeArticles
+KnowledgeArticleVersions
+ArticleProblems
+
+Technologies
+Tags
+ProblemTags
+
+ProblemStatistics
+
+Challenges
+ChallengeRequirements
+ChallengeAttempts
+ChallengeEvaluations
+
+GitHubAccounts
+GitHubRepositories
+GitHubBranches
+GitHubFiles
+GitHubWebhooks
+
+CodeReviews
+CodeReviewFindings
+
+AIProviders
+AIModels
+AIRequests
+AIResponses
+AIUsageLogs
+AIProviderHealth
+
+Embeddings
+SimilarityMatches
+
+TelegramUsers
+TelegramMessages
+
+DiscordUsers
+DiscordEvents
+
+Notifications
+
+AuditLogs
+
+============================================================
+10. IMPORTANT DATA RELATIONSHIPS
+============================================================
+
+A Developer can have many Problems.
+
+A Problem can have many Requests.
+
+A Problem can have many Debugging Attempts.
+
+A Debugging Attempt can have one or more AI Responses.
+
+A Problem can have multiple Solutions.
+
+A Problem can have one current Knowledge Article.
+
+A Knowledge Article can have multiple versions.
+
+A Problem can have multiple Challenges.
+
+A Challenge can have many Attempts.
+
+A Challenge Attempt can be linked to a GitHub Repository.
+
+A Challenge Attempt can have an AI Evaluation.
+
+A Developer can connect one or more GitHub accounts according to implementation rules.
+
+A GitHub Account can access multiple repositories according to granted permissions.
+
+A Repository can have multiple Code Reviews.
+
+A Code Review can contain multiple Findings.
+
+An AI Provider can have multiple Models.
+
+An AI Request shall be linked to the selected Provider/Model when applicable.
+
+Similarity records shall connect new requests with potentially related historical problems.
+
+============================================================
+11. API MODULES
+============================================================
+
+Suggested API areas:
+
+/api/auth
+/api/users
+/api/problems
+/api/debugging
+/api/solutions
+/api/knowledge
+/api/articles
+/api/challenges
+/api/github
+/api/code-review
+/api/telegram
+/api/discord
+/api/ai
+/api/providers
+/api/search
+/api/statistics
+/api/admin
+
+Example endpoints:
+
+POST /api/problems
+GET /api/problems/{code}
+POST /api/problems/{id}/debug
+POST /api/problems/{id}/feedback
+POST /api/problems/{id}/solve
+
+GET /api/articles
+GET /api/articles/{id}
+
+POST /api/challenges
+POST /api/challenges/{id}/start
+GET /api/challenges/{id}
+POST /api/challenges/{id}/evaluate
+
+GET /api/github/repositories
+GET /api/github/repositories/{id}/files
+POST /api/github/challenges/{id}/repository
+
+POST /api/code-review
+GET /api/code-review/{id}
+
+POST /api/telegram/webhook
+
+============================================================
+12. AI PROCESSING PIPELINE
+============================================================
+
+The recommended AI processing pipeline is:
+
+1. Receive user request.
+2. Validate request.
+3. Normalize technical information.
+4. Extract technology/error indicators.
+5. Search similar problems.
+6. Evaluate similarity confidence.
+7. If suitable knowledge exists, retrieve successful solutions.
+8. Build optimized AI context.
+9. Send request to AI Gateway.
+10. Select available provider/model.
+11. Receive AI response.
+12. Validate/normalize response.
+13. Store request and response.
+14. Present solution to developer.
+15. Wait for developer feedback.
+16. If solved, finalize knowledge.
+17. If not solved, continue debugging.
+
+============================================================
+13. TOKEN OPTIMIZATION STRATEGY
+============================================================
+
+Token optimization shall be treated as a core system requirement.
+
+Strategies:
+
+- Similarity search before LLM calls.
+- Reuse successful historical solutions.
+- Send only relevant repository files.
+- Summarize large logs before full analysis where appropriate.
+- Cache reusable AI outputs.
+- Use specialized prompts.
+- Limit unnecessary context.
+- Track provider usage.
+- Fail over between providers.
+- Reuse knowledge articles.
+- Synthesize multiple successful solutions into improved reusable knowledge.
+
+============================================================
+14. KNOWLEDGE QUALITY STRATEGY
+============================================================
+
+The system should prioritize solutions that have evidence of success.
+
+Potential solution metadata:
+
+- Number of successful uses.
+- Number of failed uses.
+- Last successful use.
+- Technologies.
+- Related problems.
+- Developer feedback.
+- Article version.
+- AI-generated confidence metadata.
+
+The system should not treat popularity alone as proof of correctness.
+
+Knowledge should be improved based on successful outcomes and review mechanisms.
+
+============================================================
+15. SEARCH SYSTEM
+============================================================
+
+The platform shall support:
+
+- Keyword search.
+- Technology filtering.
+- Tag filtering.
+- Problem code search.
+- Error message search.
+- Semantic similarity search.
+
+Search results should display:
+
+- Problem title.
+- Problem code.
+- Short description.
+- Technologies.
+- Number of reported developers.
+- Relevance.
+
+============================================================
+16. NOTIFICATIONS
+============================================================
+
+The system may support notifications for:
+
+- Challenge created.
+- Challenge evaluation completed.
+- GitHub event received.
+- Article updated.
+- New related knowledge.
+- System notifications.
+
+Notification channels may include:
+
+- In-app.
+- Telegram.
+- Discord.
+
+============================================================
+17. LOGGING AND AUDITING
+============================================================
+
+The system should log:
+
+- Authentication events.
+- Important API requests.
+- AI requests.
+- AI provider failures.
+- GitHub integration events.
+- Challenge events.
+- Administrative actions.
+- Security-related events.
+
+Audit logs should avoid storing unnecessary sensitive information.
+
+============================================================
+18. ERROR HANDLING
+============================================================
+
+The API shall use centralized error handling.
+
+Errors should provide:
+
+- HTTP status.
+- Application error code.
+- Safe user-facing message.
+- Correlation/request identifier where useful.
+
+Internal exceptions and secrets shall not be exposed to users.
+
+============================================================
+19. MVP SCOPE
+============================================================
+
+Phase 1 - Core MVP
+
+- Developer Authentication.
+- Problem Submission.
+- AI Debugging.
+- Step-by-Step Solution.
+- Solved / Still Have a Problem workflow.
+- Debugging History.
+- Database storage.
+- Public Knowledge Base.
+- Educational Article generation.
+- Problem search.
+- Basic similarity search.
+- AI Gateway.
+- Multiple LLM provider failover.
+- Basic token/usage tracking.
+
+Phase 2
+
+- GitHub OAuth.
+- GitHub Repository Analysis.
+- GitHub-based Debugging.
+- AI Code Review.
+- GitHub Webhooks.
+
+Phase 3
+
+- AI Challenge Generation.
+- GitHub Challenge Repository Creation.
+- Challenge Submission.
+- AI Challenge Evaluation.
+
+Phase 4
+
+- Telegram Bot.
+- Discord Integration.
+- Advanced semantic search.
+- Solution synthesis.
+- Automatic article evolution.
+- Advanced statistics and analytics.
+
+============================================================
+20. OUT OF SCOPE FOR INITIAL VERSION
+============================================================
+
+The initial version should not require:
+
+- Desktop EXE.
+- Local Windows Agent.
+- Ollama installation on the developer device.
+- Direct operating system control.
+- Remote execution of arbitrary commands on the developer's machine.
+
+The platform is Web-based.
+
+============================================================
+21. DEPLOYMENT
+============================================================
+
+Frontend:
+
+Technology:
+Undefined Yet
+
+Hosting:
+Cloudflare Pages
+
+Backend:
+
+Technology:
+ASP.NET Core Web API
+
+Hosting:
+MonsterASP Free
+
+Database:
+
+SQL Server
+
+AI:
+
+Multiple Free / Free-Tier LLM APIs through the internal AI Gateway.
+
+External Integrations:
+
+- GitHub
+- Telegram
+- Discord
+- Cloudflare Turnstile
+
+============================================================
+22. SECURITY PRINCIPLES FOR GITHUB
+============================================================
+
+GitHub integration shall follow the principle of least privilege.
+
+The system shall:
+
+- Request only required permissions.
+- Securely store access credentials/tokens.
+- Never expose tokens to the frontend.
+- Avoid storing unnecessary repository content.
+- Avoid exposing private repository information.
+- Validate webhook authenticity.
+- Restrict repository access according to user permissions.
+
+============================================================
+23. FUTURE ENHANCEMENTS
+============================================================
+
+Possible future features:
+
+- Pull Request automatic review.
+- AI-generated test cases.
+- Automated bug reproduction where safe.
+- Advanced repository architecture mapping.
+- Developer skill analytics.
+- Personalized learning paths.
+- Team knowledge bases.
+- Team code review analytics.
+- Advanced challenge difficulty adaptation.
+- Multi-language programming support.
+- More AI providers.
+- More communication integrations.
+- Knowledge moderation workflow.
+- Community voting and feedback.
+- Advanced reputation system.
+
+============================================================
+24. PROJECT DIFFERENTIATOR
+============================================================
+
+The platform is not intended to be only:
+
+- An AI chatbot.
+- A simple debugging assistant.
+- A Stack Overflow clone.
+- A code review tool.
+- An e-learning platform.
+
+The core concept is combining these capabilities into one continuous developer workflow:
+
+REAL PROBLEM
+    ↓
+AI DEBUGGING
+    ↓
+SUCCESSFUL SOLUTION
+    ↓
+KNOWLEDGE
+    ↓
+EDUCATIONAL ARTICLE
+    ↓
+PRACTICE CHALLENGE
+    ↓
+GITHUB IMPLEMENTATION
+    ↓
+AI EVALUATION
+    ↓
+NEW KNOWLEDGE
+    ↓
+BETTER FUTURE SOLUTIONS
+
+The system therefore creates a continuously improving developer knowledge and practice ecosystem based on real-world problems.
+
+============================================================
+25. SUCCESS CRITERIA
+============================================================
+
+The project shall be considered successful when a developer can:
+
+1. Submit a real programming problem.
+2. Receive AI debugging assistance.
+3. Understand the root cause.
+4. Follow step-by-step instructions.
+5. Confirm whether the problem was solved.
+6. Continue debugging if it was not solved.
+7. Have the successful problem stored.
+8. Find the problem later through the knowledge base.
+9. Read an educational article generated from the problem.
+10. Start a related practical challenge.
+11. Receive a GitHub repository for the challenge.
+12. Submit a solution.
+13. Receive AI evaluation.
+14. Connect GitHub repositories for debugging/code review.
+15. Search similar historical problems.
+16. Benefit from previously successful solutions.
+17. Use Telegram to find existing solutions.
+18. Experience provider failover without manually selecting an LLM provider.
+
+============================================================
+END OF SOFTWARE REQUIREMENTS SPECIFICATION
+============================================================

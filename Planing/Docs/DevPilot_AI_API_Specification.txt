@@ -1,0 +1,746 @@
+DEVPILOT AI
+API SPECIFICATION
+============================================================
+
+Version: 1.0
+Backend: ASP.NET Core Web API
+Database: SQL Server
+Backend Hosting: MonsterASP
+Frontend: Undefined Yet
+Frontend Hosting: Cloudflare Pages
+Email Provider: Brevo
+
+PURPOSE
+Define the REST API contract for the approved DevPilot AI business flow:
+Authentication, Email Verification, Problems, AI Debugging, Knowledge Base,
+Similarity Search, Challenges, GitHub, Code Review, Telegram, AI Gateway,
+and Administration.
+
+============================================================
+1. GENERAL RULES
+============================================================
+
+Base path:
+ /api
+
+Format:
+ JSON over HTTPS
+
+Authentication:
+ Bearer access token for protected endpoints.
+
+Roles:
+ Developer
+ Administrator
+
+Generic error response:
+{
+  "success": false,
+  "errorCode": "ERROR_CODE",
+  "message": "Safe user-facing message",
+  "requestId": "correlation-id"
+}
+
+Public endpoints include article browsing/search and selected integration
+webhooks. Protected endpoints require authentication. Admin endpoints require
+Administrator authorization.
+
+============================================================
+2. AUTHENTICATION & EMAIL VERIFICATION
+============================================================
+
+POST /api/auth/register
+Access: Public
+Purpose: Create developer account and start email verification.
+
+Request:
+{
+  "name": "Mahmoud",
+  "email": "developer@example.com",
+  "password": "StrongPassword",
+  "turnstileToken": "..."
+}
+
+Process:
+1. Validate input.
+2. Create User with EmailVerifiedAt = NULL.
+3. Create EmailVerification record.
+4. Generate OTP or verification token.
+5. Send verification email through Brevo.
+6. Return verification-required result.
+
+POST /api/auth/verify-email
+Access: Public
+Purpose: Verify OTP or verification token.
+
+OTP request:
+{
+  "email": "developer@example.com",
+  "code": "483921"
+}
+
+Link request:
+{
+  "token": "verification-token"
+}
+
+On success:
+- Mark EmailVerifications.VerifiedAt.
+- Set Users.EmailVerifiedAt.
+- Invalidate active verification.
+- Allow authenticated access.
+
+POST /api/auth/resend-verification
+Access: Public
+Purpose: Invalidate active verification and send a new OTP/link through Brevo.
+
+POST /api/auth/login
+Access: Public
+Purpose: Authenticate verified developer.
+
+POST /api/auth/refresh
+Access: Refresh token
+
+POST /api/auth/logout
+Access: Authenticated
+
+POST /api/auth/forgot-password
+Access: Public
+Purpose: Send password reset email through Brevo without revealing account
+existence.
+
+POST /api/auth/reset-password
+Access: Public with valid reset token.
+
+Security:
+- Store OTP/token hashes, not raw OTP values.
+- Apply expiration.
+- Apply maximum attempts.
+- Apply resend cooldown/rate limiting.
+- Never expose Brevo credentials to frontend.
+
+============================================================
+3. USER / PROFILE
+============================================================
+
+GET /api/users/me
+Access: Developer
+Returns current developer profile.
+
+PATCH /api/users/me
+Access: Developer
+Updates profile.
+
+GET /api/users/me/problems
+Access: Developer
+Returns current developer's problem history.
+
+GET /api/users/me/challenges
+Access: Developer
+Returns challenge attempts and results.
+
+GET /api/users/me/integrations
+Access: Developer
+Returns integration status.
+
+============================================================
+4. PROBLEMS & DEBUGGING
+============================================================
+
+POST /api/problems
+Access: Developer
+Purpose: Create a new technical problem.
+
+Request:
+{
+  "title": "JWT returns 401",
+  "description": "...",
+  "errorMessage": "401 Unauthorized",
+  "stackTrace": "...",
+  "technologyHint": "ASP.NET Core"
+}
+
+POST /api/problems/{problemId}/requests
+Access: Developer
+Purpose: Add another request/input when the problem is still unresolved.
+
+POST /api/problems/{problemId}/debug
+Access: Developer
+Purpose: Run AI debugging.
+
+Processing:
+1. Validate input.
+2. Normalize technical context.
+3. Search similar historical problems.
+4. Evaluate similarity.
+5. Retrieve successful reusable solutions when appropriate.
+6. Build optimized AI context.
+7. Call AI Gateway.
+8. Select available provider/model.
+9. Validate/normalize response.
+10. Store AI request/response.
+11. Store DebuggingAttempt.
+12. Return solution.
+
+Response example:
+{
+  "success": true,
+  "data": {
+    "attemptId": 12,
+    "attemptNumber": 1,
+    "rootCause": "...",
+    "solution": "...",
+    "whyItWorks": "...",
+    "similarProblems": [
+      {
+        "problemCode": "DEV-000102",
+        "similarityScore": 0.94
+      }
+    ]
+  }
+}
+
+POST /api/problems/{problemId}/attempts/{attemptId}/feedback
+Access: Problem owner
+Request:
+{
+  "result": "Solved",
+  "comment": "..."
+}
+
+Allowed:
+- Solved
+- StillHaveAProblem
+
+Solved:
+- Mark problem solved.
+- Store successful solution.
+- Update knowledge/article workflow.
+
+StillHaveAProblem:
+- Store feedback.
+- Start another debugging attempt.
+
+GET /api/problems/{problemCode}
+Access: Owner or public article/knowledge view according to visibility rules.
+
+GET /api/problems/{problemId}/history
+Access: Owner
+Returns requests, attempts, feedback, and successful solutions.
+
+============================================================
+5. SEARCH & SIMILARITY
+============================================================
+
+GET /api/problems/search
+Access: Public/Protected according to configured visibility.
+
+Query:
+q
+technology
+tag
+problemCode
+error
+page
+pageSize
+sort
+
+POST /api/search/similar-problems
+Access: Authenticated
+Purpose: Semantic/keyword search before unnecessary LLM processing.
+
+The similarity system considers:
+- Problem description
+- Error messages
+- Stack traces
+- Code context
+- Technology/framework
+- Tags
+- Previously successful solutions
+
+============================================================
+6. KNOWLEDGE ARTICLES
+============================================================
+
+GET /api/articles
+Access: Public
+
+GET /api/articles/{articleId}
+Access: Public
+
+Article response should contain:
+- Problem code
+- Problem
+- Error/code context
+- Root cause
+- Step-by-step solution
+- Explanation of each step
+- Best practices
+- Prevention
+- Statistics
+- Related problems
+- Practice challenge when available
+
+GET /api/articles/{articleId}/versions
+Access: Administrator
+
+GET /api/articles/{articleId}/versions/{versionId}
+Access: Administrator
+
+POST /api/problems/{problemId}/article/generate
+Access: Internal workflow / Administrator
+
+POST /api/articles/{articleId}/regenerate
+Access: Internal workflow / Administrator
+
+Article versioning:
+- New successful knowledge can generate a new ArticleVersion.
+- Previous versions are preserved.
+- Current article points to CurrentVersionId.
+
+============================================================
+7. CHALLENGES
+============================================================
+
+GET /api/challenges
+Access: Public
+
+GET /api/challenges/{challengeId}
+Access: Public
+Important: Do not expose the complete solution.
+
+POST /api/challenges
+Access: Authenticated or internal AI workflow
+Purpose: Create/generate challenge from a solved problem.
+
+POST /api/challenges/{challengeId}/start
+Access: Developer
+
+Process:
+1. Verify authentication.
+2. Create ChallengeAttempt.
+3. Create/prepare GitHub repository when permitted.
+4. Associate repository with attempt.
+5. Return challenge repository/environment information.
+
+GET /api/challenges/attempts/{attemptId}
+Access: Attempt owner
+
+POST /api/challenges/attempts/{attemptId}/evaluate
+Access: Attempt owner / internal evaluation workflow
+
+Evaluation can use:
+- Build/test results
+- Functional correctness
+- Requirement completion
+- Code quality
+- Security
+- Performance
+- Architecture
+- Understanding of original problem
+- Best practices
+
+============================================================
+8. GITHUB
+============================================================
+
+GET /api/github/connect
+Access: Developer
+Starts OAuth.
+
+GET /api/github/callback
+Access: OAuth callback
+Must validate state.
+
+GET /api/github/repositories
+Access: Developer
+Returns repositories available through GitHub permissions.
+
+GET /api/github/repositories/{repositoryId}/files
+Access: Developer
+Query:
+branch
+path
+
+Purpose:
+Retrieve only relevant repository context.
+
+POST /api/github/repositories/{repositoryId}/debug
+Access: Developer
+
+Request:
+{
+  "branch": "main",
+  "paths": ["Program.cs", "AuthService.cs"],
+  "problemDescription": "JWT returns 401"
+}
+
+The API should avoid sending unnecessary files to the LLM.
+
+POST /api/github/challenges/{challengeId}/repository
+Access: Developer
+Creates/initializes the challenge repository.
+
+POST /api/github/webhook
+Access: GitHub only
+Receives supported events such as:
+- Push
+- Pull Request
+
+Must validate webhook authenticity.
+
+============================================================
+9. AI CODE REVIEW
+============================================================
+
+POST /api/code-review
+Access: Developer
+
+Request may contain:
+{
+  "repositoryId": 55,
+  "branchName": "main",
+  "pullRequestNumber": 18,
+  "files": ["src/Services/AuthService.cs"]
+}
+
+Review may identify:
+- Bugs
+- Security issues
+- Performance issues
+- Code smells
+- SOLID violations
+- Maintainability
+- Architecture concerns
+- Best practices
+
+GET /api/code-review/{reviewId}
+Access: Review owner / Administrator
+
+Finding response includes:
+- FilePath
+- Severity
+- Category
+- Problem
+- Suggestion
+
+============================================================
+10. TELEGRAM
+============================================================
+
+POST /api/telegram/webhook
+Access: Telegram
+
+Flow:
+Telegram
+ ->
+Webhook
+ ->
+Knowledge/Search
+ ->
+Similar solved problem?
+ -> YES: return solution + article link
+ -> NO: AI Gateway fallback
+ ->
+Store AI request/response when used
+ ->
+Return answer
+
+GET /api/telegram/status
+Access: Developer
+
+============================================================
+11. AI GATEWAY
+============================================================
+
+These endpoints are internal and should not be publicly exposed.
+
+POST /api/ai/generate
+Purpose:
+Central AI operation entry point.
+
+Request:
+{
+  "operationType": "Debugging",
+  "problemId": 1001,
+  "context": "..."
+}
+
+The AI Gateway handles:
+- Provider selection
+- Model selection
+- Usage tracking
+- Retry
+- Failover
+- Response normalization
+- Prompt version selection
+
+Provider behavior:
+1. Select highest-priority available provider/model.
+2. Call provider.
+3. On success, store usage.
+4. On rate limit/error, mark provider/model temporarily unavailable.
+5. Retry with next available provider.
+6. Do not expose internal switching to user.
+
+GET /api/admin/ai/providers/health
+Access: Administrator
+
+GET /api/admin/ai/providers
+Access: Administrator
+
+POST /api/admin/ai/providers
+Access: Administrator
+
+PATCH /api/admin/ai/providers/{providerId}
+Access: Administrator
+
+GET /api/admin/ai/usage
+Access: Administrator
+
+GET /api/admin/ai/failures
+Access: Administrator
+
+Provider credentials must never be returned.
+
+============================================================
+12. ADMIN
+============================================================
+
+GET /api/admin/users
+GET /api/admin/users/{userId}
+PATCH /api/admin/users/{userId}
+
+GET /api/admin/problems
+GET /api/admin/problems/{problemId}
+
+GET /api/admin/articles
+PATCH /api/admin/articles/{articleId}
+
+Possible article actions:
+- Approve
+- Hide
+- Request regeneration
+- Change publication state
+
+GET /api/admin/technologies
+POST /api/admin/technologies
+PATCH /api/admin/technologies/{technologyId}
+
+============================================================
+13. STATUS / ENUMS
+============================================================
+
+VerificationMethod:
+- OTP
+- Link
+
+ProblemStatus:
+- Active
+- Solved
+
+FeedbackResult:
+- Solved
+- StillHaveAProblem
+
+ChallengeDifficulty:
+- Easy
+- Medium
+- Hard
+
+ChallengeAttemptStatus:
+- Started
+- Submitted
+- Evaluating
+- Evaluated
+- Completed
+- Failed
+
+AIRequestStatus:
+- Pending
+- Success
+- Failed
+- RateLimited
+- Cancelled
+
+ReviewStatus:
+- Pending
+- Analyzing
+- Completed
+- Failed
+
+ArticleStatus:
+- Draft
+- Published
+- Archived
+- NeedsReview
+
+============================================================
+14. HTTP STATUS CODES
+============================================================
+
+200 OK
+201 Created
+204 No Content
+400 Bad Request
+401 Unauthorized
+403 Forbidden
+404 Not Found
+409 Conflict
+422 Unprocessable Entity
+429 Too Many Requests
+500 Internal Server Error
+502 Bad Gateway
+503 Service Unavailable
+
+============================================================
+15. SECURITY REQUIREMENTS
+============================================================
+
+- HTTPS only.
+- Secure authentication and authorization.
+- Validate all request data.
+- Rate limit abuse-sensitive endpoints.
+- Use Cloudflare Turnstile where appropriate.
+- Never expose AI provider API keys to frontend.
+- Never expose GitHub tokens to frontend.
+- Store GitHub credentials securely/encrypted.
+- Store OTP/token as hashes.
+- Expire verification/reset records.
+- Apply resend cooldown.
+- Validate GitHub webhook authenticity.
+- Use least-privilege GitHub permissions.
+- Keep private repository data private.
+- Do not place sensitive credentials inside AI prompts.
+- Centralized exception handling.
+- Never return internal stack traces in production.
+
+============================================================
+16. TOKEN OPTIMIZATION RULES
+============================================================
+
+New request
+ ->
+Normalize
+ ->
+Similarity Search
+ ->
+Suitable solution?
+    |
+    +-- YES -> retrieve successful solution -> adapt with AI
+    |
+    +-- NO  -> fresh AI debugging
+
+The system must:
+- Search knowledge before fresh AI calls.
+- Reuse successful solutions.
+- Send only relevant repository files.
+- Cache reusable output where appropriate.
+- Track token/request usage.
+- Save successful adaptations.
+- Use multiple providers with failover.
+
+============================================================
+17. ARTICLE EVOLUTION RULES
+============================================================
+
+When multiple successful solutions exist:
+
+1. Collect successful variants.
+2. Analyze supporting evidence.
+3. Synthesize improved solution.
+4. Generate new ArticleVersion.
+5. Preserve previous versions.
+6. Update CurrentVersionId.
+
+The newest version should represent the best currently supported solution,
+not simply the most recently generated text.
+
+============================================================
+18. GITHUB CHALLENGE FLOW
+============================================================
+
+Start Challenge
+ ->
+Create ChallengeAttempt
+ ->
+Create/prepare GitHub repository
+ ->
+Developer codes online
+ ->
+GitHub Push / Pull Request
+ ->
+GitHub Webhook
+ ->
+Build / Tests
+ ->
+AI Evaluation
+ ->
+ChallengeEvaluation
+ ->
+Developer Result
+
+Online development may use GitHub Codespaces / Dev Containers.
+Docker is not required on the developer's local machine and is not part of the
+MonsterASP hosting layer.
+
+============================================================
+19. API IMPLEMENTATION ORDER
+============================================================
+
+Phase 1:
+Authentication + Email Verification
+
+Phase 2:
+Problems + Debugging + Feedback + History
+
+Phase 3:
+Knowledge Base + Search + Similarity
+
+Phase 4:
+AI Gateway + Provider Management + Usage
+
+Phase 5:
+GitHub OAuth + Repository Access + Webhooks
+
+Phase 6:
+Challenges + GitHub Challenge Repository + Evaluation
+
+Phase 7:
+AI Code Review
+
+Phase 8:
+Telegram
+
+Phase 9:
+Admin
+
+============================================================
+20. FINAL API FLOW
+============================================================
+
+Frontend
+  |
+  v
+ASP.NET Core Web API
+  |
+  +-- Authentication
+  +-- Problems
+  +-- Debugging
+  +-- Search / Similarity
+  +-- Knowledge
+  +-- Challenges
+  +-- GitHub
+  +-- Code Review
+  +-- Telegram
+  +-- Admin
+  |
+  +-- AI Gateway
+  +-- Email Service
+  |
+  v
+SQL Server / Brevo / GitHub / Telegram / LLM Providers
+
+============================================================
+END OF API SPECIFICATION
+============================================================
