@@ -13,6 +13,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.2" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.6.0" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -20,5 +21,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="Email\Templates\*.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>

@@ -1,3 +1,4 @@
+using DevPilotAI.Domain.Common;
 using DevPilotAI.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +9,8 @@ public interface IApplicationDbContext
     DbSet<User> Users { get; }
     DbSet<Role> Roles { get; }
     DbSet<UserRole> UserRoles { get; }
+    DbSet<EmailVerification> EmailVerifications { get; }
+    DbSet<RefreshToken> RefreshTokens { get; }
 
     DbSet<Problem> Problems { get; }
     DbSet<ProblemRequest> ProblemRequests { get; }
@@ -32,5 +35,6 @@ public interface IApplicationDbContext
     DbSet<AIModel> AIModels { get; }
     DbSet<AIRequest> AIRequests { get; }
 
+    void SoftDelete<TEntity>(TEntity entity) where TEntity : class, ISoftDeletable;
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

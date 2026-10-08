@@ -1,8 +1,9 @@
+using DevPilotAI.Domain.Common;
 using DevPilotAI.Domain.Enums;
 
 namespace DevPilotAI.Domain.Entities;
 
-public class Problem
+public class Problem : ISoftDeletable
 {
     public int ProblemId { get; set; }
     public string ProblemCode { get; set; } = string.Empty;
@@ -12,6 +13,8 @@ public class Problem
     public string Title { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
     public ProblemStatus Status { get; set; } = ProblemStatus.Open;
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ResolvedAt { get; set; }
 

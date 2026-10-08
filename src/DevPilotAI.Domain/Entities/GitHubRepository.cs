@@ -1,6 +1,8 @@
+using DevPilotAI.Domain.Common;
+
 namespace DevPilotAI.Domain.Entities;
 
-public class GitHubRepository
+public class GitHubRepository : ISoftDeletable
 {
     public int GitHubRepositoryId { get; set; }
     public int GitHubAccountId { get; set; }
@@ -11,6 +13,8 @@ public class GitHubRepository
     public string RepoUrl { get; set; } = string.Empty;
     public string DefaultBranch { get; set; } = "main";
     public bool IsPrivate { get; set; }
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
 
     public ICollection<CodeReview> CodeReviews { get; set; } = new List<CodeReview>();
 }

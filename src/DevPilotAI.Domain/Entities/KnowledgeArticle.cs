@@ -1,6 +1,8 @@
+using DevPilotAI.Domain.Common;
+
 namespace DevPilotAI.Domain.Entities;
 
-public class KnowledgeArticle
+public class KnowledgeArticle : ISoftDeletable
 {
     public int KnowledgeArticleId { get; set; }
     public int ProblemId { get; set; }
@@ -11,6 +13,8 @@ public class KnowledgeArticle
     public string Summary { get; set; } = string.Empty;
     public int CurrentVersion { get; set; } = 1;
     public bool IsPublished { get; set; } = true;
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<ArticleVersion> Versions { get; set; } = new List<ArticleVersion>();

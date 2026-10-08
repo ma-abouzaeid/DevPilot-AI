@@ -1,3 +1,5 @@
+using DevPilotAI.Domain.Enums;
+
 namespace DevPilotAI.Domain.Entities;
 
 public class DebuggingAttempt
@@ -9,6 +11,7 @@ public class DebuggingAttempt
     public int ProblemRequestId { get; set; }
     public ProblemRequest ProblemRequest { get; set; } = null!;
 
+    public int AttemptNumber { get; set; }
     public string RootCauseAnalysis { get; set; } = string.Empty;
     public string Explanation { get; set; } = string.Empty;
     public string ProposedSolution { get; set; } = string.Empty;

@@ -5,4 +5,7 @@
     <Project Path="src/DevPilotAI.Domain/DevPilotAI.Domain.csproj" />
     <Project Path="src/DevPilotAI.Infrastructure/DevPilotAI.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DevPilotAI.Tests/DevPilotAI.Tests.csproj" />
+  </Folder>
 </Solution>
