@@ -11,7 +11,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-                       ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found in configuration.");
+                       ?? throw new InvalidOperationException("Connection string not found in configuration.");
 
 builder.Services.AddDbContext<DevPilotDbContext>(options =>
 {
@@ -61,6 +61,8 @@ if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "DevPilot AI API v1");
         c.RoutePrefix = "swagger";
     });
+
+    app.MapGet("/", () => Results.Redirect("/swagger"));
 }
 
 app.UseCors("DevPilotCorsPolicy");
