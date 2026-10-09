@@ -8,6 +8,7 @@ using DevPilotAI.Infrastructure.Persistence;
 using DevPilotAI.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -77,6 +78,13 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddDevPilotRateLimiting(builder.Configuration);
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var jwtSecret = builder.Configuration["JwtSettings:Secret"] ?? "DevPilotAI_Super_Secret_Key_Change_In_Production_123456789!";
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "DevPilotAI";
 var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "DevPilotAIUsers";
@@ -123,8 +131,19 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() 
-                     ?? new[] { "http://localhost:3000", "https://devpilot.ai" };
+var rawAllowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+if (rawAllowedOrigins == null || rawAllowedOrigins.Length == 0)
+{
+    var commaOrigins = builder.Configuration["AllowedOrigins"];
+    if (!string.IsNullOrWhiteSpace(commaOrigins))
+    {
+        rawAllowedOrigins = commaOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+}
+
+var allowedOrigins = (rawAllowedOrigins != null && rawAllowedOrigins.Length > 0)
+    ? rawAllowedOrigins.Select(o => o.Trim().TrimEnd('/')).Distinct().ToArray()
+    : new[] { "https://devpilot-ai-three.vercel.app", "http://localhost:3000" };
 
 builder.Services.AddCors(options =>
 {
@@ -139,6 +158,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.Use(async (context, next) =>
@@ -151,7 +171,11 @@ app.Use(async (context, next) =>
     await next();
 });
 
-if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
+var enableSwagger = builder.Configuration.GetValue<bool>("Swagger:Enabled", false)
+                    || app.Environment.IsDevelopment()
+                    || app.Environment.IsStaging();
+
+if (enableSwagger)
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
@@ -159,9 +183,14 @@ if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "DevPilot AI API v1");
         c.RoutePrefix = "swagger";
     });
-
-    app.MapGet("/", () => Results.Redirect("/swagger"));
 }
+
+app.MapGet("/", () => Results.Ok(new
+{
+    status = "Online",
+    service = "DevPilot AI API",
+    version = "v1"
+}));
 
 app.UseCors("DevPilotCorsPolicy");
 app.UseHttpsRedirection();
