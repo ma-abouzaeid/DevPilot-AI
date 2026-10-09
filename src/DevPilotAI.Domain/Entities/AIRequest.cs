@@ -23,4 +23,6 @@ public class AIRequest
     public bool Success { get; set; } = true;
     public string? ErrorMessage { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public ICollection<AIUsageEvent> AIUsageEvents { get; set; } = new List<AIUsageEvent>();
 }

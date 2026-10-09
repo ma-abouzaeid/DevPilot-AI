@@ -1,4 +1,5 @@
 using DevPilotAI.Application.Common.Interfaces;
+using DevPilotAI.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevPilotAI.Application.Services;
@@ -6,10 +7,12 @@ namespace DevPilotAI.Application.Services;
 public class UserService : IUserService
 {
     private readonly IApplicationDbContext _dbContext;
+    private readonly IAuditService? _auditService;
 
-    public UserService(IApplicationDbContext dbContext)
+    public UserService(IApplicationDbContext dbContext, IAuditService? auditService = null)
     {
         _dbContext = dbContext;
+        _auditService = auditService;
     }
 
     public async Task DeleteAccountAsync(int userId, CancellationToken cancellationToken = default)
@@ -38,5 +41,17 @@ public class UserService : IUserService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (_auditService != null)
+        {
+            await _auditService.LogAsync(
+                SecurityAuditEventTypes.AccountSoftDeleted,
+                nameof(User),
+                userId.ToString(),
+                oldValues: null,
+                newValues: new { UserId = userId, DeletedAt = user.DeletedAt },
+                userId: userId,
+                cancellationToken: cancellationToken);
+        }
     }
 }

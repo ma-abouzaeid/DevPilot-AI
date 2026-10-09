@@ -66,6 +66,39 @@ public class DatabaseRelationshipTests
     }
 
     [Fact]
+    public async Task DeletingParentUser_WithChildAuditLog_DoesNotCascadeDeleteAuditLog()
+    {
+        using var context = GetDbContext();
+
+        var user = new User
+        {
+            Name = "Audit Cascade Test User",
+            Email = "audit-cascade-test@example.com",
+            PasswordHash = "HashedPassword123"
+        };
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
+        var auditLog = new AuditLog
+        {
+            UserId = user.UserId,
+            Action = "TEST_CASCADE",
+            EntityName = "User",
+            EntityId = user.UserId.ToString()
+        };
+        context.AuditLogs.Add(auditLog);
+        await context.SaveChangesAsync();
+
+        context.Users.Remove(user);
+        await context.SaveChangesAsync();
+
+        var remainingLog = await context.AuditLogs
+            .FirstOrDefaultAsync(l => l.AuditLogId == auditLog.AuditLogId);
+
+        Assert.NotNull(remainingLog);
+    }
+
+    [Fact]
     public async Task DeletingParentProblem_WithChildProblemRequest_IsBlockedFromCascadeDeletingChild()
     {
         using var context = GetDbContext();

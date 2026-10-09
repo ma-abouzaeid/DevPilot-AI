@@ -12,4 +12,5 @@ public class AIModel
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<AIRequest> Requests { get; set; } = new List<AIRequest>();
+    public ICollection<AIUsageEvent> AIUsageEvents { get; set; } = new List<AIUsageEvent>();
 }

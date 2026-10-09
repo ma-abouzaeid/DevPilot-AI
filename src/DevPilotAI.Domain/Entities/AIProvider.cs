@@ -16,4 +16,5 @@ public class AIProvider
 
     public ICollection<AIModel> Models { get; set; } = new List<AIModel>();
     public ICollection<AIRequest> Requests { get; set; } = new List<AIRequest>();
+    public ICollection<AIUsageEvent> AIUsageEvents { get; set; } = new List<AIUsageEvent>();
 }

@@ -1,10 +1,13 @@
 using DevPilotAI.Application.Services;
+using DevPilotAI.Infrastructure.Security;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace DevPilotAI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[EnableRateLimiting(RateLimitPolicies.General)]
 public class ProblemsController : ControllerBase
 {
     private readonly IProblemService _problemService;
@@ -15,6 +18,7 @@ public class ProblemsController : ControllerBase
     }
 
     [HttpPost]
+    [EnableRateLimiting(RateLimitPolicies.AiAnalysis)]
     public async Task<IActionResult> SubmitProblem([FromBody] CreateProblemDto dto, CancellationToken cancellationToken)
     {
         var result = await _problemService.SubmitProblemAsync(dto, cancellationToken);
@@ -22,6 +26,7 @@ public class ProblemsController : ControllerBase
     }
 
     [HttpPost("{problemId:int}/requests")]
+    [EnableRateLimiting(RateLimitPolicies.AiFollowUp)]
     public async Task<IActionResult> AddProblemRequest(int problemId, [FromBody] AddProblemRequestDto dto, CancellationToken cancellationToken)
     {
         var result = await _problemService.AddProblemRequestAsync(problemId, dto, cancellationToken);
@@ -29,6 +34,7 @@ public class ProblemsController : ControllerBase
     }
 
     [HttpPost("{problemId:int}/debug")]
+    [EnableRateLimiting(RateLimitPolicies.AiAnalysis)]
     public async Task<IActionResult> DebugProblem(int problemId, [FromQuery] int requestId, CancellationToken cancellationToken)
     {
         var result = await _problemService.DebugProblemAsync(problemId, requestId, cancellationToken);
@@ -36,6 +42,7 @@ public class ProblemsController : ControllerBase
     }
 
     [HttpPost("{problemId:int}/attempts/{attemptId:int}/feedback")]
+    [EnableRateLimiting(RateLimitPolicies.AiFollowUp)]
     public async Task<IActionResult> SubmitFeedback(int problemId, int attemptId, [FromBody] FeedbackRequestDto dto, CancellationToken cancellationToken)
     {
         var result = await _problemService.SubmitFeedbackAsync(problemId, attemptId, dto.IsSolved, dto.Comments, cancellationToken);

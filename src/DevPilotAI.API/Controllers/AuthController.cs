@@ -1,5 +1,7 @@
 using DevPilotAI.Application.Services;
+using DevPilotAI.Infrastructure.Security;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace DevPilotAI.API.Controllers;
 
@@ -15,6 +17,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
+    [EnableRateLimiting(RateLimitPolicies.Register)]
     public async Task<IActionResult> Register([FromBody] RegisterRequestDto dto, CancellationToken cancellationToken)
     {
         var result = await _authService.RegisterAsync(dto, cancellationToken);
@@ -36,6 +39,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting(RateLimitPolicies.Login)]
     public async Task<IActionResult> Login([FromBody] LoginRequestDto dto, CancellationToken cancellationToken)
     {
         var result = await _authService.LoginAsync(dto, cancellationToken);

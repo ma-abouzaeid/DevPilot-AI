@@ -35,6 +35,16 @@ public interface IApplicationDbContext
     DbSet<AIModel> AIModels { get; }
     DbSet<AIRequest> AIRequests { get; }
 
+    DbSet<AuditLog> AuditLogs { get; }
+
+    DbSet<Plan> Plans { get; }
+    DbSet<Feature> Features { get; }
+    DbSet<PlanFeature> PlanFeatures { get; }
+    DbSet<UserSubscription> UserSubscriptions { get; }
+    DbSet<AIUsageEvent> AIUsageEvents { get; }
+    DbSet<UsagePeriod> UsagePeriods { get; }
+    DbSet<UsageLedger> UsageLedgers { get; }
+
     void SoftDelete<TEntity>(TEntity entity) where TEntity : class, ISoftDeletable;
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

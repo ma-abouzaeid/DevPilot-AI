@@ -23,4 +23,5 @@ public class Problem : ISoftDeletable
     public ICollection<ProblemSolution> ProblemSolutions { get; set; } = new List<ProblemSolution>();
     public ICollection<KnowledgeArticle> KnowledgeArticles { get; set; } = new List<KnowledgeArticle>();
     public ICollection<Challenge> Challenges { get; set; } = new List<Challenge>();
+    public ICollection<AIUsageEvent> AIUsageEvents { get; set; } = new List<AIUsageEvent>();
 }

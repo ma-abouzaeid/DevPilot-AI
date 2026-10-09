@@ -67,12 +67,15 @@ builder.Services.AddHttpClient<IEmailService, DevPilotAI.Infrastructure.Email.Br
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITurnstileService, TurnstileService>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+builder.Services.AddScoped<IAuditService, DevPilotAI.Infrastructure.Audit.AuditService>();
 builder.Services.AddScoped<IAIGateway, AIGatewayService>();
 builder.Services.AddScoped<IProblemService, ProblemService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddDevPilotRateLimiting(builder.Configuration);
 
 var jwtSecret = builder.Configuration["JwtSettings:Secret"] ?? "DevPilotAI_Super_Secret_Key_Change_In_Production_123456789!";
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "DevPilotAI";
@@ -164,6 +167,7 @@ app.UseCors("DevPilotCorsPolicy");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();

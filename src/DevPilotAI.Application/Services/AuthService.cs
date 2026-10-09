@@ -13,18 +13,21 @@ public class AuthService : IAuthService
     private readonly ITurnstileService _turnstileService;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly IEmailService _emailService;
+    private readonly IAuditService? _auditService;
     private readonly PasswordHasher<User> _passwordHasher;
 
     public AuthService(
         IApplicationDbContext dbContext,
         ITurnstileService turnstileService,
         IJwtTokenGenerator jwtTokenGenerator,
-        IEmailService emailService)
+        IEmailService emailService,
+        IAuditService? auditService = null)
     {
         _dbContext = dbContext;
         _turnstileService = turnstileService;
         _jwtTokenGenerator = jwtTokenGenerator;
         _emailService = emailService;
+        _auditService = auditService;
         _passwordHasher = new PasswordHasher<User>();
     }
 
@@ -86,6 +89,23 @@ public class AuthService : IAuthService
         });
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        var defaultPlan = await _dbContext.Plans
+            .FirstOrDefaultAsync(p => p.IsDefault && p.Status == "Active", cancellationToken);
+        if (defaultPlan != null)
+        {
+            _dbContext.UserSubscriptions.Add(new UserSubscription
+            {
+                UserId = user.UserId,
+                PlanId = defaultPlan.PlanId,
+                Status = "Active",
+                StartDate = DateTime.UtcNow,
+                AssignmentSource = "Registration",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
         var rawOtp = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
         var otpHash = HashString(rawOtp);
 
@@ -103,6 +123,18 @@ public class AuthService : IAuthService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         await _emailService.SendVerificationEmailAsync(user.Email, user.Name, rawOtp, cancellationToken);
+
+        if (_auditService != null)
+        {
+            await _auditService.LogAsync(
+                SecurityAuditEventTypes.AccountCreated,
+                nameof(User),
+                user.UserId.ToString(),
+                oldValues: null,
+                newValues: new { user.Email, user.Name },
+                userId: user.UserId,
+                cancellationToken: cancellationToken);
+        }
 
         return new RegisterResponseDto(
             Success: true,
@@ -165,6 +197,18 @@ public class AuthService : IAuthService
 
             await _dbContext.SaveChangesAsync(cancellationToken);
 
+            if (_auditService != null)
+            {
+                await _auditService.LogAsync(
+                    SecurityAuditEventTypes.EmailVerified,
+                    nameof(User),
+                    user.UserId.ToString(),
+                    oldValues: null,
+                    newValues: new { user.Email, Method = "OTP" },
+                    userId: user.UserId,
+                    cancellationToken: cancellationToken);
+            }
+
             return new VerifyEmailResponseDto(
                 Success: true,
                 Message: "Email verified successfully."
@@ -199,6 +243,18 @@ public class AuthService : IAuthService
         tokenVerification.User.EmailVerifiedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (_auditService != null)
+        {
+            await _auditService.LogAsync(
+                SecurityAuditEventTypes.EmailVerified,
+                nameof(User),
+                tokenVerification.User.UserId.ToString(),
+                oldValues: null,
+                newValues: new { tokenVerification.User.Email, Method = "Token" },
+                userId: tokenVerification.User.UserId,
+                cancellationToken: cancellationToken);
+        }
 
         return new VerifyEmailResponseDto(
             Success: true,
@@ -267,17 +323,50 @@ public class AuthService : IAuthService
 
         if (user == null || user.IsDeleted)
         {
+            if (_auditService != null)
+            {
+                await _auditService.LogAsync(
+                    SecurityAuditEventTypes.LoginFailed,
+                    nameof(User),
+                    normalizedEmail,
+                    oldValues: null,
+                    newValues: new { Email = normalizedEmail, Reason = "User not found or deleted" },
+                    userId: null,
+                    cancellationToken: cancellationToken);
+            }
             throw new UnauthorizedAccessException("Invalid email or password.");
         }
 
         var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password);
         if (verificationResult == PasswordVerificationResult.Failed)
         {
+            if (_auditService != null)
+            {
+                await _auditService.LogAsync(
+                    SecurityAuditEventTypes.LoginFailed,
+                    nameof(User),
+                    user.UserId.ToString(),
+                    oldValues: null,
+                    newValues: new { Email = normalizedEmail, Reason = "Password mismatch" },
+                    userId: user.UserId,
+                    cancellationToken: cancellationToken);
+            }
             throw new UnauthorizedAccessException("Invalid email or password.");
         }
 
         if (!user.EmailVerifiedAt.HasValue)
         {
+            if (_auditService != null)
+            {
+                await _auditService.LogAsync(
+                    SecurityAuditEventTypes.LoginFailed,
+                    nameof(User),
+                    user.UserId.ToString(),
+                    oldValues: null,
+                    newValues: new { Email = normalizedEmail, Reason = "Email not verified" },
+                    userId: user.UserId,
+                    cancellationToken: cancellationToken);
+            }
             throw new UnauthorizedAccessException("Email is not verified. Please verify your account before logging in.");
         }
 
@@ -308,6 +397,18 @@ public class AuthService : IAuthService
 
         _dbContext.RefreshTokens.Add(refreshTokenEntity);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (_auditService != null)
+        {
+            await _auditService.LogAsync(
+                SecurityAuditEventTypes.LoginSuccess,
+                nameof(User),
+                user.UserId.ToString(),
+                oldValues: null,
+                newValues: new { user.Email, user.Name, Roles = roles },
+                userId: user.UserId,
+                cancellationToken: cancellationToken);
+        }
 
         var userDto = new UserDto(
             UserId: user.UserId,
@@ -357,6 +458,19 @@ public class AuthService : IAuthService
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
+
+            if (_auditService != null)
+            {
+                await _auditService.LogAsync(
+                    SecurityAuditEventTypes.RefreshTokenReuse,
+                    nameof(RefreshToken),
+                    tokenEntity.RefreshTokenId.ToString(),
+                    oldValues: null,
+                    newValues: new { UserId = tokenEntity.UserId, RevokedCount = userTokens.Count },
+                    userId: tokenEntity.UserId,
+                    cancellationToken: cancellationToken);
+            }
+
             throw new UnauthorizedAccessException("Refresh token reuse detected. All active sessions have been revoked for security.");
         }
 
@@ -420,6 +534,18 @@ public class AuthService : IAuthService
             tokenEntity.IsRevoked = true;
             tokenEntity.RevokedAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync(cancellationToken);
+
+            if (_auditService != null)
+            {
+                await _auditService.LogAsync(
+                    SecurityAuditEventTypes.Logout,
+                    nameof(RefreshToken),
+                    tokenEntity.RefreshTokenId.ToString(),
+                    oldValues: null,
+                    newValues: new { tokenEntity.UserId },
+                    userId: tokenEntity.UserId,
+                    cancellationToken: cancellationToken);
+            }
         }
 
         return new LogoutResponseDto(
@@ -509,6 +635,18 @@ public class AuthService : IAuthService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (_auditService != null)
+        {
+            await _auditService.LogAsync(
+                SecurityAuditEventTypes.PasswordReset,
+                nameof(User),
+                verification.UserId.ToString(),
+                oldValues: null,
+                newValues: new { verification.UserId, verification.User.Email },
+                userId: verification.UserId,
+                cancellationToken: cancellationToken);
+        }
 
         return new ResetPasswordResponseDto(
             Success: true,

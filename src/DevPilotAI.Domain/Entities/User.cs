@@ -18,5 +18,9 @@ public class User : ISoftDeletable
     public ICollection<GitHubAccount> GitHubAccounts { get; set; } = new List<GitHubAccount>();
     public ICollection<CodeReview> CodeReviews { get; set; } = new List<CodeReview>();
     public ICollection<ChallengeAttempt> ChallengeAttempts { get; set; } = new List<ChallengeAttempt>();
-    public ICollection<AIRequest> AIRequests { get; set; } = new List<AIRequest>();
+    public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
+    public ICollection<UserSubscription> UserSubscriptions { get; set; } = new List<UserSubscription>();
+    public ICollection<AIUsageEvent> AIUsageEvents { get; set; } = new List<AIUsageEvent>();
+    public ICollection<UsagePeriod> UsagePeriods { get; set; } = new List<UsagePeriod>();
+    public ICollection<UsageLedger> UsageLedgers { get; set; } = new List<UsageLedger>();
 }
