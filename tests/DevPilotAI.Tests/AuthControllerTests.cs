@@ -1,5 +1,6 @@
 using DevPilotAI.API.Controllers;
-using DevPilotAI.Application.Services;
+using DevPilotAI.Application.Authentication;
+using DevPilotAI.Application.Authentication.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Xunit;

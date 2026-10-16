@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using DevPilotAI.API.Controllers;
-using DevPilotAI.Application.Services;
+using DevPilotAI.Application.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;

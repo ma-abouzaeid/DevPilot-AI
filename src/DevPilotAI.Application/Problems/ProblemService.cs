@@ -4,7 +4,10 @@ using DevPilotAI.Domain.Entities;
 using DevPilotAI.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
-namespace DevPilotAI.Application.Services;
+using DevPilotAI.Application.Common.Models;
+using DevPilotAI.Application.Problems.DTOs;
+
+namespace DevPilotAI.Application.Problems;
 
 public class ProblemService : IProblemService
 {

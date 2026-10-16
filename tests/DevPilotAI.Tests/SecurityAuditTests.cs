@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using System.Text.Json;
 using DevPilotAI.Application.Common.Interfaces;
-using DevPilotAI.Application.Services;
+using DevPilotAI.Application.Authentication;
+using DevPilotAI.Application.Authentication.DTOs;
+using DevPilotAI.Application.Users;
 using DevPilotAI.Domain.Entities;
 using DevPilotAI.Infrastructure.Audit;
 using DevPilotAI.Infrastructure.Persistence;

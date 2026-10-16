@@ -1,5 +1,6 @@
+using DevPilotAI.Application.Authentication;
+using DevPilotAI.Application.Authentication.DTOs;
 using DevPilotAI.Application.Common.Interfaces;
-using DevPilotAI.Application.Services;
 using DevPilotAI.Domain.Entities;
 using DevPilotAI.Infrastructure.Persistence;
 using DevPilotAI.Infrastructure.Security;

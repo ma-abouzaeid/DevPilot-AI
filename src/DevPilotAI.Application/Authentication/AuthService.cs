@@ -6,7 +6,9 @@ using DevPilotAI.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace DevPilotAI.Application.Services;
+using DevPilotAI.Application.Authentication.DTOs;
+
+namespace DevPilotAI.Application.Authentication;
 
 public class AuthService : IAuthService
 {

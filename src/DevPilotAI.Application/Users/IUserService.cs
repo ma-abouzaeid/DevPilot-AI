@@ -1,4 +1,4 @@
-namespace DevPilotAI.Application.Services;
+namespace DevPilotAI.Application.Users;
 
 public interface IUserService
 {

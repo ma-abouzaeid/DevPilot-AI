@@ -3,7 +3,7 @@ using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace DevPilotAI.Application.Services;
+namespace DevPilotAI.Application.Users;
 
 public class UserService : IUserService
 {

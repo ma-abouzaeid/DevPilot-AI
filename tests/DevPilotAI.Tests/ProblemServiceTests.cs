@@ -1,5 +1,7 @@
 using DevPilotAI.Application.Common.Interfaces;
-using DevPilotAI.Application.Services;
+using DevPilotAI.Application.Common.Models;
+using DevPilotAI.Application.Problems;
+using DevPilotAI.Application.Problems.DTOs;
 using DevPilotAI.Domain.Entities;
 using DevPilotAI.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;

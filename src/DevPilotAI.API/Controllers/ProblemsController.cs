@@ -1,7 +1,8 @@
 using System.Security.Claims;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Models;
-using DevPilotAI.Application.Services;
+using DevPilotAI.Application.Problems;
+using DevPilotAI.Application.Problems.DTOs;
 using DevPilotAI.Domain.Entities;
 using DevPilotAI.Infrastructure.Security;
 using Microsoft.AspNetCore.Authorization;

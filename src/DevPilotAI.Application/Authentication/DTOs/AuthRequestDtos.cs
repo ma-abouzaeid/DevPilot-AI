@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace DevPilotAI.Application.Services;
+namespace DevPilotAI.Application.Authentication.DTOs;
 
 public class RegisterRequestDto
 {
@@ -96,68 +96,4 @@ public class ResetPasswordRequestDto
     [EmailAddress(ErrorMessage = "Invalid email format.")]
     [StringLength(255, ErrorMessage = "Email cannot exceed 255 characters.")]
     public string? Email { get; set; }
-}
-
-public record UserDto(
-    int UserId,
-    string Name,
-    string Email,
-    DateTime? EmailVerifiedAt
-);
-
-public record RegisterResponseDto(
-    bool Success,
-    string Message,
-    string Email,
-    bool RequiresVerification
-);
-
-public record VerifyEmailResponseDto(
-    bool Success,
-    string Message
-);
-
-public record ResendVerificationResponseDto(
-    bool Success,
-    string Message
-);
-
-public record LoginResponseDto(
-    bool Success,
-    string AccessToken,
-    string RefreshToken,
-    UserDto User
-);
-
-public record RefreshTokenResponseDto(
-    bool Success,
-    string AccessToken,
-    string RefreshToken
-);
-
-public record LogoutResponseDto(
-    bool Success,
-    string Message
-);
-
-public record ForgotPasswordResponseDto(
-    bool Success,
-    string Message
-);
-
-public record ResetPasswordResponseDto(
-    bool Success,
-    string Message
-);
-
-public interface IAuthService
-{
-    Task<RegisterResponseDto> RegisterAsync(RegisterRequestDto dto, CancellationToken cancellationToken = default);
-    Task<VerifyEmailResponseDto> VerifyEmailAsync(VerifyEmailRequestDto dto, CancellationToken cancellationToken = default);
-    Task<ResendVerificationResponseDto> ResendVerificationAsync(ResendVerificationRequestDto dto, CancellationToken cancellationToken = default);
-    Task<LoginResponseDto> LoginAsync(LoginRequestDto dto, CancellationToken cancellationToken = default);
-    Task<RefreshTokenResponseDto> RefreshTokenAsync(RefreshTokenRequestDto dto, CancellationToken cancellationToken = default);
-    Task<LogoutResponseDto> LogoutAsync(LogoutRequestDto dto, CancellationToken cancellationToken = default);
-    Task<ForgotPasswordResponseDto> ForgotPasswordAsync(ForgotPasswordRequestDto dto, CancellationToken cancellationToken = default);
-    Task<ResetPasswordResponseDto> ResetPasswordAsync(ResetPasswordRequestDto dto, CancellationToken cancellationToken = default);
 }

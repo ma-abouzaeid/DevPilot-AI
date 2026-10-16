@@ -1,0 +1,538 @@
+/* ============================================================
+   DevPilot AI - Motion System
+   Coordinates entrance sequences, micro-interactions and
+   loading/feedback states across the whole site.
+
+   Principles:
+   - Animate transform + opacity only (GPU friendly)
+   - One shared easing/duration language (see tokens below)
+   - All decorative motion is disabled for users who prefer
+     reduced motion (@media prefers-reduced-motion: reduce)
+   ============================================================ */
+
+:root {
+    --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+    --dur-fast: 180ms;
+    --dur-base: 320ms;
+    --dur-slow: 650ms;
+}
+
+/* ------------------------------------------------------------
+   Depth layers for the AI particle backdrops
+   Canvas sits behind the content, never intercepts input, and
+   never blocks scrolling or links.
+   ------------------------------------------------------------ */
+.hero-section,
+.why-section,
+.cta-section {
+    position: relative;
+}
+
+.hero-section > .container,
+.why-section > .container,
+.cta-section > .container {
+    position: relative;
+    z-index: 1;
+}
+
+.why-section,
+.cta-section {
+    overflow: hidden;
+}
+
+.net-canvas {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1s ease 250ms;
+}
+
+.net-canvas.is-active {
+    opacity: 1;
+}
+
+/* the section-sized mesh stays fainter so the code window leads */
+.net-canvas-soft {
+    opacity: 0;
+}
+
+.net-canvas-soft.is-active {
+    opacity: 0.85;
+}
+
+/* ------------------------------------------------------------
+   Slowly drifting gradient glows behind dark sections
+   (pure transform keyframes - no filters, no repaints)
+   ------------------------------------------------------------ */
+.why-section::before,
+.why-section::after,
+.cta-section::after,
+.login-section::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+    will-change: transform;
+}
+
+.why-section::before {
+    width: 460px;
+    height: 460px;
+    top: -150px;
+    right: -130px;
+    background: radial-gradient(circle at center, rgba(0, 102, 255, 0.26), rgba(0, 102, 255, 0) 68%);
+    animation: drift-a 22s ease-in-out infinite alternate;
+}
+
+.why-section::after {
+    width: 380px;
+    height: 380px;
+    bottom: -160px;
+    left: -120px;
+    background: radial-gradient(circle at center, rgba(0, 212, 255, 0.16), rgba(0, 212, 255, 0) 68%);
+    animation: drift-b 26s ease-in-out infinite alternate;
+}
+
+.cta-section::after {
+    width: 520px;
+    height: 520px;
+    top: -220px;
+    right: 8%;
+    background: radial-gradient(circle at center, rgba(0, 102, 255, 0.22), rgba(0, 102, 255, 0) 70%);
+    animation: drift-a 24s ease-in-out infinite alternate;
+}
+
+.login-section::after {
+    width: 520px;
+    height: 520px;
+    bottom: -240px;
+    right: -140px;
+    background: radial-gradient(circle at center, rgba(138, 43, 226, 0.16), rgba(138, 43, 226, 0) 68%);
+    animation: drift-b 28s ease-in-out infinite alternate;
+}
+
+@keyframes drift-a {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to { transform: translate3d(-46px, 32px, 0) scale(1.12); }
+}
+
+@keyframes drift-b {
+    from { transform: translate3d(0, 0, 0) scale(1.1); }
+    to { transform: translate3d(52px, -28px, 0) scale(1); }
+}
+
+/* decorative motion pauses while its section is off-screen */
+.motion-paused::before,
+.motion-paused::after {
+    animation-play-state: paused !important;
+}
+
+/* ------------------------------------------------------------
+   Micro-interactions: buttons, links, cards, focus
+   ------------------------------------------------------------ */
+.btn-primary,
+.btn-outline-light,
+.btn-outline-card,
+.btn-login {
+    transition:
+        transform var(--dur-fast) var(--ease-out-soft),
+        box-shadow var(--dur-fast) var(--ease-out-soft),
+        background-color var(--dur-fast) ease,
+        border-color var(--dur-fast) ease,
+        color var(--dur-fast) ease;
+}
+
+.btn-primary:hover,
+.btn-outline-light:hover,
+.btn-outline-card:hover:not(:disabled),
+.btn-login:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+
+.btn-primary:active,
+.btn-outline-light:active,
+.btn-outline-card:active:not(:disabled),
+.btn-login:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+    transition-duration: 80ms;
+}
+
+/* keyboard focus: always visible, never layout-shifting */
+a:focus-visible,
+button:focus-visible,
+.btn:focus-visible,
+.form-input:focus-visible,
+.otp-input:focus-visible,
+.article-card:focus-visible {
+    outline: 2px solid #4d9bff;
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
+.form-input:focus-visible,
+.otp-input:focus-visible,
+.login-card .btn:focus-visible {
+    outline: none; /* colored glow + border already provided by style.css */
+}
+
+/* hover lift for the square feature icons inside cards */
+.icon-square,
+.why-icon,
+.feature-icon {
+    transition: transform var(--dur-base) var(--ease-out-soft);
+}
+
+.feature-card:hover .icon-square,
+.article-card:hover .article-top {
+    transform: translateY(-2px);
+}
+
+.why-item:hover .why-icon,
+.feature-box:hover .feature-icon {
+    transform: translateY(-2px) scale(1.05);
+}
+
+/* navbar links: animated underline area (no layout shift between items) */
+.nav-dark .nav-link {
+    border-bottom: 2px solid transparent;
+    transition: color 220ms ease, border-color 220ms ease;
+}
+
+.nav-dark .nav-link:not(.active):hover {
+    color: #d7e2ff;
+    border-bottom-color: rgba(0, 102, 255, 0.45);
+}
+
+.nav-dark .navbar-brand .logo-img {
+    transition: opacity var(--dur-base) ease;
+}
+
+.nav-dark .navbar-brand:hover .logo-img {
+    opacity: 0.85;
+}
+
+/* learn-more arrows already animate gap in style.css: keep in sync */
+
+/* ------------------------------------------------------------
+   Reveal-on-scroll system (classes added by js/animations.js)
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: no-preference) {
+    .reveal {
+        opacity: 0;
+        transform: translate3d(0, 22px, 0);
+        transition:
+            opacity var(--dur-slow) var(--ease-out-soft),
+            transform var(--dur-slow) var(--ease-out-soft);
+        transition-delay: var(--reveal-delay, 0ms);
+    }
+
+    .reveal.is-visible {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ------------------------------------------------------------
+   Keyframes (shared by several entrance sequences)
+   ------------------------------------------------------------ */
+@keyframes fade-up {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 20px, 0);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes pop-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.82);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes alert-in {
+    from {
+        opacity: 0;
+        transform: translate3d(0, -8px, 0);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ------------------------------------------------------------
+   Page-level entrance
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: no-preference) {
+    body {
+        animation: fade-in 400ms ease both;
+    }
+}
+
+/* ------------------------------------------------------------
+   Hero entrance sequence (staggered, runs once on load)
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: no-preference) {
+    .hero-section .section-badge {
+        animation: fade-up var(--dur-slow) var(--ease-out-soft) both 80ms;
+    }
+
+    .hero-section .hero-title {
+        animation: fade-up var(--dur-slow) var(--ease-out-soft) both 180ms;
+    }
+
+    .hero-section .hero-text {
+        animation: fade-up var(--dur-slow) var(--ease-out-soft) both 320ms;
+    }
+
+    .hero-section div.d-flex.gap-3 .btn {
+        animation: fade-up var(--dur-slow) var(--ease-out-soft) both 440ms;
+    }
+
+    .hero-section .hero-stats .col-6:nth-child(1) {
+        animation: fade-up var(--dur-slow) var(--ease-out-soft) both 560ms;
+    }
+
+    .hero-section .hero-stats .col-6:nth-child(2) {
+        animation: fade-up var(--dur-slow) var(--ease-out-soft) both 620ms;
+    }
+
+    .hero-section .hero-stats .col-6:nth-child(3) {
+        animation: fade-up var(--dur-slow) var(--ease-out-soft) both 680ms;
+    }
+
+    .hero-section .hero-stats .col-6:nth-child(4) {
+        animation: fade-up var(--dur-slow) var(--ease-out-soft) both 740ms;
+    }
+}
+
+/* ------------------------------------------------------------
+   Auth pages entrance (login / register / verify / reset)
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: no-preference) {
+    .login-section .welcome-badge,
+    .login-section .back-link {
+        animation: fade-up 600ms var(--ease-out-soft) both 60ms;
+    }
+
+    .login-section .title-style {
+        animation: fade-up var(--dur-slow) var(--ease-out-soft) both 140ms;
+    }
+
+    .login-section .login-text {
+        animation: fade-up var(--dur-slow) var(--ease-out-soft) both 240ms;
+    }
+
+    .login-section .feature-box {
+        animation: fade-up 600ms var(--ease-out-soft) both 340ms;
+    }
+
+    .login-section .feature-box:nth-of-type(2) {
+        animation-delay: 420ms;
+    }
+
+    .login-section .feature-box:nth-of-type(3) {
+        animation-delay: 500ms;
+    }
+
+    .login-section .feature-box:nth-of-type(4) {
+        animation-delay: 580ms;
+    }
+
+    .login-section .quote-box {
+        animation: fade-up 600ms var(--ease-out-soft) both 660ms;
+    }
+
+    .login-section .login-card {
+        animation: fade-up 700ms var(--ease-out-soft) both 200ms;
+    }
+}
+
+/* ------------------------------------------------------------
+   Feedback states (alerts, success, OTP)
+   Display changes (d-none toggles) restart these automatically.
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: no-preference) {
+    .login-card .alert {
+        animation: alert-in 420ms var(--ease-out-soft) both;
+    }
+
+    .login-card .error-text {
+        transition: opacity 200ms ease;
+    }
+
+    .otp-input {
+        animation: fade-up 450ms var(--ease-out-soft) both;
+    }
+
+    .otp-input:nth-child(2) { animation-delay: 45ms; }
+    .otp-input:nth-child(3) { animation-delay: 90ms; }
+    .otp-input:nth-child(4) { animation-delay: 135ms; }
+    .otp-input:nth-child(5) { animation-delay: 180ms; }
+    .otp-input:nth-child(6) { animation-delay: 225ms; }
+
+    #success-view .success-icon {
+        animation: pop-in 520ms var(--ease-spring) both 60ms;
+    }
+
+    #success-view .card-title {
+        animation: fade-up 500ms var(--ease-out-soft) both 220ms;
+    }
+
+    #success-view p {
+        animation: fade-up 500ms var(--ease-out-soft) both 300ms;
+    }
+
+    #success-view .btn-login {
+        animation: fade-up 500ms var(--ease-out-soft) both 380ms;
+    }
+}
+
+/* ------------------------------------------------------------
+   Code window typing
+   The typed code keeps the original markup, classes and colors;
+   only `white-space: pre-wrap` is added to the code blocks so the
+   authored indentation (non-breaking spaces) survives while typing.
+   ------------------------------------------------------------ */
+.code-box .code-typed {
+    white-space: pre-wrap;
+}
+
+.type-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 1.05em;
+    margin-left: 1px;
+    vertical-align: text-bottom;
+    background-color: #4d9bff;
+    animation: caret-blink 1.05s steps(2, start) infinite;
+}
+
+@keyframes caret-blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+}
+
+/* ------------------------------------------------------------
+   Testimonial reveal
+   Quote mark -> words -> attribution. Words stay inline (flow and
+   wrapping untouched) and only opacity/transform animate, so the
+   container never changes height.
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: no-preference) {
+    /* armed = instantly hidden (no transition on the hide itself) */
+    .quote-armed .q-icon {
+        opacity: 0;
+        transform: scale(0.55);
+    }
+
+    .quote-armed .t-word {
+        opacity: 0;
+    }
+
+    .quote-armed .q-author {
+        display: inline-block;
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    /* revealed = transition to the final state */
+    .quote-in .q-icon {
+        opacity: 1;
+        transform: scale(1);
+        transition:
+            opacity 420ms var(--ease-out-soft),
+            transform 520ms var(--ease-spring);
+        transition-delay: var(--quote-base, 220ms);
+    }
+
+    .quote-in .t-word {
+        opacity: 1;
+        transition: opacity 420ms ease;
+        transition-delay: calc(var(--quote-base, 220ms) + var(--word-delay, 0ms));
+    }
+
+    .quote-in .q-author {
+        opacity: 1;
+        transform: none;
+        transition:
+            opacity 420ms var(--ease-out-soft),
+            transform 420ms var(--ease-out-soft);
+        transition-delay: var(--author-delay, 1200ms);
+    }
+}
+
+/* ------------------------------------------------------------
+   Skeleton loaders (for future data-driven screens)
+   ------------------------------------------------------------ */
+.skeleton {
+    border-radius: 10px;
+    background: linear-gradient(
+        100deg,
+        rgba(120, 150, 255, 0.08) 30%,
+        rgba(120, 150, 255, 0.2) 50%,
+        rgba(120, 150, 255, 0.08) 70%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-text {
+    height: 12px;
+    margin: 8px 0;
+}
+
+.skeleton-text:last-child {
+    width: 60%;
+    margin-bottom: 0;
+}
+
+@keyframes skeleton-shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+}
+
+/* ------------------------------------------------------------
+   Reduced motion: remove all decorative motion instantly
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .net-canvas {
+        display: none !important;
+    }
+
+    /* keep decorative glows static at their base position */
+    .why-section::before,
+    .why-section::after,
+    .cta-section::after,
+    .login-section::after {
+        animation: none !important;
+    }
+}

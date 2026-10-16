@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using DevPilotAI.Application.Common.Models;
-using DevPilotAI.Application.Services;
+using DevPilotAI.Application.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

@@ -1,5 +1,6 @@
 using DevPilotAI.Application.Common.Models;
-using DevPilotAI.Application.Services;
+using DevPilotAI.Application.Authentication;
+using DevPilotAI.Application.Authentication.DTOs;
 using DevPilotAI.Infrastructure.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
