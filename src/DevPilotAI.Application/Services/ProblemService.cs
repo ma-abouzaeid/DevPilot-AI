@@ -1,3 +1,4 @@
+using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Domain.Entities;
 using DevPilotAI.Domain.Enums;
@@ -20,29 +21,72 @@ public class ProblemService : IProblemService
     {
         if (string.IsNullOrWhiteSpace(dto.Title))
         {
-            throw new ArgumentException("Problem title is required.", nameof(dto.Title));
+            throw AppError.InvalidRequest("Problem title is required.", "INVALID_REQUEST", nameof(dto.Title));
         }
 
         if (string.IsNullOrWhiteSpace(dto.Description))
         {
-            throw new ArgumentException("Problem description is required.", nameof(dto.Description));
+            throw AppError.InvalidRequest("Problem description is required.", "INVALID_REQUEST", nameof(dto.Description));
         }
 
-        var count = await _dbContext.Problems.CountAsync(cancellationToken) + 1;
-        var problemCode = $"DEV-{count:D6}";
-
-        var problem = new Problem
+        if (dto.UserId > 0 && await _dbContext.Users.AnyAsync(cancellationToken))
         {
-            ProblemCode = problemCode,
-            UserId = dto.UserId,
-            Title = dto.Title.Trim(),
-            Summary = dto.Description.Length > 200 ? dto.Description.Substring(0, 200).Trim() : dto.Description.Trim(),
-            Status = ProblemStatus.InProgress,
-            CreatedAt = DateTime.UtcNow
-        };
+            var userExists = await _dbContext.Users.AnyAsync(u => u.UserId == dto.UserId, cancellationToken);
+            if (!userExists)
+            {
+                throw AppError.NotFound($"User with ID {dto.UserId} was not found.");
+            }
+        }
 
-        _dbContext.Problems.Add(problem);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        Problem? problem = null;
+        const int maxRetries = 5;
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            var count = await _dbContext.Problems.IgnoreQueryFilters().CountAsync(cancellationToken) + 1;
+            var problemCode = $"DEV-{count:D6}";
+
+            while (await _dbContext.Problems.IgnoreQueryFilters().AnyAsync(p => p.ProblemCode == problemCode, cancellationToken))
+            {
+                count++;
+                problemCode = $"DEV-{count:D6}";
+            }
+
+            problem = new Problem
+            {
+                ProblemCode = problemCode,
+                UserId = dto.UserId,
+                Title = dto.Title.Trim(),
+                Summary = dto.Description.Length > 200 ? dto.Description.Substring(0, 200).Trim() : dto.Description.Trim(),
+                Status = ProblemStatus.InProgress,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _dbContext.Problems.Add(problem);
+
+            try
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                break;
+            }
+            catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex) && attempt < maxRetries)
+            {
+                if (_dbContext is DbContext efContext)
+                {
+                    efContext.Entry(problem).State = EntityState.Detached;
+                }
+                else
+                {
+                    _dbContext.Problems.Remove(problem);
+                }
+                problem = null;
+            }
+        }
+
+        if (problem == null)
+        {
+            throw AppError.Conflict("Could not generate a unique problem code due to concurrent activity. Please retry.", "RESOURCE_CONFLICT");
+        }
 
         var request = new ProblemRequest
         {
@@ -62,15 +106,20 @@ public class ProblemService : IProblemService
         return await DebugProblemInternalAsync(problem, request, cancellationToken);
     }
 
-    public async Task<ProblemRequestDto> AddProblemRequestAsync(int problemId, AddProblemRequestDto dto, CancellationToken cancellationToken = default)
+    public async Task<ProblemRequestDto> AddProblemRequestAsync(int problemId, AddProblemRequestDto dto, int? userId = null, CancellationToken cancellationToken = default)
     {
         var problem = await _dbContext.Problems
             .FirstOrDefaultAsync(p => p.ProblemId == problemId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Problem with ID {problemId} was not found.");
+            ?? throw AppError.NotFound($"Problem with ID {problemId} was not found.");
+
+        if (userId.HasValue && problem.UserId != userId.Value)
+        {
+            throw AppError.Forbidden("You do not have permission to modify this problem.");
+        }
 
         if (string.IsNullOrWhiteSpace(dto.Content))
         {
-            throw new ArgumentException("Request content is required.", nameof(dto.Content));
+            throw AppError.InvalidRequest("Request content is required.", "INVALID_REQUEST", nameof(dto.Content));
         }
 
         var request = new ProblemRequest
@@ -98,28 +147,38 @@ public class ProblemService : IProblemService
         );
     }
 
-    public async Task<DebuggingResultDto> DebugProblemAsync(int problemId, int requestId, CancellationToken cancellationToken = default)
+    public async Task<DebuggingResultDto> DebugProblemAsync(int problemId, int requestId, int? userId = null, CancellationToken cancellationToken = default)
     {
         var problem = await _dbContext.Problems
             .FirstOrDefaultAsync(p => p.ProblemId == problemId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Problem with ID {problemId} was not found.");
+            ?? throw AppError.NotFound($"Problem with ID {problemId} was not found.");
+
+        if (userId.HasValue && problem.UserId != userId.Value)
+        {
+            throw AppError.Forbidden("You do not have permission to debug this problem.");
+        }
 
         var request = await _dbContext.ProblemRequests
             .FirstOrDefaultAsync(r => r.ProblemRequestId == requestId && r.ProblemId == problemId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Problem request with ID {requestId} was not found for problem {problemId}.");
+            ?? throw AppError.NotFound($"Problem request with ID {requestId} was not found for problem {problemId}.");
 
         return await DebugProblemInternalAsync(problem, request, cancellationToken);
     }
 
-    public async Task<DebuggingResultDto> SubmitFeedbackAsync(int problemId, int attemptId, bool isSolved, string? comments, CancellationToken cancellationToken = default)
+    public async Task<DebuggingResultDto> SubmitFeedbackAsync(int problemId, int attemptId, bool isSolved, string? comments, int? userId = null, CancellationToken cancellationToken = default)
     {
         var problem = await _dbContext.Problems
             .FirstOrDefaultAsync(p => p.ProblemId == problemId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Problem with ID {problemId} was not found.");
+            ?? throw AppError.NotFound($"Problem with ID {problemId} was not found.");
+
+        if (userId.HasValue && problem.UserId != userId.Value)
+        {
+            throw AppError.Forbidden("You do not have permission to submit feedback for this problem.");
+        }
 
         var attempt = await _dbContext.DebuggingAttempts
             .FirstOrDefaultAsync(a => a.DebuggingAttemptId == attemptId && a.ProblemId == problemId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Debugging attempt with ID {attemptId} was not found for problem {problemId}.");
+            ?? throw AppError.NotFound($"Debugging attempt with ID {attemptId} was not found for problem {problemId}.");
 
         var feedback = new DeveloperFeedback
         {
@@ -210,7 +269,7 @@ public class ProblemService : IProblemService
     {
         if (string.IsNullOrWhiteSpace(problemCode))
         {
-            throw new ArgumentException("Problem code is required.", nameof(problemCode));
+            throw AppError.InvalidRequest("Problem code is required.", "INVALID_REQUEST", nameof(problemCode));
         }
 
         return await _dbContext.Problems
@@ -227,7 +286,7 @@ public class ProblemService : IProblemService
             .Include(p => p.DebuggingAttempts)
             .Include(p => p.ProblemSolutions)
             .FirstOrDefaultAsync(p => p.ProblemId == problemId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Problem with ID {problemId} was not found.");
+            ?? throw AppError.NotFound($"Problem with ID {problemId} was not found.");
 
         var requests = problem.ProblemRequests
             .OrderBy(r => r.CreatedAt)
@@ -367,5 +426,33 @@ public class ProblemService : IProblemService
             ProposedSolution: attempt.ProposedSolution,
             ProviderUsed: aiResponse.ProviderName
         );
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException ex)
+    {
+        var inner = ex.InnerException;
+        if (inner != null)
+        {
+            var numberProp = inner.GetType().GetProperty("Number");
+            if (numberProp != null && numberProp.GetValue(inner) is int number && (number == 2601 || number == 2627))
+            {
+                return true;
+            }
+
+            var innerMsg = inner.Message;
+            if (innerMsg.Contains("UNIQUE", StringComparison.OrdinalIgnoreCase) ||
+                innerMsg.Contains("duplicate key", StringComparison.OrdinalIgnoreCase) ||
+                innerMsg.Contains("IX_", StringComparison.OrdinalIgnoreCase) ||
+                innerMsg.Contains("ProblemCode", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        var msg = ex.Message;
+        return msg.Contains("UNIQUE", StringComparison.OrdinalIgnoreCase) ||
+               msg.Contains("duplicate key", StringComparison.OrdinalIgnoreCase) ||
+               msg.Contains("IX_", StringComparison.OrdinalIgnoreCase) ||
+               msg.Contains("ProblemCode", StringComparison.OrdinalIgnoreCase);
     }
 }

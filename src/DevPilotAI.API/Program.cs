@@ -14,7 +14,38 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var traceId = context.HttpContext.Request.Headers.TryGetValue("X-Correlation-ID", out var correlationId) && !string.IsNullOrWhiteSpace(correlationId)
+                ? correlationId.ToString().Trim()
+                : context.HttpContext.TraceIdentifier;
+
+            var errors = context.ModelState
+                .Where(ms => ms.Value?.Errors.Count > 0)
+                .SelectMany(ms => ms.Value!.Errors.Select(e => new DevPilotAI.Application.Common.Models.ValidationErrorDetail
+                {
+                    Field = System.Text.Json.JsonNamingPolicy.CamelCase.ConvertName(ms.Key.Replace("$.", "")),
+                    Code = "VALIDATION_ERROR",
+                    Message = e.ErrorMessage
+                }))
+                .ToList();
+
+            var responsePayload = new DevPilotAI.Application.Common.Models.ApiResponse<object>
+            {
+                Success = false,
+                Message = "Please correct the highlighted fields and try again.",
+                Data = null,
+                Errors = errors,
+                ErrorCode = "VALIDATION_FAILED",
+                TraceId = traceId
+            };
+
+            return new Microsoft.AspNetCore.Mvc.BadRequestObjectResult(responsePayload);
+        };
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -85,7 +116,19 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
-var jwtSecret = builder.Configuration["JwtSettings:Secret"] ?? "DevPilotAI_Super_Secret_Key_Change_In_Production_123456789!";
+var jwtSecret = builder.Configuration["JwtSettings:Secret"];
+if (builder.Environment.IsProduction())
+{
+    if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Contains("Change_In_Production", StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException("Production configuration error: JwtSettings:Secret must be explicitly configured with a secure key and cannot use default placeholders.");
+    }
+}
+else
+{
+    jwtSecret = string.IsNullOrWhiteSpace(jwtSecret) ? "DevPilotAI_Super_Secret_Key_Change_In_Production_123456789!" : jwtSecret;
+}
+
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "DevPilotAI";
 var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "DevPilotAIUsers";
 
@@ -127,6 +170,49 @@ builder.Services.AddAuthentication(options =>
             {
                 context.Fail("Invalid user identification in token.");
             }
+        },
+        OnChallenge = async context =>
+        {
+            context.HandleResponse();
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.ContentType = "application/json";
+
+            var traceId = context.Request.Headers.TryGetValue("X-Correlation-ID", out var correlationId) && !string.IsNullOrWhiteSpace(correlationId)
+                ? correlationId.ToString().Trim()
+                : context.HttpContext.TraceIdentifier;
+
+            var responsePayload = new DevPilotAI.Application.Common.Models.ApiResponse<object>
+            {
+                Success = false,
+                Message = "Authentication is required to access this resource.",
+                Data = null,
+                Errors = new List<DevPilotAI.Application.Common.Models.ValidationErrorDetail>(),
+                ErrorCode = "UNAUTHENTICATED",
+                TraceId = traceId
+            };
+
+            await context.Response.WriteAsJsonAsync(responsePayload);
+        },
+        OnForbidden = async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/json";
+
+            var traceId = context.Request.Headers.TryGetValue("X-Correlation-ID", out var correlationId) && !string.IsNullOrWhiteSpace(correlationId)
+                ? correlationId.ToString().Trim()
+                : context.HttpContext.TraceIdentifier;
+
+            var responsePayload = new DevPilotAI.Application.Common.Models.ApiResponse<object>
+            {
+                Success = false,
+                Message = "You do not have permission to access this resource.",
+                Data = null,
+                Errors = new List<DevPilotAI.Application.Common.Models.ValidationErrorDetail>(),
+                ErrorCode = "FORBIDDEN",
+                TraceId = traceId
+            };
+
+            await context.Response.WriteAsJsonAsync(responsePayload);
         }
     };
 });
@@ -143,7 +229,7 @@ if (rawAllowedOrigins == null || rawAllowedOrigins.Length == 0)
 
 var allowedOrigins = (rawAllowedOrigins != null && rawAllowedOrigins.Length > 0)
     ? rawAllowedOrigins.Select(o => o.Trim().TrimEnd('/')).Distinct().ToArray()
-    : new[] { "https://devpilot-ai-three.vercel.app", "http://localhost:3000" };
+    : new[] { "https://devpilot-ai-three.vercel.app", "http://localhost:3000"};
 
 builder.Services.AddCors(options =>
 {

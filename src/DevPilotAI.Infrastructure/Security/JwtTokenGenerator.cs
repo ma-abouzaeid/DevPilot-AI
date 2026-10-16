@@ -18,7 +18,19 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
     public string GenerateAccessToken(int userId, string email, string name, IEnumerable<string> roles)
     {
-        var secret = _configuration["JwtSettings:Secret"] ?? "DevPilotAI_Super_Secret_Key_Change_In_Production_123456789!";
+        var secret = _configuration["JwtSettings:Secret"];
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (string.Equals(env, "Production", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(secret) || secret.Contains("Change_In_Production", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Production configuration error: JwtSettings:Secret cannot use default placeholders in Production.");
+            }
+        }
+        else
+        {
+            secret = string.IsNullOrWhiteSpace(secret) ? "DevPilotAI_Super_Secret_Key_Change_In_Production_123456789!" : secret;
+        }
         var issuer = _configuration["JwtSettings:Issuer"] ?? "DevPilotAI";
         var audience = _configuration["JwtSettings:Audience"] ?? "DevPilotAIUsers";
         var expiryMinutes = _configuration.GetValue<int>("JwtSettings:ExpiryMinutes", 60);

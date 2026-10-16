@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - DevPilot AI</title>
+    <!-- Bootstrap css cdn -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.0/css/all.min.css"
+        integrity="sha512-ApSLB1Pd3/bZN8fWB/RG9YhN/7bd9Hkf3AGaE2mPfebjrxagjuBtx2GcgdqIlJkUzwylBo61r9Xa9NmgBI0swA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/media.css">
+
+    <!-- Cloudflare Turnstile API -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+</head>
+
+<body>
+    <!-- navbar -->
+    <div id="navbar" data-active="login"></div>
+
+    <!-- login section -->
+    <section class="login-section">
+        <div class="container">
+            <div class="row align-items-center gy-5">
+
+                <!-- left side -->
+                <div class="col-12 col-md-6">
+                    <span class="welcome-badge">Welcome Back</span>
+                    <h1 class="title-style">Continue Your <br><span class="text-blue">Learning Journey</span></h1>
+                    <p class="text-gray login-text">Log in to access your saved articles, continue challenges, join the
+                        community, and get personalized recommendations.</p>
+
+                    <div class="feature-box d-flex">
+                        <i class="fa-solid fa-book-open feature-icon"></i>
+                        <div>
+                            <h5>Access Expert Articles</h5>
+                            <p class="text-gray">Explore high-quality technical content written by developers</p>
+                        </div>
+                    </div>
+                    <div class="feature-box d-flex">
+                        <i class="fa-solid fa-bolt feature-icon"></i>
+                        <div>
+                            <h5>Save & Organize</h5>
+                            <p class="text-gray">Keep your favorite articles and resources in one place</p>
+                        </div>
+                    </div>
+                    <div class="feature-box d-flex">
+                        <i class="fa-solid fa-users feature-icon"></i>
+                        <div>
+                            <h5>Join the Community</h5>
+                            <p class="text-gray">Discuss, share knowledge, and grow with other developers</p>
+                        </div>
+                    </div>
+                    <div class="feature-box d-flex">
+                        <i class="fa-solid fa-user-gear feature-icon"></i>
+                        <div>
+                            <h5>Personalized Experience</h5>
+                            <p class="text-gray">Get recommendations based on your interests and skills</p>
+                        </div>
+                    </div>
+
+                    <div class="quote-box d-none d-md-block">
+                        <i class="fa-solid fa-quote-left text-blue"></i>
+                        <p class="text-gray">DevPilot AI has helped me learn new technologies faster and stay updated
+                            with the latest trends.</p>
+                        <small class="text-gray">- A Developer in Our Community</small>
+                    </div>
+                </div>
+
+                <!-- login card -->
+                <div class="col-12 col-md-6">
+                    <div class="login-card">
+                        <div class="logo justify-content-center">
+                            <img src="images/logo.png" alt="DevPilot AI" class="logo-img logo-img-card">
+                        </div>
+                        <h2 class="card-title text-center">Log in to your account</h2>
+                        <p class="text-gray text-center">Welcome back! Please enter your details to continue.</p>
+
+                        <!-- alert, filled by js -->
+                        <div class="alert d-none" id="login-alert" role="alert"></div>
+
+                        <form id="login-form" novalidate>
+                            <!-- email -->
+                            <div class="form-group">
+                                <label for="email" class="form-label">Email Address</label>
+                                <div class="input-box">
+                                    <i class="fa-regular fa-envelope input-icon"></i>
+                                    <input type="email" id="email" class="form-input" placeholder="you@example.com"
+                                        autocomplete="email" aria-required="true" aria-describedby="email-error">
+                                </div>
+                                <small class="error-text" id="email-error">Please enter a valid email address.</small>
+                            </div>
+
+                            <!-- password -->
+                            <div class="form-group">
+                                <label for="password" class="form-label">Password</label>
+                                <div class="input-box">
+                                    <i class="fa-solid fa-lock input-icon"></i>
+                                    <input type="password" id="password" class="form-input"
+                                        placeholder="Enter your password" autocomplete="current-password" aria-required="true"
+                                        aria-describedby="password-error">
+                                    <button type="button" class="toggle-password" id="toggle-password"
+                                        aria-label="Show password">
+                                        <i class="fa-regular fa-eye"></i>
+                                    </button>
+                                </div>
+                                <small class="error-text" id="password-error">Password is required.</small>
+                            </div>
+
+                            <!-- remember me + forgot password -->
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="remember" checked>
+                                    <label class="form-check-label text-gray" for="remember">Keep me signed in</label>
+                                </div>
+                                <a href="forgot-password.html" class="link-blue">Forgot your password?</a>
+                            </div>
+
+                            <!-- Cloudflare Turnstile -->
+                            <div class="form-group text-center my-3" id="turnstile-group">
+                                <div class="cf-turnstile d-flex justify-content-center"
+                                    data-sitekey="0x4AAAAAAFTM4ariHx3i33R0"
+                                    data-theme="dark"
+                                    data-callback="onTurnstileSuccess"
+                                    data-expired-callback="onTurnstileExpired"
+                                    data-error-callback="onTurnstileError"></div>
+                                <small class="error-text text-center" id="turnstile-error">Please complete the security check.</small>
+                            </div>
+
+                            <button type="submit" class="btn-login" id="login-btn">
+                                Log In <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </form>
+
+                        <p class="text-gray text-center mt-4 mb-0">Don't have an account?
+                            <a href="register.html" class="link-blue">Create account</a>
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+          <!-- footer -->
+    <div id="footer" data-variant="simple"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+
+    <script src="js/navbar.js"></script>
+    <script src="js/footer.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/api-client.js"></script>
+    <script src="js/login.js"></script>
+</body>
+
+</html>

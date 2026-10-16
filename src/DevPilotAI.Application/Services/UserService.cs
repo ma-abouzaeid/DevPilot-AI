@@ -1,3 +1,4 @@
+using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -20,7 +21,7 @@ public class UserService : IUserService
         var user = await _dbContext.Users
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken)
-            ?? throw new KeyNotFoundException($"User with ID {userId} was not found.");
+            ?? throw AppError.NotFound($"User with ID {userId} was not found.");
 
         if (user.IsDeleted)
         {

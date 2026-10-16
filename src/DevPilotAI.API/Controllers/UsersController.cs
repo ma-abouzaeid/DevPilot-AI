@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using DevPilotAI.Application.Common.Models;
 using DevPilotAI.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,26 +18,24 @@ public class UsersController : ControllerBase
         _userService = userService;
     }
 
+    private string GetTraceId() =>
+        HttpContext?.Request?.Headers.TryGetValue("X-Correlation-ID", out var correlationId) == true && !string.IsNullOrWhiteSpace(correlationId)
+            ? correlationId.ToString().Trim()
+            : HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
+
     [HttpDelete("me")]
     public async Task<IActionResult> DeleteCurrentUser(CancellationToken cancellationToken)
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
         {
-            return Unauthorized(new
-            {
-                success = false,
-                errorCode = "UNAUTHORIZED",
-                message = "Invalid or missing user identity in access token."
-            });
+            var traceId = GetTraceId();
+            return Unauthorized(ApiResponse<object?>.FailureResult("Invalid or missing user identity in access token.", "UNAUTHORIZED", null, traceId));
         }
 
         await _userService.DeleteAccountAsync(userId, cancellationToken);
 
-        return Ok(new
-        {
-            success = true,
-            message = "User account has been successfully deleted."
-        });
+        var response = ApiResponse<object?>.SuccessResult(null, "Your account has been deactivated successfully.", GetTraceId());
+        return Ok(response);
     }
 }

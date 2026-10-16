@@ -38,8 +38,8 @@ public class TurnstileService : ITurnstileService
         var secretKey = _configuration["Turnstile:SecretKey"];
         if (string.IsNullOrWhiteSpace(secretKey))
         {
-            _logger.LogWarning("Turnstile is enabled but secret key is not configured.");
-            return true;
+            _logger.LogError("Turnstile is enabled but secret key is not configured. Failing closed for security.");
+            return false;
         }
 
         try

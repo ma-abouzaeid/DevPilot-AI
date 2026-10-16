@@ -1,0 +1,354 @@
+/* ============================================================
+   DevPilot AI - Responsive & Media Queries
+   Breakpoints:
+   - Desktop (>= 992px): Multi-column grid, no forced scroll
+   - Tablet & Mobile (< 992px): Horizontal peek scroll for 3 key sections
+   - Mobile Phones (< 576px): Optimized peek widths, clamp typography
+   - Small Screens (< 360px): High-density compact layouts
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   Desktop Viewport: >= 992px
+   Ensure standard grid behavior and no horizontal scroll
+   ------------------------------------------------------------ */
+@media (min-width: 992px) {
+    .responsive-scroll-container {
+        overflow: visible;
+    }
+
+    .workflow-row,
+    .features-row,
+    .articles-row {
+        flex-wrap: wrap;
+    }
+}
+
+/* ------------------------------------------------------------
+   Tablet & Mobile: < 992px
+   Single horizontal row with smooth touch-friendly scrolling
+   ------------------------------------------------------------ */
+@media (max-width: 991.98px) {
+    .title-style {
+        font-size: clamp(32px, 5vw, 42px);
+    }
+
+    .login-left-content {
+        padding: 40px 24px;
+    }
+
+    .login-right {
+        padding: 40px 16px;
+    }
+
+    /* Hero section adjustments */
+    .hero-section {
+        min-height: auto;
+        padding: 44px 0 48px;
+        background-image:
+            linear-gradient(180deg, rgba(3, 10, 26, 0.88) 0%, rgba(3, 10, 26, 0.75) 100%),
+            url("../images/hero.jpeg");
+        background-position: 75% center;
+    }
+
+    .hero-title {
+        font-size: clamp(38px, 6vw, 48px);
+    }
+
+    .hero-text {
+        max-width: 100%;
+    }
+
+    /* Horizontal Scroll Mechanism for the 3 Key Sections */
+    .workflow-scroll-container,
+    .features-scroll-container,
+    .articles-scroll-container {
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        padding-top: 8px;
+        padding-bottom: 20px;
+        padding-left: 16px;
+        padding-right: 16px;
+        margin-left: -16px;
+        margin-right: -16px;
+        scroll-padding: 16px;
+    }
+
+    .workflow-row,
+    .features-row,
+    .articles-row {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    .workflow-col,
+    .feature-col,
+    .article-col {
+        flex: 0 0 auto !important;
+        scroll-snap-align: start;
+        scroll-snap-stop: normal;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    /* 1. Workflow 4-Step Row */
+    .workflow-row {
+        gap: 20px;
+    }
+
+    .workflow-col {
+        width: 250px;
+        max-width: 275px;
+    }
+
+    .workflow-col .step-arrow {
+        display: inline-block !important;
+        position: absolute;
+        top: 36px;
+        right: -13px;
+        font-size: 15px;
+        color: #9aa8c7;
+    }
+
+    /* 2. Feature Cards Row */
+    .features-row {
+        gap: 16px;
+    }
+
+    .feature-col {
+        width: 240px;
+        max-width: 265px;
+    }
+
+    /* 3. Featured Articles Row */
+    .articles-row {
+        gap: 16px;
+    }
+
+    .article-col {
+        width: 280px;
+        max-width: 310px;
+    }
+
+    .articles-header {
+        row-gap: 12px;
+    }
+}
+
+/* ------------------------------------------------------------
+   Medium Tablet: 768px - 991px
+   Auth layout fine-tuning
+   ------------------------------------------------------------ */
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .login-section .title-style {
+        font-size: 30px;
+    }
+
+    .login-section .login-text {
+        margin: 14px 0 22px;
+        font-size: 14px;
+    }
+
+    .login-section .feature-box {
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+
+    .login-section .feature-box h5 {
+        font-size: 15px;
+    }
+
+    .login-section .feature-box p {
+        font-size: 12px;
+    }
+
+    .login-section .feature-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+
+    .login-card {
+        padding: 28px 20px;
+    }
+
+    .login-card .card-title {
+        font-size: 22px;
+    }
+
+    .login-card .logo-img-card {
+        height: 44px;
+    }
+}
+
+/* ------------------------------------------------------------
+   Mobile Devices: < 768px
+   Auth background graphic scaling
+   ------------------------------------------------------------ */
+@media (max-width: 767.98px) {
+    .login-section::before {
+        top: 100px;
+        width: 460px;
+        height: 460px;
+        transform: translateX(-50%);
+        opacity: 0.1;
+    }
+}
+
+/* ------------------------------------------------------------
+   Mobile Phones: < 576px
+   Card peek affordances, touch target spacing, responsive clamp
+   ------------------------------------------------------------ */
+@media (max-width: 575.98px) {
+    .title-style {
+        font-size: clamp(26px, 7vw, 34px);
+    }
+
+    .login-card {
+        padding: 28px 18px;
+        border-radius: 20px;
+    }
+
+    .card-title {
+        font-size: 22px;
+    }
+
+    .footer-links a {
+        margin-left: 0;
+        margin-right: 14px;
+        display: inline-block;
+        margin-bottom: 6px;
+    }
+
+    .hero-section {
+        padding: 28px 0 36px;
+    }
+
+    .hero-title {
+        font-size: clamp(28px, 8vw, 36px);
+    }
+
+    .hero-text {
+        margin: 16px 0 24px;
+        font-size: 15px;
+    }
+
+    .hero-stats {
+        margin-top: 28px;
+    }
+
+    .hero-stats h4 {
+        font-size: 18px;
+    }
+
+    .section-title {
+        font-size: clamp(22px, 5.5vw, 26px);
+        margin-bottom: 10px;
+    }
+
+    .section-text {
+        font-size: 14px;
+        margin-bottom: 28px;
+    }
+
+    /* Peeking affordance: ~15-20% of adjacent card visible */
+    .responsive-scroll-container {
+        padding-left: 14px;
+        padding-right: 14px;
+        margin-left: -14px;
+        margin-right: -14px;
+        scroll-padding: 14px;
+    }
+
+    .workflow-col {
+        width: 76vw;
+        min-width: 220px;
+        max-width: 280px;
+    }
+
+    .workflow-row {
+        gap: 16px;
+    }
+
+    .workflow-col .step-arrow {
+        right: -11px;
+        font-size: 13px;
+    }
+
+    .feature-col {
+        width: 78vw;
+        min-width: 225px;
+        max-width: 285px;
+    }
+
+    .features-row {
+        gap: 14px;
+    }
+
+    .article-col {
+        width: 82vw;
+        min-width: 250px;
+        max-width: 305px;
+    }
+
+    .articles-row {
+        gap: 14px;
+    }
+
+    /* Code sample box in Why section */
+    .code-box {
+        overflow-x: auto;
+        padding: 16px 14px;
+        font-size: 13px;
+        border-radius: 12px;
+    }
+
+    /* OTP Inputs on Mobile */
+    .otp-group {
+        gap: 6px;
+    }
+
+    .otp-input {
+        width: 42px;
+        height: 52px;
+        font-size: 20px;
+    }
+}
+
+/* ------------------------------------------------------------
+   Narrow / Small Mobile Screens: <= 360px
+   (e.g., iPhone SE 1st gen, Galaxy Fold outer screen)
+   ------------------------------------------------------------ */
+@media (max-width: 360px) {
+    .workflow-col {
+        width: 84vw;
+        min-width: 205px;
+    }
+
+    .feature-col {
+        width: 84vw;
+        min-width: 210px;
+    }
+
+    .article-col {
+        width: 86vw;
+        min-width: 230px;
+    }
+
+    .login-card {
+        padding: 22px 12px;
+    }
+
+    .otp-group {
+        gap: 4px;
+    }
+
+    .otp-input {
+        width: 36px;
+        height: 46px;
+        font-size: 18px;
+    }
+}
