@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- favicon: existing brand asset -->
+    <link rel="icon" type="image/jpeg" href="images/logo-bg.jpg">
+    <link rel="apple-touch-icon" href="images/logo-bg.jpg">
+    <title>Verify Email - DevPilot AI</title>
+    <!-- Bootstrap css cdn -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.0/css/all.min.css"
+        integrity="sha512-ApSLB1Pd3/bZN8fWB/RG9YhN/7bd9Hkf3AGaE2mPfebjrxagjuBtx2GcgdqIlJkUzwylBo61r9Xa9NmgBI0swA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/media.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+
+<body>
+    <!-- navbar -->
+    <div id="navbar" data-active="register"></div>
+
+    <!-- verify email section -->
+    <section class="login-section">
+        <div class="container">
+            <div class="row align-items-start gy-5 pt-3">
+
+                <!-- left side -->
+                <div class="col-12 col-md-6">
+                    <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
+                    <h1 class="title-style">Verify Your <br><span class="text-blue">Email Address</span></h1>
+                    <p class="text-gray login-text">We've sent a 6-digit verification code to your email address. Enter
+                        the code to confirm your account and start your journey with DevPilot AI.</p>
+
+                    <div class="feature-box d-flex">
+                        <i class="fa-regular fa-envelope feature-icon"></i>
+                        <div>
+                            <h5>Secure Verification</h5>
+                            <p class="text-gray">We use email verification to keep your account safe and secure</p>
+                        </div>
+                    </div>
+                    <div class="feature-box d-flex">
+                        <i class="fa-solid fa-bolt feature-icon"></i>
+                        <div>
+                            <h5>Quick and Easy</h5>
+                            <p class="text-gray">Enter the code we sent to your email address</p>
+                        </div>
+                    </div>
+                    <div class="feature-box d-flex">
+                        <i class="fa-solid fa-users feature-icon"></i>
+                        <div>
+                            <h5>Start Exploring</h5>
+                            <p class="text-gray">Once verified, you get access to articles, tools, and the community</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- verification card -->
+                <div class="col-12 col-md-6">
+                    <div class="login-card">
+                        <div class="logo justify-content-center">
+                            <img src="images/logo.png" alt="DevPilot AI" class="logo-img logo-img-card">
+                        </div>
+
+                        <!-- verify view -->
+                        <div id="verify-view">
+                            <h2 class="card-title text-center">Check your email</h2>
+                            <p class="text-gray text-center mb-1">We've sent a 6-digit verification code to</p>
+                            <p class="text-center"><strong class="text-blue" data-email>you@example.com</strong></p>
+
+                            <!-- alert, filled by js -->
+                            <div class="alert d-none" id="verify-alert" role="alert"></div>
+
+                            <form id="verify-form" novalidate>
+                                <div class="form-group otp-wrap">
+                                    <span class="visually-hidden" id="otp-label">Verification code, 6 digits</span>
+                                    <div class="otp-group" role="group" aria-labelledby="otp-label">
+                                <input type="text" class="otp-input" inputmode="numeric" maxlength="1" aria-label="Digit 1 of 6" aria-describedby="otp-error" autocomplete="one-time-code">
+                                <input type="text" class="otp-input" inputmode="numeric" maxlength="1" aria-label="Digit 2 of 6" aria-describedby="otp-error">
+                                <input type="text" class="otp-input" inputmode="numeric" maxlength="1" aria-label="Digit 3 of 6" aria-describedby="otp-error">
+                                <input type="text" class="otp-input" inputmode="numeric" maxlength="1" aria-label="Digit 4 of 6" aria-describedby="otp-error">
+                                <input type="text" class="otp-input" inputmode="numeric" maxlength="1" aria-label="Digit 5 of 6" aria-describedby="otp-error">
+                                <input type="text" class="otp-input" inputmode="numeric" maxlength="1" aria-label="Digit 6 of 6" aria-describedby="otp-error">
+                                    </div>
+                                    <small class="error-text text-center" id="otp-error" aria-live="polite">Please enter all 6 digits.</small>
+                                </div>
+
+                                <p class="timer-text" id="timer-box">
+                                    <i class="fa-regular fa-clock"></i>
+                                    <span id="timer-label">Code expires in</span> <span id="countdown">05:00</span>
+                                </p>
+
+                                <button type="submit" class="btn-login" id="verify-btn">
+                                    Verify Email <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </form>
+
+                            <div class="divider-text">Didn't receive the code?</div>
+
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <button type="button" class="btn-outline-card" id="resend-btn">
+                                        <i class="fa-solid fa-rotate-right"></i> <span id="resend-label">Resend Code</span>
+                                        <span class="resend-hint" id="resend-hint"></span>
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <a href="register.html" class="btn-outline-card"> 
+                                        <i class="fa-regular fa-envelope"></i> Change Email
+                                        <span class="resend-hint">Use a different email</span>
+                                    </a>
+                                </div>
+                            </div>
+                            <p class="terms-text mt-3 mb-0">Can't find the email? Check your spam folder.</p>
+                        </div>
+
+                        <!-- success view -->
+                        <div id="success-view" class="text-center d-none" tabindex="-1">
+                            <div class="success-icon"><i class="fa-solid fa-check"></i></div>
+                            <h2 class="card-title">Email verified successfully!</h2>
+                            <p class="text-gray">Your email address has been verified and your account is now active.</p>
+                            <a href="login.html" class="btn-login d-block text-center" id="continue-btn"> Continue to Log In <i class="fa-solid fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- footer -->
+    <div id="footer" data-variant="simple"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+
+    <script src="js/animations.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/footer.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/api-client.js"></script>
+    <script src="js/verify-email.js"></script>
+</body>
+
+</html>

@@ -1,11 +1,14 @@
 using System.Security.Cryptography;
 using System.Text;
+using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace DevPilotAI.Application.Services;
+using DevPilotAI.Application.Authentication.DTOs;
+
+namespace DevPilotAI.Application.Authentication;
 
 public class AuthService : IAuthService
 {
@@ -36,7 +39,7 @@ public class AuthService : IAuthService
         var isValidBotCheck = await _turnstileService.VerifyTokenAsync(dto.TurnstileToken, null, cancellationToken);
         if (!isValidBotCheck)
         {
-            throw new InvalidOperationException("Security check failed. Please complete the captcha verification.");
+            throw AppError.Conflict("Security check failed. Please complete the captcha verification.", "BOT_CHECK_FAILED");
         }
 
         var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
@@ -47,7 +50,7 @@ public class AuthService : IAuthService
 
         if (existingUser != null)
         {
-            throw new InvalidOperationException("An account with this email address already exists.");
+            throw AppError.Conflict("An account with this email address already exists.", "EMAIL_ALREADY_EXISTS");
         }
 
         var tempUser = new User { Email = normalizedEmail };
@@ -70,7 +73,7 @@ public class AuthService : IAuthService
         }
         catch (DbUpdateException)
         {
-            throw new InvalidOperationException("An account with this email address already exists.");
+            throw AppError.Conflict("An account with this email address already exists.", "EMAIL_ALREADY_EXISTS");
         }
 
         var developerRole = await _dbContext.Roles
@@ -148,48 +151,58 @@ public class AuthService : IAuthService
     {
         if (string.IsNullOrWhiteSpace(dto.Code) && string.IsNullOrWhiteSpace(dto.Token))
         {
-            throw new ArgumentException("Either verification code or verification token must be provided.");
+            throw AppError.InvalidRequest("Either verification code or verification token must be provided.");
         }
 
         if (!string.IsNullOrWhiteSpace(dto.Code))
         {
             if (string.IsNullOrWhiteSpace(dto.Email))
             {
-                throw new ArgumentException("Email is required when verifying with a code.");
+                throw AppError.InvalidRequest("Email is required when verifying with a code.");
             }
 
             var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
             var user = await _dbContext.Users
                 .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail, cancellationToken)
-                ?? throw new KeyNotFoundException("User account not found.");
+                ?? throw AppError.NotFound("User account not found.");
 
             if (user.IsDeleted)
             {
-                throw new KeyNotFoundException("User account not found.");
+                throw AppError.NotFound("User account not found.");
             }
 
             if (user.EmailVerifiedAt.HasValue)
             {
-                throw new InvalidOperationException("Email address is already verified.");
+                throw AppError.Conflict("Email address is already verified.", "EMAIL_ALREADY_VERIFIED");
             }
 
             var codeHash = HashString(dto.Code.Trim());
 
             var verification = await _dbContext.EmailVerifications
-                .Where(v => v.UserId == user.UserId && v.Method == "OTP" && v.VerifiedAt == null && v.ExpiresAt > DateTime.UtcNow)
+                .Where(v => v.UserId == user.UserId && v.Method == "OTP" && v.VerifiedAt == null)
                 .OrderByDescending(v => v.CreatedAt)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            if (verification == null || verification.Attempts >= 5)
+            if (verification == null)
             {
-                throw new InvalidOperationException("Invalid or expired verification code.");
+                throw AppError.Conflict("Invalid or expired verification code.", "INVALID_CODE");
+            }
+
+            if (verification.ExpiresAt <= DateTime.UtcNow)
+            {
+                throw AppError.Conflict("Verification code has expired. Please request a new one.", "CODE_EXPIRED");
+            }
+
+            if (verification.Attempts >= 5)
+            {
+                throw AppError.Conflict("Maximum verification attempts reached. Please request a new code.", "MAX_ATTEMPTS_EXCEEDED");
             }
 
             if (verification.CodeHash != codeHash)
             {
                 verification.Attempts++;
                 await _dbContext.SaveChangesAsync(cancellationToken);
-                throw new InvalidOperationException("Invalid or expired verification code.");
+                throw AppError.Conflict("Invalid or expired verification code.", "INVALID_CODE");
             }
 
             verification.VerifiedAt = DateTime.UtcNow;
@@ -231,12 +244,17 @@ public class AuthService : IAuthService
         var tokenHash = HashString(tokenToVerify);
         var tokenVerification = await _dbContext.EmailVerifications
             .Include(v => v.User)
-            .Where(v => v.TokenHash == tokenHash && v.VerifiedAt == null && v.ExpiresAt > DateTime.UtcNow && v.Attempts < 5)
+            .Where(v => v.TokenHash == tokenHash && v.VerifiedAt == null)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (tokenVerification == null || tokenVerification.User == null || tokenVerification.User.IsDeleted)
         {
-            throw new InvalidOperationException("Invalid or expired verification token.");
+            throw AppError.Conflict("Invalid or expired verification token.", "INVALID_TOKEN");
+        }
+
+        if (tokenVerification.ExpiresAt <= DateTime.UtcNow)
+        {
+            throw AppError.Conflict("Verification link has expired. Please request a new one.", "TOKEN_EXPIRED");
         }
 
         tokenVerification.VerifiedAt = DateTime.UtcNow;
@@ -267,16 +285,16 @@ public class AuthService : IAuthService
         var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
         var user = await _dbContext.Users
             .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail, cancellationToken)
-            ?? throw new KeyNotFoundException("User account not found.");
+            ?? throw AppError.NotFound("User account not found.");
 
         if (user.IsDeleted)
         {
-            throw new KeyNotFoundException("User account not found.");
+            throw AppError.NotFound("User account not found.");
         }
 
         if (user.EmailVerifiedAt.HasValue)
         {
-            throw new InvalidOperationException("This account is already verified.");
+            throw AppError.Conflict("This account is already verified.", "EMAIL_ALREADY_VERIFIED");
         }
 
         var recentVerification = await _dbContext.EmailVerifications
@@ -285,7 +303,7 @@ public class AuthService : IAuthService
 
         if (recentVerification != null)
         {
-            throw new InvalidOperationException("Please wait before requesting another verification code.");
+            throw AppError.Conflict("Please wait before requesting another verification code.", "RESEND_COOLDOWN");
         }
 
         var rawOtp = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
@@ -334,7 +352,7 @@ public class AuthService : IAuthService
                     userId: null,
                     cancellationToken: cancellationToken);
             }
-            throw new UnauthorizedAccessException("Invalid email or password.");
+            throw AppError.Unauthorized("Invalid email or password.", "INVALID_CREDENTIALS");
         }
 
         var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password);
@@ -351,7 +369,7 @@ public class AuthService : IAuthService
                     userId: user.UserId,
                     cancellationToken: cancellationToken);
             }
-            throw new UnauthorizedAccessException("Invalid email or password.");
+            throw AppError.Unauthorized("Invalid email or password.", "INVALID_CREDENTIALS");
         }
 
         if (!user.EmailVerifiedAt.HasValue)
@@ -367,7 +385,7 @@ public class AuthService : IAuthService
                     userId: user.UserId,
                     cancellationToken: cancellationToken);
             }
-            throw new UnauthorizedAccessException("Email is not verified. Please verify your account before logging in.");
+            throw AppError.Unauthorized("Email is not verified. Please verify your account before logging in.", "EMAIL_NOT_VERIFIED");
         }
 
         var roles = user.UserRoles
@@ -429,7 +447,7 @@ public class AuthService : IAuthService
     {
         if (string.IsNullOrWhiteSpace(dto.RefreshToken))
         {
-            throw new ArgumentException("Refresh token is required.", nameof(dto.RefreshToken));
+            throw AppError.InvalidRequest("Refresh token is required.", "INVALID_REQUEST", nameof(dto.RefreshToken));
         }
 
         var tokenHash = HashString(dto.RefreshToken.Trim());
@@ -442,7 +460,7 @@ public class AuthService : IAuthService
 
         if (tokenEntity == null || tokenEntity.IsRevoked || tokenEntity.ExpiresAt <= DateTime.UtcNow || tokenEntity.User == null || tokenEntity.User.IsDeleted)
         {
-            throw new UnauthorizedAccessException("Invalid or expired refresh token.");
+            throw AppError.Unauthorized("Invalid or expired refresh token.", "INVALID_REFRESH_TOKEN");
         }
 
         if (tokenEntity.IsUsed)
@@ -471,7 +489,7 @@ public class AuthService : IAuthService
                     cancellationToken: cancellationToken);
             }
 
-            throw new UnauthorizedAccessException("Refresh token reuse detected. All active sessions have been revoked for security.");
+            throw AppError.Unauthorized("Refresh token reuse detected. All active sessions have been revoked for security.", "TOKEN_REUSE_DETECTED");
         }
 
         var roles = tokenEntity.User.UserRoles
@@ -521,7 +539,7 @@ public class AuthService : IAuthService
     {
         if (string.IsNullOrWhiteSpace(dto.RefreshToken))
         {
-            throw new ArgumentException("Refresh token is required.", nameof(dto.RefreshToken));
+            throw AppError.InvalidRequest("Refresh token is required.", "INVALID_REQUEST", nameof(dto.RefreshToken));
         }
 
         var tokenHash = HashString(dto.RefreshToken.Trim());
@@ -592,7 +610,7 @@ public class AuthService : IAuthService
     {
         if (string.IsNullOrWhiteSpace(dto.Token))
         {
-            throw new ArgumentException("Reset token is required.", nameof(dto.Token));
+            throw AppError.InvalidRequest("Reset token is required.", "INVALID_REQUEST", nameof(dto.Token));
         }
 
         var tokenToVerify = dto.Token.Trim();
@@ -612,12 +630,22 @@ public class AuthService : IAuthService
 
         var verification = await _dbContext.EmailVerifications
             .Include(v => v.User)
-            .Where(v => v.TokenHash == tokenHash && v.Method == "ResetLink" && v.VerifiedAt == null && v.ExpiresAt > DateTime.UtcNow && v.Attempts < 5)
+            .Where(v => v.TokenHash == tokenHash && v.Method == "ResetLink" && v.VerifiedAt == null)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (verification == null || verification.User == null || verification.User.IsDeleted)
         {
-            throw new InvalidOperationException("Invalid or expired reset token.");
+            throw AppError.Conflict("Invalid or expired reset token.", "INVALID_TOKEN");
+        }
+
+        if (verification.ExpiresAt <= DateTime.UtcNow)
+        {
+            throw AppError.Conflict("Password reset link has expired. Please request a new one.", "TOKEN_EXPIRED");
+        }
+
+        if (verification.Attempts >= 5)
+        {
+            throw AppError.Conflict("Maximum attempts reached for this reset link. Please request a new one.", "MAX_ATTEMPTS_EXCEEDED");
         }
 
         var newPasswordHash = _passwordHasher.HashPassword(verification.User, dto.NewPassword);

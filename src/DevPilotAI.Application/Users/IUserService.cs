@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using DevPilotAI.Application.Authentication.DTOs;
 
-namespace DevPilotAI.Application.Services;
+namespace DevPilotAI.Application.Users;
 
 public interface IUserService
 {

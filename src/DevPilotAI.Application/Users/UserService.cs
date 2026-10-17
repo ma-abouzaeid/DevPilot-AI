@@ -1,8 +1,10 @@
+using DevPilotAI.Application.Authentication.DTOs;
+using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace DevPilotAI.Application.Services;
+namespace DevPilotAI.Application.Users;
 
 public class UserService : IUserService
 {
@@ -20,7 +22,7 @@ public class UserService : IUserService
         var user = await _dbContext.Users
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken)
-            ?? throw new KeyNotFoundException($"User with ID {userId} was not found.");
+            ?? throw AppError.NotFound($"User with ID {userId} was not found.");
 
         if (user.IsDeleted)
         {
@@ -60,7 +62,7 @@ public class UserService : IUserService
     {
         var user = await _dbContext.Users
             .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken)
-            ?? throw new KeyNotFoundException($"User with ID {userId} was not found.");
+            ?? throw AppError.NotFound($"User with ID {userId} was not found.");
 
         return new UserDto(user.UserId, user.Name, user.Email, user.EmailVerifiedAt);
     }
@@ -70,7 +72,7 @@ public class UserService : IUserService
     {
         var user = await _dbContext.Users
             .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken)
-            ?? throw new KeyNotFoundException($"User with ID {userId} was not found.");
+            ?? throw AppError.NotFound($"User with ID {userId} was not found.");
 
         // Update only allowed fields
         user.Name = request.Name;
@@ -92,7 +94,4 @@ public class UserService : IUserService
 
         return new UserDto(user.UserId, user.Name, user.Email, user.EmailVerifiedAt);
     }
-
-
-
 }

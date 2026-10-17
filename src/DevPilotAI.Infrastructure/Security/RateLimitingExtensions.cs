@@ -138,8 +138,11 @@ public static class RateLimitingExtensions
         var responsePayload = new
         {
             success = false,
-            errorCode = "RATE_LIMIT_EXCEEDED",
             message = "Too many requests. Please try again later.",
+            data = (object?)null,
+            errors = Array.Empty<object>(),
+            errorCode = "RATE_LIMIT_EXCEEDED",
+            traceId = requestId,
             requestId = requestId
         };
 

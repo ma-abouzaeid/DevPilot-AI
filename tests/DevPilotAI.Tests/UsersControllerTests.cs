@@ -1,9 +1,10 @@
 using System.Security.Claims;
 using DevPilotAI.API.Controllers;
-using DevPilotAI.Application.Services;
+using DevPilotAI.Application.Authentication.DTOs;
+using DevPilotAI.Application.Common.Models;
+using DevPilotAI.Application.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using DevPilotAI.API.Models;
 using Moq;
 using Xunit;
 
@@ -104,8 +105,8 @@ public class UsersControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(200, okResult.StatusCode);
         var response = Assert.IsType<ApiResponse<UserDto>>(okResult.Value);
-        Assert.True(response.success);
-        Assert.Equal(expectedDto, response.data);
+        Assert.True(response.Success);
+        Assert.Equal(expectedDto, response.Data);
     }
 
     [Fact]
@@ -146,8 +147,8 @@ public class UsersControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(200, okResult.StatusCode);
         var response = Assert.IsType<ApiResponse<UserDto>>(okResult.Value);
-        Assert.True(response.success);
-        Assert.Equal(updatedDto, response.data);
+        Assert.True(response.Success);
+        Assert.Equal(updatedDto, response.Data);
     }
 
     [Fact]
@@ -189,8 +190,7 @@ public class UsersControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(200, okResult.StatusCode);
         var response = Assert.IsType<ApiResponse<UserDto>>(okResult.Value);
-        Assert.True(response.success);
-        Assert.Equal(updatedDto, response.data);
+        Assert.True(response.Success);
+        Assert.Equal(updatedDto, response.Data);
     }
-
 }
