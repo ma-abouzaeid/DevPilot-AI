@@ -216,14 +216,7 @@ loginForm.addEventListener("submit", async function (e) {
 
     if (result.ok && result.success) {
         if (result.data && result.data.accessToken) {
-            try {
-                localStorage.setItem("accessToken", result.data.accessToken);
-                if (result.data.refreshToken) {
-                    localStorage.setItem("refreshToken", result.data.refreshToken);
-                }
-            } catch (e) {
-                console.warn("Could not persist session token:", e);
-            }
+            DevPilotApi.setTokens(result.data.accessToken, result.data.refreshToken);
         }
         window.location.href = getNextPage();
         return;

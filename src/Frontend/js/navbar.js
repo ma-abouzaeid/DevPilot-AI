@@ -1,7 +1,21 @@
 // navbar
-const navbarBox = document.querySelector("#navbar")
+const navbarBox = document.querySelector("#navbar");
 
 if (navbarBox) {
+    const isLoggedIn = (typeof window.DevPilotApi !== "undefined" && typeof window.DevPilotApi.isAuthenticated === "function")
+        ? window.DevPilotApi.isAuthenticated()
+        : Boolean(localStorage.getItem("accessToken"));
+
+    const authButtonsHtml = isLoggedIn
+        ? `<div class="d-flex gap-2">
+             <a class="btn btn-outline-light" href="dashboard.html">Dashboard</a>
+             <button type="button" class="btn btn-danger" id="nav-logout-btn">Log Out</button>
+           </div>`
+        : `<div class="d-flex gap-2">
+             <a class="btn btn-outline-light" href="login.html">Login</a>
+             <a class="btn btn-primary" href="register.html">Get Started</a>
+           </div>`;
+
     navbarBox.innerHTML = `
     <nav class="navbar navbar-expand-lg nav-dark" data-bs-theme="dark">
         <div class="container">
@@ -19,18 +33,28 @@ if (navbarBox) {
                     <li class="nav-item"><a class="nav-link" data-page="about" href="about.html">About</a></li>
                     <li class="nav-item"><a class="nav-link" data-page="community" href="community.html">Community</a></li>
                 </ul>
-                <div class="d-flex gap-2">
-                    <a class="btn btn-outline-light" href="login.html">Login</a>
-                    <a class="btn btn-primary" href="register.html">Get Started</a>
-                </div>
+                ${authButtonsHtml}
             </div>
         </div>
-    </nav>`
+    </nav>`;
 
     // active link
-    const activeLink = navbarBox.querySelector('[data-page="' + navbarBox.dataset.active + '"]')
+    const activeLink = navbarBox.querySelector('[data-page="' + navbarBox.dataset.active + '"]');
     if (activeLink) {
-        activeLink.classList.add("active")
-        activeLink.setAttribute("aria-current", "page")
+        activeLink.classList.add("active");
+        activeLink.setAttribute("aria-current", "page");
+    }
+
+    const logoutBtn = navbarBox.querySelector("#nav-logout-btn");
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", function () {
+            if (window.DevPilotApi && typeof window.DevPilotApi.logout === "function") {
+                window.DevPilotApi.logout("login.html");
+            } else {
+                localStorage.removeItem("accessToken");
+                localStorage.removeItem("refreshToken");
+                window.location.href = "login.html";
+            }
+        });
     }
 }
