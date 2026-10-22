@@ -1,3 +1,4 @@
+using DevPilotAI.Application.Authentication.DTOs;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Domain.Entities;
@@ -54,5 +55,43 @@ public class UserService : IUserService
                 userId: userId,
                 cancellationToken: cancellationToken);
         }
+    }
+
+    // Retrieve the current authenticated user's profile (safe fields only)
+    public async Task<UserDto> GetCurrentProfileAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken)
+            ?? throw AppError.NotFound($"User with ID {userId} was not found.");
+
+        return new UserDto(user.UserId, user.Name, user.Email, user.EmailVerifiedAt);
+    }
+
+    // Update mutable profile fields (Name only) and return updated profile DTO.
+    public async Task<UserDto> UpdateCurrentProfileAsync(int userId, UpdateUserProfileRequestDto request, CancellationToken cancellationToken = default)
+    {
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken)
+            ?? throw AppError.NotFound($"User with ID {userId} was not found.");
+
+        // Update only allowed fields
+        user.Name = request.Name;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (_auditService != null)
+        {
+            // Use generic audit action string as no specific enum exists for profile updates.
+            await _auditService.LogAsync(
+                action: "PROFILE_UPDATED",
+                entityName: nameof(User),
+                entityId: userId.ToString(),
+                oldValues: null,
+                newValues: new { Name = request.Name },
+                userId: userId,
+                cancellationToken: cancellationToken);
+        }
+
+        return new UserDto(user.UserId, user.Name, user.Email, user.EmailVerifiedAt);
     }
 }
