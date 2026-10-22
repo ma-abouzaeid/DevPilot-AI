@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using DevPilotAI.Application.Common.Interfaces;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 
 namespace DevPilotAI.Infrastructure.Security;
@@ -10,32 +11,27 @@ namespace DevPilotAI.Infrastructure.Security;
 public class JwtTokenGenerator : IJwtTokenGenerator
 {
     private readonly IConfiguration _configuration;
+    private readonly IHostEnvironment? _environment;
 
-    public JwtTokenGenerator(IConfiguration configuration)
+    public JwtTokenGenerator(IConfiguration configuration, IHostEnvironment? environment = null)
     {
         _configuration = configuration;
+        _environment = environment;
     }
 
     public string GenerateAccessToken(int userId, string email, string name, IEnumerable<string> roles)
     {
-        var secret = _configuration["JwtSettings:Secret"];
-        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-        if (string.Equals(env, "Production", StringComparison.OrdinalIgnoreCase))
-        {
-            if (string.IsNullOrWhiteSpace(secret) || secret.Contains("Change_In_Production", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException("Production configuration error: JwtSettings:Secret cannot use default placeholders in Production.");
-            }
-        }
-        else
-        {
-            secret = string.IsNullOrWhiteSpace(secret) ? "DevPilotAI_Super_Secret_Key_Change_In_Production_123456789!" : secret;
-        }
-        var issuer = _configuration["JwtSettings:Issuer"] ?? "DevPilotAI";
-        var audience = _configuration["JwtSettings:Audience"] ?? "DevPilotAIUsers";
+        var envName = _environment?.EnvironmentName 
+            ?? _configuration["ASPNETCORE_ENVIRONMENT"] 
+            ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        var isProduction = string.Equals(envName, "Production", StringComparison.OrdinalIgnoreCase);
+
+        var secret = JwtSecurityValidator.GetValidatedSecret(_configuration, isProduction);
+        var issuer = JwtSecurityValidator.GetIssuer(_configuration);
+        var audience = JwtSecurityValidator.GetAudience(_configuration);
         var expiryMinutes = _configuration.GetValue<int>("JwtSettings:ExpiryMinutes", 60);
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        var key = JwtSecurityValidator.GetSecurityKey(secret);
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new List<Claim>

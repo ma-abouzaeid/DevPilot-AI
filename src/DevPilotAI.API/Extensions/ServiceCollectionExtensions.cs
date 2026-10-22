@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Application.Common.Models;
+using DevPilotAI.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
@@ -104,21 +105,9 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration,
         IWebHostEnvironment environment)
     {
-        var jwtSecret = configuration["JwtSettings:Secret"];
-        if (environment.IsProduction())
-        {
-            if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Contains("Change_In_Production", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException("Production configuration error: JwtSettings:Secret must be explicitly configured with a secure key and cannot use default placeholders.");
-            }
-        }
-        else
-        {
-            jwtSecret = string.IsNullOrWhiteSpace(jwtSecret) ? "DevPilotAI_Super_Secret_Key_Change_In_Production_123456789!" : jwtSecret;
-        }
-
-        var jwtIssuer = configuration["JwtSettings:Issuer"] ?? "DevPilotAI";
-        var jwtAudience = configuration["JwtSettings:Audience"] ?? "DevPilotAIUsers";
+        var jwtSecret = JwtSecurityValidator.GetValidatedSecret(configuration, environment.IsProduction());
+        var jwtIssuer = JwtSecurityValidator.GetIssuer(configuration);
+        var jwtAudience = JwtSecurityValidator.GetAudience(configuration);
 
         services.AddAuthentication(options =>
         {
@@ -137,7 +126,7 @@ public static class ServiceCollectionExtensions
                 ValidateIssuerSigningKey = true,
                 ValidIssuer = jwtIssuer,
                 ValidAudience = jwtAudience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+                IssuerSigningKey = JwtSecurityValidator.GetSecurityKey(jwtSecret),
                 ClockSkew = TimeSpan.Zero
             };
             options.Events = new JwtBearerEvents
