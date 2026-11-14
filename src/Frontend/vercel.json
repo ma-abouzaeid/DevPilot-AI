@@ -5,6 +5,10 @@
     {
       "source": "/api/:path*",
       "destination": "http://devpilot-ai.runasp.net/api/:path*"
+    },
+    {
+      "source": "/hubs/:path*",
+      "destination": "http://devpilot-ai.runasp.net/hubs/:path*"
     }
   ],
   "headers": [

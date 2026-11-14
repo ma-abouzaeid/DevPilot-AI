@@ -941,13 +941,26 @@
     }
 
     async function ensureTicketsHub() {
-        if (ticketsState.hub) return ticketsState.hub;
+        if (ticketsState.hub && ticketsState.hub.state === signalR.HubConnectionState.Connected) {
+            return ticketsState.hub;
+        }
+        if (ticketsState.hub) {
+            try { await ticketsState.hub.stop(); } catch (e) { /* ignore */ }
+            ticketsState.hub = null;
+            ticketsState.joinedId = null;
+        }
         if (!window.signalR) throw new Error("SignalR client failed to load.");
-        var token = window.DevPilotApi.getAccessToken();
+
+        var hubOptions = {
+            accessTokenFactory: function () { return window.DevPilotApi.getAccessToken(); }
+        };
+        if (window.DEVPILOT_SIGNALR_LONG_POLLING) {
+            // Vercel rewrites proxy HTTP; WebSockets usually 404/fail — LongPolling works.
+            hubOptions.transport = signalR.HttpTransportType.LongPolling;
+        }
+
         ticketsState.hub = new signalR.HubConnectionBuilder()
-            .withUrl(new URL("/hubs/support-tickets", API_BASE).href, {
-                accessTokenFactory: function () { return token; }
-            })
+            .withUrl(new URL("/hubs/support-tickets", API_BASE).href, hubOptions)
             .withAutomaticReconnect()
             .build();
 
@@ -968,12 +981,20 @@
             loadAdminTicketsList().catch(function () { /* ignore */ });
         });
 
-        await ticketsState.hub.start();
+        try {
+            await ticketsState.hub.start();
+        } catch (err) {
+            ticketsState.hub = null;
+            throw err;
+        }
         return ticketsState.hub;
     }
 
     async function joinAdminTicketRoom(ticketId) {
         var conn = await ensureTicketsHub();
+        if (conn.state !== signalR.HubConnectionState.Connected) {
+            throw new Error("Live chat is not connected yet. Retry in a moment.");
+        }
         if (ticketsState.joinedId && ticketsState.joinedId !== ticketId) {
             try { await conn.invoke("LeaveTicket", ticketsState.joinedId); } catch (e) { /* ignore */ }
         }
@@ -1181,8 +1202,20 @@
                 if (!body) return;
                 chatForm.querySelector("button").disabled = true;
                 try {
-                    var conn = await ensureTicketsHub();
-                    await conn.invoke("SendMessage", id, body);
+                    var conn = null;
+                    try { conn = await ensureTicketsHub(); } catch (hubErr) { conn = null; }
+                    if (conn && conn.state === signalR.HubConnectionState.Connected) {
+                        if (Number(ticketsState.joinedId) !== Number(id)) {
+                            await joinAdminTicketRoom(id);
+                        }
+                        await conn.invoke("SendMessage", id, body);
+                    } else {
+                        var sent = await api("/api/support-tickets/" + id + "/messages", {
+                            method: "POST",
+                            body: JSON.stringify({ body: body })
+                        });
+                        if (sent.data) appendAdminChatMessage(sent.data);
+                    }
                     input.value = "";
                 } catch (err) {
                     onError(err);
@@ -1205,10 +1238,13 @@
             if (canChat) {
                 var msgRes = await api("/api/support-tickets/" + ticketId + "/messages");
                 messages = msgRes.data || [];
-                if (joinChat) await joinAdminTicketRoom(ticketId);
             }
             renderAdminTicketDetail(ticket, messages);
             await loadAdminTicketsList();
+            // Realtime join is best-effort — never wipe the ticket UI if SignalR fails.
+            if (canChat && joinChat) {
+                joinAdminTicketRoom(ticketId).catch(function () { /* REST chat still works */ });
+            }
         } catch (err) {
             detail.innerHTML = '<div class="empty-state text-danger">' + escapeHtml(err.message || "Failed") + "</div>";
         }

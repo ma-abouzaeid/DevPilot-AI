@@ -52,14 +52,25 @@
     }
 
     async function ensureHub() {
-        if (hubConnection) return hubConnection;
+        if (hubConnection && hubConnection.state === signalR.HubConnectionState.Connected) {
+            return hubConnection;
+        }
+        if (hubConnection) {
+            try { await hubConnection.stop(); } catch (e) { /* ignore */ }
+            hubConnection = null;
+            joinedTicketId = null;
+        }
         if (!window.signalR) throw new Error("SignalR client failed to load.");
 
-        const token = window.DevPilotApi.getAccessToken();
+        const hubOptions = {
+            accessTokenFactory: function () { return window.DevPilotApi.getAccessToken(); }
+        };
+        if (window.DEVPILOT_SIGNALR_LONG_POLLING) {
+            hubOptions.transport = signalR.HttpTransportType.LongPolling;
+        }
+
         hubConnection = new signalR.HubConnectionBuilder()
-            .withUrl(new URL("/hubs/support-tickets", API_BASE).href, {
-                accessTokenFactory: function () { return token; }
-            })
+            .withUrl(new URL("/hubs/support-tickets", API_BASE).href, hubOptions)
             .withAutomaticReconnect()
             .build();
 
@@ -80,12 +91,20 @@
             leaveTicketRoom();
         });
 
-        await hubConnection.start();
+        try {
+            await hubConnection.start();
+        } catch (err) {
+            hubConnection = null;
+            throw err;
+        }
         return hubConnection;
     }
 
     async function joinTicketRoom(ticketId) {
         const conn = await ensureHub();
+        if (conn.state !== signalR.HubConnectionState.Connected) {
+            throw new Error("Live chat is not connected yet.");
+        }
         if (joinedTicketId && joinedTicketId !== ticketId) {
             try { await conn.invoke("LeaveTicket", joinedTicketId); } catch (e) { /* ignore */ }
         }
@@ -216,8 +235,20 @@
                 if (!body) return;
                 form.querySelector("button").disabled = true;
                 try {
-                    const conn = await ensureHub();
-                    await conn.invoke("SendMessage", id, body);
+                    let conn = null;
+                    try { conn = await ensureHub(); } catch (hubErr) { conn = null; }
+                    if (conn && conn.state === signalR.HubConnectionState.Connected) {
+                        if (Number(joinedTicketId) !== Number(id)) {
+                            await joinTicketRoom(id);
+                        }
+                        await conn.invoke("SendMessage", id, body);
+                    } else {
+                        const sent = await api("/api/support-tickets/" + id + "/messages", {
+                            method: "POST",
+                            body: JSON.stringify({ body: body })
+                        });
+                        if (sent.data) appendMessage(sent.data);
+                    }
                     input.value = "";
                 } catch (err) {
                     showAlert("danger", err.message || "Failed to send message");
@@ -240,12 +271,14 @@
             if (canChat) {
                 const msgRes = await api("/api/support-tickets/" + ticketId + "/messages");
                 messages = msgRes.data || [];
-                if (joinChat) await joinTicketRoom(ticketId);
             } else {
                 await leaveTicketRoom();
             }
             renderDetail(ticket, messages);
             loadTickets();
+            if (canChat && joinChat) {
+                joinTicketRoom(ticketId).catch(function () { /* REST chat still works */ });
+            }
         } catch (e) {
             detailEl.innerHTML = '<div class="empty-state text-danger">' + escapeHtml(e.message) + "</div>";
         }
