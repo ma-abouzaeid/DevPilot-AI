@@ -1,4 +1,4 @@
-// footer — legal links only (nav lives in the header)
+// footer — site + legal links
 const footerBox = document.querySelector("#footer");
 
 if (footerBox) {
@@ -9,6 +9,8 @@ if (footerBox) {
                 <img src="images/logo-light.svg" alt="DevPilot AI" class="logo-img logo-svg">
             </a>
             <ul class="footer-links">
+                <li class="d-inline-block"><a href="support.html">Support</a></li>
+                <li class="d-inline-block"><a href="community.html">Community</a></li>
                 <li class="d-inline-block"><a href="privacy.html">Privacy</a></li>
                 <li class="d-inline-block"><a href="terms.html">Terms</a></li>
             </ul>
