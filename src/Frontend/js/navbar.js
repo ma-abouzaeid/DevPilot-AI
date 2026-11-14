@@ -7,8 +7,9 @@ if (navbarBox) {
         : Boolean(localStorage.getItem("accessToken"));
 
     const authButtonsHtml = isLoggedIn
-        ? `<div class="d-flex gap-2">
+        ? `<div class="d-flex flex-wrap gap-2">
              <a class="btn btn-outline-light" href="dashboard.html">Dashboard</a>
+             <a class="btn btn-outline-light" href="settings.html">Settings</a>
              <button type="button" class="btn btn-danger" id="nav-logout-btn">Log Out</button>
            </div>`
         : `<div class="d-flex gap-2">

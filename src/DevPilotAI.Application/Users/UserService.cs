@@ -74,8 +74,13 @@ public class UserService : IUserService
             .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken)
             ?? throw AppError.NotFound($"User with ID {userId} was not found.");
 
-        // Update only allowed fields
-        user.Name = request.Name;
+        var name = request.Name.Trim();
+        if (name.Length < 2)
+        {
+            throw AppError.InvalidRequest("Name must be between 2 and 150 characters.", "INVALID_REQUEST", nameof(request.Name));
+        }
+
+        user.Name = name;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -87,7 +92,7 @@ public class UserService : IUserService
                 entityName: nameof(User),
                 entityId: userId.ToString(),
                 oldValues: null,
-                newValues: new { Name = request.Name },
+                newValues: new { Name = name },
                 userId: userId,
                 cancellationToken: cancellationToken);
         }

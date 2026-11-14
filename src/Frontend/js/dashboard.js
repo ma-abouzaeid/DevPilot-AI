@@ -21,6 +21,11 @@
         return '<span class="badge-soft open">Open</span>';
     }
 
+    function detailsHref(p) {
+        const id = p.problemId || p.ProblemId;
+        return "problem-details.html?id=" + encodeURIComponent(id);
+    }
+
     function continueHref(p) {
         const status = (p.status || p.Status || "").toLowerCase();
         const id = p.problemId || p.ProblemId;
@@ -75,13 +80,16 @@
                 const code = p.problemCode || p.ProblemCode || "";
                 const title = p.title || p.Title || "Untitled problem";
                 const status = p.status || p.Status || "";
+                const continueLabel = String(status).toLowerCase() === "solved" ? "Article" : "Continue";
                 return (
                     '<div class="list-row">' +
                     "<div>" +
-                    '<a class="link-blue" href="' + continueHref(p) + '">' +
+                    '<a class="link-blue" href="' + detailsHref(p) + '">' +
                     escapeHtml(title) +
                     "</a>" +
-                    '<div class="text-gray small">' + escapeHtml(code) + "</div>" +
+                    '<div class="text-gray small">' + escapeHtml(code) +
+                    ' · <a class="link-blue" href="' + continueHref(p) + '">' + continueLabel + "</a>" +
+                    "</div>" +
                     "</div>" +
                     statusBadge(status) +
                     "</div>"

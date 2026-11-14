@@ -64,7 +64,16 @@ public record ProblemHistoryDto(
     DateTime? ResolvedAt,
     List<ProblemRequestDto> Requests,
     List<DebuggingAttemptDto> Attempts,
-    List<ProblemSolutionDto> Solutions
+    List<ProblemSolutionDto> Solutions,
+    bool IsOwner = false,
+    string? Summary = null
+);
+
+public record PlatformStatsDto(
+    int Developers,
+    int ProblemsSolved,
+    int KnowledgeArticles,
+    int CodingChallenges
 );
 
 public record ProblemSearchResultDto(

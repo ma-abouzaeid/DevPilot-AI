@@ -9,12 +9,17 @@ if (footerBox) {
                 <li class="d-inline-block"><a href="terms.html">Terms</a></li>`
 
     if (footerBox.dataset.variant !== "simple") {
+        const isLoggedIn = (typeof window.DevPilotApi !== "undefined" && typeof window.DevPilotApi.isAuthenticated === "function")
+            ? window.DevPilotApi.isAuthenticated()
+            : Boolean(localStorage.getItem("accessToken"));
         links = `
                 <li class="d-inline-block"><a href="index.html">Home</a></li>
                 <li class="d-inline-block"><a href="articles.html">Articles</a></li>
                 <li class="d-inline-block"><a href="challenges.html">Challenges</a></li>
                 <li class="d-inline-block"><a href="about.html">About</a></li>
-                <li class="d-inline-block"><a href="community.html">Community</a></li>` + links
+                <li class="d-inline-block"><a href="community.html">Community</a></li>` +
+            (isLoggedIn ? `<li class="d-inline-block"><a href="settings.html">Settings</a></li>` : "") +
+            links
     }
 
     footerBox.innerHTML = `

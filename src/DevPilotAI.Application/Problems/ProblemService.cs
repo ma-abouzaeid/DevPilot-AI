@@ -391,7 +391,7 @@ public class ProblemService : IProblemService
             .FirstOrDefaultAsync(p => p.ProblemCode == problemCode.Trim(), cancellationToken);
     }
 
-    public async Task<ProblemHistoryDto> GetProblemHistoryAsync(int problemId, bool includeSourceCode = false, CancellationToken cancellationToken = default)
+    public async Task<ProblemHistoryDto> GetProblemHistoryAsync(int problemId, int? viewerUserId = null, CancellationToken cancellationToken = default)
     {
         var problem = await _dbContext.Problems
             .Include(p => p.ProblemRequests)
@@ -399,6 +399,9 @@ public class ProblemService : IProblemService
             .Include(p => p.ProblemSolutions)
             .FirstOrDefaultAsync(p => p.ProblemId == problemId, cancellationToken)
             ?? throw AppError.NotFound($"Problem with ID {problemId} was not found.");
+
+        var isOwner = viewerUserId.HasValue && problem.UserId == viewerUserId.Value;
+        var includeSourceCode = isOwner;
 
         var requests = problem.ProblemRequests
             .OrderBy(r => r.CreatedAt)
@@ -444,7 +447,27 @@ public class ProblemService : IProblemService
             ResolvedAt: problem.ResolvedAt,
             Requests: requests,
             Attempts: attempts,
-            Solutions: solutions
+            Solutions: solutions,
+            IsOwner: isOwner,
+            Summary: problem.Summary
+        );
+    }
+
+    public async Task<PlatformStatsDto> GetPlatformStatsAsync(CancellationToken cancellationToken = default)
+    {
+        var developers = await _dbContext.Users.AsNoTracking().CountAsync(cancellationToken);
+        var problemsSolved = await _dbContext.Problems.AsNoTracking()
+            .CountAsync(p => p.Status == ProblemStatus.Solved, cancellationToken);
+        var knowledgeArticles = await _dbContext.KnowledgeArticles.AsNoTracking()
+            .CountAsync(a => a.IsPublished, cancellationToken);
+        var codingChallenges = await _dbContext.Challenges.AsNoTracking()
+            .CountAsync(c => c.IsPublished && !c.IsDeleted, cancellationToken);
+
+        return new PlatformStatsDto(
+            Developers: developers,
+            ProblemsSolved: problemsSolved,
+            KnowledgeArticles: knowledgeArticles,
+            CodingChallenges: codingChallenges
         );
     }
 

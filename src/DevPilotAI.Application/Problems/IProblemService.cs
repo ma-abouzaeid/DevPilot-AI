@@ -13,9 +13,10 @@ public interface IProblemService
     Task<DebuggingResultDto> SubmitFeedbackAsync(int problemId, int attemptId, bool isSolved, string? comments, int? userId = null, CancellationToken cancellationToken = default);
     Task<Problem?> GetProblemDetailsAsync(int problemId, CancellationToken cancellationToken = default);
     Task<Problem?> GetProblemByCodeAsync(string problemCode, CancellationToken cancellationToken = default);
-    Task<ProblemHistoryDto> GetProblemHistoryAsync(int problemId, bool includeSourceCode = false, CancellationToken cancellationToken = default);
+    Task<ProblemHistoryDto> GetProblemHistoryAsync(int problemId, int? viewerUserId = null, CancellationToken cancellationToken = default);
     Task<PagedResultDto<ProblemSearchResultDto>> SearchProblemsAsync(string? query, string? technology, int page = 1, int pageSize = 10, CancellationToken cancellationToken = default);
     Task<MyProblemsDashboardDto> GetMyProblemsDashboardAsync(int userId, int recentCount = 8, CancellationToken cancellationToken = default);
     Task<PagedResultDto<KnowledgeArticleListItemDto>> SearchPublishedArticlesAsync(string? query, string? technology, int page = 1, int pageSize = 10, CancellationToken cancellationToken = default);
     Task<KnowledgeArticleDetailsDto?> GetPublishedArticleAsync(int? knowledgeArticleId = null, int? problemId = null, string? articleOrProblemCode = null, CancellationToken cancellationToken = default);
+    Task<PlatformStatsDto> GetPlatformStatsAsync(CancellationToken cancellationToken = default);
 }

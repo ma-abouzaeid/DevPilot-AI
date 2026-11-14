@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="images/logo-mark.svg">
+    <title>Account Settings - DevPilot AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.0/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/media.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+
+<body>
+    <div id="navbar" data-active="settings"></div>
+
+    <section class="page-shell">
+        <div class="container" style="max-width: 720px;">
+            <span class="page-kicker"><i class="fa-solid fa-user-gear"></i> Account</span>
+            <h1 class="page-title">Settings</h1>
+            <p class="page-lead">Update your profile details or deactivate your account.</p>
+
+            <div class="alert d-none" id="settings-alert" role="alert"></div>
+
+            <div class="surface-card mb-4">
+                <h2 class="h5 mb-3">Profile</h2>
+                <form id="profile-form" class="debug-form" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label" for="profile-name">Display name</label>
+                        <input type="text" class="form-control" id="profile-name" name="name" minlength="2" maxlength="150" required autocomplete="name">
+                        <small class="text-gray">Shown on the challenge leaderboard and dashboard.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="profile-email">Email</label>
+                        <input type="email" class="form-control" id="profile-email" readonly disabled>
+                        <small class="text-gray" id="email-verified-hint">Email cannot be changed here.</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="btn-save-profile">
+                        <i class="fa-solid fa-floppy-disk"></i> Save changes
+                    </button>
+                </form>
+            </div>
+
+            <div class="surface-card border-danger-subtle">
+                <h2 class="h5 mb-2 text-danger">Danger zone</h2>
+                <p class="text-gray mb-3">Deactivating soft-deletes your account and signs you out. You will lose access to your tickets and GitHub link.</p>
+                <button type="button" class="btn btn-outline-danger" id="btn-delete-account">
+                    <i class="fa-solid fa-trash"></i> Deactivate account
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <div id="footer" data-variant="simple"></div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="js/config.js"></script>
+    <script src="js/api-client.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/footer.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/settings.js"></script>
+</body>
+
+</html>

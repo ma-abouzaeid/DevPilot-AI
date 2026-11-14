@@ -28,14 +28,16 @@ public class ProblemsController : ControllerBase
             ? correlationId.ToString().Trim()
             : HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
 
-    private int GetRequiredAuthenticatedUserId()
+    private int? TryGetAuthenticatedUserId()
     {
         var claim = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(claim, out var id) || id <= 0)
-        {
-            throw AppError.Unauthorized("User identity claim is missing or invalid.");
-        }
-        return id;
+        return int.TryParse(claim, out var id) && id > 0 ? id : null;
+    }
+
+    private int GetRequiredAuthenticatedUserId()
+    {
+        return TryGetAuthenticatedUserId()
+            ?? throw AppError.Unauthorized("User identity claim is missing or invalid.");
     }
 
     [HttpPost]
@@ -127,9 +129,18 @@ public class ProblemsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetProblemHistory(int problemId, CancellationToken cancellationToken)
     {
-        // Public history omits source code / logs to avoid leaking private snippets.
-        var history = await _problemService.GetProblemHistoryAsync(problemId, includeSourceCode: false, cancellationToken);
+        // Owners receive source/logs; anonymous/public viewers get sanitized history.
+        var history = await _problemService.GetProblemHistoryAsync(problemId, TryGetAuthenticatedUserId(), cancellationToken);
         var response = ApiResponse<ProblemHistoryDto>.SuccessResult(history, "Problem history retrieved successfully.", GetTraceId());
+        return Ok(response);
+    }
+
+    [HttpGet("stats")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetPlatformStats(CancellationToken cancellationToken)
+    {
+        var stats = await _problemService.GetPlatformStatsAsync(cancellationToken);
+        var response = ApiResponse<PlatformStatsDto>.SuccessResult(stats, "Platform stats retrieved successfully.", GetTraceId());
         return Ok(response);
     }
 
