@@ -165,37 +165,53 @@ public class AIGatewayService : IAIGateway
                 provider.LastError = Truncate(ex.Message, 1000);
                 errors.Add($"{provider.Name}: {Truncate(ex.Message, 300)}");
 
-                var promptTokens = EstimateTokens(request.SystemPrompt) + EstimateTokens(request.UserPrompt);
-                var (aiRequestId, usageEventId) = await PersistAiTelemetryAsync(
-                    request,
-                    provider,
-                    model,
-                    success: false,
-                    promptTokens,
-                    completionTokens: 0,
-                    sw.ElapsedMilliseconds,
-                    errorMessage: Truncate(ex.Message, 1000),
-                    correlationId,
-                    retrySequence - 1,
-                    startedAt,
-                    cancellationToken);
+                try
+                {
+                    var promptTokens = EstimateTokens(request.SystemPrompt) + EstimateTokens(request.UserPrompt);
+                    var (aiRequestId, usageEventId) = await PersistAiTelemetryAsync(
+                        request,
+                        provider,
+                        model,
+                        success: false,
+                        promptTokens,
+                        completionTokens: 0,
+                        sw.ElapsedMilliseconds,
+                        errorMessage: Truncate(ex.Message, 1000),
+                        correlationId,
+                        retrySequence - 1,
+                        startedAt,
+                        cancellationToken);
 
-                await TryAuditAiAsync(
-                    SystemAuditEventTypes.AiRequestFailed,
-                    request,
-                    provider.Name,
-                    model.ModelName,
-                    success: false,
-                    promptTokens,
-                    0,
-                    sw.ElapsedMilliseconds,
-                    aiRequestId,
-                    usageEventId,
-                    correlationId,
-                    Truncate(ex.Message, 300),
-                    cancellationToken);
+                    await TryAuditAiAsync(
+                        SystemAuditEventTypes.AiRequestFailed,
+                        request,
+                        provider.Name,
+                        model.ModelName,
+                        success: false,
+                        promptTokens,
+                        0,
+                        sw.ElapsedMilliseconds,
+                        aiRequestId,
+                        usageEventId,
+                        correlationId,
+                        Truncate(ex.Message, 300),
+                        cancellationToken);
 
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+                catch (Exception telemetryEx)
+                {
+                    // Telemetry must never convert a recoverable provider failure into a 500.
+                    _logger.LogWarning(telemetryEx, "Failed to persist failure telemetry for {ProviderName}", provider.Name);
+                    try
+                    {
+                        await _dbContext.SaveChangesAsync(cancellationToken);
+                    }
+                    catch (Exception saveEx)
+                    {
+                        _logger.LogWarning(saveEx, "Failed to persist provider status after {ProviderName} failure", provider.Name);
+                    }
+                }
             }
         }
 

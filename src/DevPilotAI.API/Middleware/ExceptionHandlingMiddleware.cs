@@ -52,6 +52,7 @@ public class ExceptionHandlingMiddleware
             UnauthorizedAccessException authEx => HandleUnauthorizedAccess(context, authEx),
             InvalidOperationException invEx => (invEx.Data["StatusCode"] is HttpStatusCode sc ? (int)sc : (int)HttpStatusCode.Conflict, (string?)invEx.Data["ErrorCode"] ?? "RESOURCE_CONFLICT", invEx.Message, new List<ValidationErrorDetail>()),
             DbUpdateException dbEx => HandleDbUpdateException(dbEx),
+            SqlException sqlEx => HandleSqlException(sqlEx),
             _ => ((int)HttpStatusCode.InternalServerError, "INTERNAL_SERVER_ERROR", "An unexpected error occurred. Please try again later.", new List<ValidationErrorDetail>())
         };
 
@@ -121,15 +122,7 @@ public class ExceptionHandlingMiddleware
 
         if (dbEx.InnerException is SqlException sqlEx)
         {
-            if (sqlEx.Number == 2601 || sqlEx.Number == 2627)
-            {
-                return ((int)HttpStatusCode.Conflict, "RESOURCE_CONFLICT", "A resource with these details already exists.", new List<ValidationErrorDetail>());
-            }
-
-            if (sqlEx.Number == 547)
-            {
-                return ((int)HttpStatusCode.BadRequest, "FOREIGN_KEY_VIOLATION", "A referenced record does not exist or cannot be modified.", new List<ValidationErrorDetail>());
-            }
+            return HandleSqlException(sqlEx);
         }
 
         var innerMsg = dbEx.InnerException?.Message ?? dbEx.Message;
@@ -138,6 +131,29 @@ public class ExceptionHandlingMiddleware
             innerMsg.Contains("IX_", StringComparison.OrdinalIgnoreCase))
         {
             return ((int)HttpStatusCode.Conflict, "RESOURCE_CONFLICT", "A resource with these details already exists.", new List<ValidationErrorDetail>());
+        }
+
+        return ((int)HttpStatusCode.InternalServerError, "INTERNAL_SERVER_ERROR", "An unexpected database error occurred while persisting changes.", new List<ValidationErrorDetail>());
+    }
+
+    private static (int StatusCode, string ErrorCode, string Message, List<ValidationErrorDetail> Errors) HandleSqlException(SqlException sqlEx)
+    {
+        // 208 = Invalid object name (missing table/view) — often a pending migration.
+        if (sqlEx.Number == 208)
+        {
+            return ((int)HttpStatusCode.InternalServerError, "DATABASE_SCHEMA_MISMATCH",
+                "The database schema is missing a required object. Apply pending migrations and try again.",
+                new List<ValidationErrorDetail>());
+        }
+
+        if (sqlEx.Number == 2601 || sqlEx.Number == 2627)
+        {
+            return ((int)HttpStatusCode.Conflict, "RESOURCE_CONFLICT", "A resource with these details already exists.", new List<ValidationErrorDetail>());
+        }
+
+        if (sqlEx.Number == 547)
+        {
+            return ((int)HttpStatusCode.BadRequest, "FOREIGN_KEY_VIOLATION", "A referenced record does not exist or cannot be modified.", new List<ValidationErrorDetail>());
         }
 
         return ((int)HttpStatusCode.InternalServerError, "INTERNAL_SERVER_ERROR", "An unexpected database error occurred while persisting changes.", new List<ValidationErrorDetail>());

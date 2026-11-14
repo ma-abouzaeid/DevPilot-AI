@@ -730,42 +730,16 @@ public class ProblemService : IProblemService
 
         if (_similarityEngine != null)
         {
-            var embeddingData = await _similarityEngine.GenerateEmbeddingAsync(queryText, cancellationToken);
-            if (embeddingData.Length > 0)
+            try
             {
-                var existingEmbedding = await _dbContext.ProblemEmbeddings
-                    .FirstOrDefaultAsync(e => e.ProblemRequestId == request.ProblemRequestId, cancellationToken);
-
-                if (existingEmbedding == null)
-                {
-                    _dbContext.ProblemEmbeddings.Add(new ProblemEmbedding
-                    {
-                        ProblemRequestId = request.ProblemRequestId,
-                        EmbeddingData = embeddingData,
-                        ModelVersion = "feature-v1",
-                        CreatedAt = DateTime.UtcNow
-                    });
-                    await _dbContext.SaveChangesAsync(cancellationToken);
-                }
+                bestMatch = await TryCaptureSimilarityAsync(request, queryText, cancellationToken);
             }
-
-            bestMatch = await _similarityEngine.FindBestMatchAsync(
-                request.ProblemRequestId,
-                queryText,
-                request.Framework,
-                threshold: 0.85,
-                cancellationToken: cancellationToken);
-
-            if (bestMatch != null)
+            catch (Exception)
             {
-                _dbContext.SimilarityMatches.Add(new SimilarityMatch
-                {
-                    ProblemRequestId = request.ProblemRequestId,
-                    MatchedProblemId = bestMatch.MatchedProblemId,
-                    SimilarityScore = (decimal)bestMatch.SimilarityScore,
-                    CreatedAt = DateTime.UtcNow
-                });
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                // Similarity is an optimization only. Missing embedding tables or match failures
+                // must never block AI debugging or leave the ticket without a solution.
+                DetachPendingSimilarityEntities(request.ProblemRequestId);
+                bestMatch = null;
             }
         }
 
@@ -871,14 +845,15 @@ public class ProblemService : IProblemService
         }
 
         var payload = DebuggingResultParser.ParseOrFallback(aiResponse.Content, problem.Title);
-        if (!string.IsNullOrWhiteSpace(similarityNote))
+        if (!string.IsNullOrWhiteSpace(similarityNote) && bestMatch != null)
         {
             payload.Notes = string.IsNullOrWhiteSpace(payload.Notes)
                 ? similarityNote
                 : $"{similarityNote} {payload.Notes}";
-            if (!payload.RootCause!.Contains(bestMatch!.MatchedProblemCode, StringComparison.OrdinalIgnoreCase))
+            var rootCause = payload.RootCause ?? string.Empty;
+            if (!rootCause.Contains(bestMatch.MatchedProblemCode, StringComparison.OrdinalIgnoreCase))
             {
-                payload.RootCause = $"{similarityNote} {payload.RootCause}".Trim();
+                payload.RootCause = $"{similarityNote} {rootCause}".Trim();
             }
         }
 
@@ -931,6 +906,76 @@ public class ProblemService : IProblemService
             DebuggingAttemptId = attempt.DebuggingAttemptId,
             ProviderUsed = aiResponse.ProviderName
         };
+    }
+
+    private void DetachPendingSimilarityEntities(int problemRequestId)
+    {
+        if (_dbContext is not DbContext ef)
+        {
+            return;
+        }
+
+        foreach (var entry in ef.ChangeTracker.Entries()
+                     .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+                     .ToList())
+        {
+            if (entry.Entity is ProblemEmbedding embedding
+                && embedding.ProblemRequestId == problemRequestId)
+            {
+                entry.State = EntityState.Detached;
+            }
+            else if (entry.Entity is SimilarityMatch match
+                     && match.ProblemRequestId == problemRequestId)
+            {
+                entry.State = EntityState.Detached;
+            }
+        }
+    }
+
+    private async Task<SimilarityMatchResult?> TryCaptureSimilarityAsync(
+        ProblemRequest request,
+        string queryText,
+        CancellationToken cancellationToken)
+    {
+        var embeddingData = await _similarityEngine!.GenerateEmbeddingAsync(queryText, cancellationToken);
+        if (embeddingData.Length > 0)
+        {
+            var existingEmbedding = await _dbContext.ProblemEmbeddings
+                .FirstOrDefaultAsync(e => e.ProblemRequestId == request.ProblemRequestId, cancellationToken);
+
+            if (existingEmbedding == null)
+            {
+                _dbContext.ProblemEmbeddings.Add(new ProblemEmbedding
+                {
+                    ProblemRequestId = request.ProblemRequestId,
+                    EmbeddingData = embeddingData,
+                    ModelVersion = "feature-v1",
+                    CreatedAt = DateTime.UtcNow
+                });
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        var bestMatch = await _similarityEngine.FindBestMatchAsync(
+            request.ProblemRequestId,
+            queryText,
+            request.Framework,
+            threshold: 0.85,
+            cancellationToken: cancellationToken);
+
+        if (bestMatch != null)
+        {
+            _dbContext.SimilarityMatches.Add(new SimilarityMatch
+            {
+                ProblemRequestId = request.ProblemRequestId,
+                MatchedProblemId = bestMatch.MatchedProblemId,
+                SimilarityScore = (decimal)bestMatch.SimilarityScore,
+                CreatedAt = DateTime.UtcNow
+            });
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return bestMatch;
     }
 
     private static string TruncateForAudit(string? value, int max)
