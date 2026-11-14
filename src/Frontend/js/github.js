@@ -26,8 +26,6 @@
     const resultHeading = document.getElementById("result-heading");
     const resultModeLabel = document.getElementById("result-mode-label");
     const resultCodeBadge = document.getElementById("result-code");
-    const providerRow = document.getElementById("provider-row");
-    const resultProvider = document.getElementById("result-provider");
     const feedbackActions = document.getElementById("feedback-actions");
     const feedbackMessage = document.getElementById("feedback-message");
     const btnSolved = document.getElementById("btn-solved");
@@ -37,10 +35,9 @@
     let selectedPath = null;
     let mode = "debug";
     let lastDebugResult = null;
-
-    function isAdminViewer() {
-        return !!(window.DevPilotApi && typeof window.DevPilotApi.isAdmin === "function" && window.DevPilotApi.isAdmin());
-    }
+    let reviewsPage = 1;
+    const reviewsHistoryList = document.getElementById("reviews-history-list");
+    const reviewsPager = document.getElementById("reviews-pager");
 
     function pick(obj) {
         if (!obj) return "";
@@ -71,7 +68,6 @@
             steps: steps,
             correctedCode: pick(data, "correctedCode", "CorrectedCode"),
             notes: pick(data, "notes", "Notes"),
-            providerUsed: pick(data, "providerUsed", "ProviderUsed"),
             proposedSolution: pick(data, "proposedSolution", "ProposedSolution")
         };
     }
@@ -84,6 +80,18 @@
         return text;
     }
 
+    function fallbackCopy(text) {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "absolute";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand("copy"); } catch (e) { /* ignore */ }
+        document.body.removeChild(ta);
+    }
+
     function ideBlock(code, filename) {
         const formatted = formatSourceCode(code || "// No code changes suggested");
         const lines = formatted.length ? formatted.split("\n") : [" "];
@@ -94,12 +102,40 @@
             '<div class="ide-toolbar">' +
             '<div class="ide-dots" aria-hidden="true"><span></span><span></span><span></span></div>' +
             '<span class="ide-filename">' + escapeHtml(filename || "fixed.txt") + "</span>" +
+            '<button type="button" class="ide-copy-btn" data-copy="' + encodeURIComponent(formatted) + '">' +
+            '<i class="fa-regular fa-copy"></i> Copy</button>' +
             "</div>" +
             '<div class="ide-body ide-body-readonly">' +
             '<pre class="ide-gutter" aria-hidden="true">' + gutter + "</pre>" +
             '<pre class="ide-code"><code>' + escapeHtml(formatted) + "</code></pre>" +
             "</div></div>"
         );
+    }
+
+    function bindIdeCopyButtons(scope) {
+        if (!scope) return;
+        scope.querySelectorAll(".ide-copy-btn").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                const text = decodeURIComponent(btn.getAttribute("data-copy") || "");
+                const done = function () {
+                    btn.classList.add("is-copied");
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
+                    setTimeout(function () {
+                        btn.classList.remove("is-copied");
+                        btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
+                    }, 1600);
+                };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(done).catch(function () {
+                        fallbackCopy(text);
+                        done();
+                    });
+                } else {
+                    fallbackCopy(text);
+                    done();
+                }
+            });
+        });
     }
 
     async function fetchSelectedFileContent() {
@@ -365,6 +401,12 @@
 
         btnSolved.disabled = true;
         btnUnsolved.disabled = true;
+        if (window.DevPilotBusy) {
+            window.DevPilotBusy.show(
+                "Creating your article & challenge…",
+                "DevPilot is publishing knowledge from this fix. You’ll open the article next."
+            );
+        }
         try {
             const feedbackUrl = new URL(
                 "/api/Problems/" + lastDebugResult.problemId + "/attempts/" + lastDebugResult.debuggingAttemptId + "/feedback",
@@ -383,18 +425,19 @@
                 throw new Error(response.message || "Failed to submit feedback.");
             }
 
-            if (response && response.data) {
-                const incoming = normalizeDebugResult(response.data);
-                if (incoming.correctedCode) lastDebugResult.correctedCode = incoming.correctedCode;
-                if (incoming.location) lastDebugResult.location = incoming.location;
-                if (incoming.rootCause) lastDebugResult.rootCause = incoming.rootCause;
-                if (incoming.solutionSummary) lastDebugResult.solutionSummary = incoming.solutionSummary;
-                if (incoming.steps.length) lastDebugResult.steps = incoming.steps;
-                renderDebugResult(lastDebugResult, { followUp: false, solved: true });
-            } else {
-                renderDebugResult(lastDebugResult, { followUp: false, solved: true });
+            const articleId =
+                (response.data && (response.data.knowledgeArticleId || response.data.KnowledgeArticleId || response.data.articleId || response.data.ArticleId)) ||
+                null;
+            const target = articleId
+                ? "article-details.html?id=" + encodeURIComponent(articleId)
+                : "article-details.html?problemId=" + encodeURIComponent(lastDebugResult.problemId);
+
+            if (window.DevPilotBusy) {
+                window.DevPilotBusy.show("Almost done…", "Redirecting to your new article.");
             }
+            window.location.href = target;
         } catch (err) {
+            if (window.DevPilotBusy) window.DevPilotBusy.hide();
             showAlert(err.message || "Failed to mark as solved.", "danger");
             btnSolved.disabled = false;
             btnUnsolved.disabled = false;
@@ -489,6 +532,81 @@
         }
     }
 
+    function fmtReviewDate(value) {
+        if (!value) return "—";
+        try { return new Date(value).toLocaleString(); } catch (e) { return String(value); }
+    }
+
+    async function loadSavedReviews() {
+        if (!reviewsHistoryList) return;
+        reviewsHistoryList.innerHTML = '<div class="empty-state">Loading saved reviews…</div>';
+        try {
+            const url = new URL("/api/GitHub/reviews", API_BASE);
+            url.searchParams.set("page", String(reviewsPage));
+            url.searchParams.set("pageSize", "10");
+            const res = await window.DevPilotApi.request(url.href);
+            if (!res.ok) throw new Error(res.message || "Failed to load saved reviews");
+
+            const data = res.data || {};
+            const items = data.items || data.Items || [];
+            const total = data.totalCount || data.TotalCount || 0;
+            const page = data.page || data.Page || reviewsPage;
+            const pageSize = data.pageSize || data.PageSize || 10;
+
+            if (!items.length) {
+                reviewsHistoryList.innerHTML =
+                    '<div class="empty-state">No saved reviews yet. Run a Code Review and it will show up here.</div>';
+            } else {
+                reviewsHistoryList.innerHTML = items.map(function (item) {
+                    const id = item.codeReviewId || item.CodeReviewId;
+                    const repo = item.repositoryFullName || item.RepositoryFullName || "Repository";
+                    const branch = item.branch || item.Branch || "main";
+                    const findings = item.findingsCount || item.FindingsCount || 0;
+                    const preview = item.summaryPreview || item.SummaryPreview || "";
+                    const when = fmtReviewDate(item.reviewedAt || item.ReviewedAt);
+                    return (
+                        '<button type="button" class="github-item" data-review-id="' + escapeHtml(String(id)) + '">' +
+                        "<strong>" + escapeHtml(repo) + "</strong>" +
+                        '<div class="text-gray small">' + escapeHtml(branch) + " · " + findings + " findings · " + escapeHtml(when) + "</div>" +
+                        (preview ? '<div class="small mt-1">' + escapeHtml(preview) + "</div>" : "") +
+                        "</button>"
+                    );
+                }).join("");
+            }
+
+            if (reviewsPager) {
+                const pages = Math.max(1, Math.ceil(total / pageSize));
+                reviewsPager.innerHTML =
+                    '<span class="text-gray small">Page ' + page + " / " + pages + " · " + total + " saved</span>" +
+                    '<div class="d-flex gap-2">' +
+                    '<button type="button" class="btn btn-outline-card btn-sm" data-reviews-dir="-1"' + (page <= 1 ? " disabled" : "") + ">Prev</button>" +
+                    '<button type="button" class="btn btn-outline-card btn-sm" data-reviews-dir="1"' + (page >= pages ? " disabled" : "") + ">Next</button>" +
+                    "</div>";
+                reviewsPager.querySelectorAll("button[data-reviews-dir]").forEach(function (btn) {
+                    btn.addEventListener("click", function () {
+                        reviewsPage = page + Number(btn.getAttribute("data-reviews-dir"));
+                        loadSavedReviews().catch(function (err) {
+                            showAlert(err.message || "Failed to load reviews", "danger");
+                        });
+                    });
+                });
+            }
+        } catch (err) {
+            reviewsHistoryList.innerHTML =
+                '<div class="empty-state text-danger">' + escapeHtml(err.message || "Failed to load saved reviews.") + "</div>";
+        }
+    }
+
+    async function openSavedReview(reviewId) {
+        hideAlert();
+        const url = new URL("/api/GitHub/reviews/" + encodeURIComponent(reviewId), API_BASE).href;
+        const res = await window.DevPilotApi.request(url);
+        if (!res.ok || !res.data) throw new Error(res.message || "Failed to open review");
+        setMode("review");
+        renderReviewResult(res.data, { fromHistory: true });
+        resultCard.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
     async function runReview() {
         hideAlert();
         if (!selectedRepo) {
@@ -517,7 +635,10 @@
                 }
                 throw new Error(res.message || "Review failed");
             }
-            renderReviewResult(res.data);
+            renderReviewResult(res.data, { fromHistory: false });
+            reviewsPage = 1;
+            loadSavedReviews().catch(function () { /* ignore */ });
+            showAlert("Code review saved. You can reopen it anytime from Saved code reviews.", "success");
         } catch (err) {
             showAlert(err.message || "Review failed", "danger");
         } finally {
@@ -538,8 +659,6 @@
                 : (opts.followUp ? "Follow-up analysis on the same ticket" : "Initial analysis");
         }
         if (resultCodeBadge) resultCodeBadge.textContent = data.problemCode || "";
-        if (resultProvider) resultProvider.textContent = data.providerUsed || "AI";
-        if (providerRow) providerRow.classList.toggle("d-none", !isAdminViewer());
 
         const steps = (data.steps || []).map(function (step) {
             return (
@@ -568,6 +687,8 @@
                 : "") +
             "</div>";
 
+        bindIdeCopyButtons(resultBody);
+
         if (opts.solved) {
             feedbackActions.classList.add("d-none");
             feedbackMessage.classList.remove("d-none");
@@ -584,14 +705,20 @@
         resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
-    function renderReviewResult(data) {
+    function renderReviewResult(data, options) {
+        const opts = options || {};
         resultCard.classList.remove("d-none");
         lastDebugResult = null;
+        const reviewId = data.codeReviewId || data.CodeReviewId;
+        const repoName = data.repositoryFullName || data.RepositoryFullName || "";
+        const reviewedAt = data.reviewedAt || data.ReviewedAt;
         if (resultHeading) resultHeading.textContent = "Code review";
-        if (resultModeLabel) resultModeLabel.textContent = "Repository review";
-        if (resultCodeBadge) resultCodeBadge.textContent = "Review";
-        if (providerRow) providerRow.classList.toggle("d-none", !isAdminViewer());
-        if (resultProvider) resultProvider.textContent = pick(data, "providerUsed", "ProviderUsed") || "AI";
+        if (resultModeLabel) {
+            resultModeLabel.textContent = opts.fromHistory
+                ? ("Saved review" + (reviewedAt ? (" · " + fmtReviewDate(reviewedAt)) : ""))
+                : ("Repository review" + (repoName ? (" · " + repoName) : ""));
+        }
+        if (resultCodeBadge) resultCodeBadge.textContent = opts.fromHistory ? "Saved" : "Review";
         if (feedbackActions) feedbackActions.classList.add("d-none");
         if (feedbackMessage) feedbackMessage.classList.add("d-none");
 
@@ -609,9 +736,10 @@
 
         const paths = (data.reviewedPaths || data.ReviewedPaths || []).map(escapeHtml).join(", ");
         resultBody.innerHTML =
-            '<p class="mb-2">Provider: <strong>' + escapeHtml(data.providerUsed || data.ProviderUsed || "") + "</strong></p>" +
+            (repoName ? '<p class="mb-1"><strong>' + escapeHtml(repoName) + "</strong> · " + escapeHtml(data.branch || data.Branch || "") + "</p>" : "") +
+            (reviewId ? '<p class="mb-2 text-gray small">Saved review #' + escapeHtml(String(reviewId)) + "</p>" : "") +
             "<h3 class=\"h6\">Summary</h3><p>" + escapeHtml(data.summary || data.Summary || "") + "</p>" +
-            '<p class="text-gray small">Reviewed: ' + paths + "</p>" +
+            '<p class="text-gray small">Reviewed: ' + (paths || "—") + "</p>" +
             "<h3 class=\"h6\">Findings</h3>" + findings;
         resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
@@ -664,7 +792,25 @@
     if (btnUnsolved) btnUnsolved.addEventListener("click", followUpSameProblem);
     setDebugFieldsEnabled(false);
     document.getElementById("btn-review").addEventListener("click", runReview);
+    const btnRefreshReviews = document.getElementById("btn-refresh-reviews");
+    if (btnRefreshReviews) {
+        btnRefreshReviews.addEventListener("click", function () {
+            loadSavedReviews().catch(function (err) {
+                showAlert(err.message || "Failed to load reviews", "danger");
+            });
+        });
+    }
+    if (reviewsHistoryList) {
+        reviewsHistoryList.addEventListener("click", function (e) {
+            const btn = e.target.closest("[data-review-id]");
+            if (!btn) return;
+            openSavedReview(btn.getAttribute("data-review-id")).catch(function (err) {
+                showAlert(err.message || "Failed to open review", "danger");
+            });
+        });
+    }
     refreshReviewGate();
+    loadSavedReviews().catch(function () { /* ignore */ });
     if (window.DevPilotApi && typeof window.DevPilotApi.refreshRolesFromProfile === "function") {
         window.DevPilotApi.refreshRolesFromProfile().catch(function () { /* ignore */ });
     }
@@ -688,6 +834,13 @@
     setMode(initialMode);
     if (initialMode === "review") {
         refreshReviewGate();
+    }
+    const deepReviewId = params.get("reviewId");
+    if (deepReviewId) {
+        openSavedReview(deepReviewId).catch(function (err) {
+            showAlert(err.message || "Failed to open saved review", "danger");
+        });
+        window.history.replaceState({}, "", "github.html" + (initialMode === "review" ? "?mode=review" : ""));
     }
     loadStatus().catch(function (err) {
         showAlert(err.message || "Failed to load GitHub status", "danger");

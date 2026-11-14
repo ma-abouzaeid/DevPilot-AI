@@ -57,13 +57,18 @@
 }
 
 /* ---------- Base ---------- */
-html { overflow-x: hidden; }
+/* Do NOT set overflow-x on both html and body — that forces overflow-y:auto
+   on each and creates the classic double page scrollbar + floating footer. */
+html {
+    height: 100%;
+}
 
 body {
     font-family: var(--font-body);
     background: var(--bg);
     color: var(--text);
-    overflow-x: hidden;
+    min-height: 100%;
+    overflow-x: clip;
 }
 
 h1, h2, h3, h4, h5, .title-style, .hero-title, .page-title, .section-title, .card-title {
@@ -218,6 +223,68 @@ html {
     clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
 }
 
+/* ---------- Brand busy overlay (mark solved → article) ---------- */
+.brand-busy-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(11, 31, 51, 0.55);
+    backdrop-filter: blur(6px);
+}
+.brand-busy-overlay.d-none { display: none !important; }
+body.brand-busy-open { overflow: hidden; }
+.brand-busy-card {
+    width: min(420px, 100%);
+    text-align: center;
+    padding: 36px 28px 32px;
+    border-radius: var(--radius-lg);
+    background: #fff;
+    border: 1px solid var(--border);
+    box-shadow: 0 24px 60px rgba(11, 31, 51, 0.28);
+}
+.brand-busy-logo-wrap {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 20px;
+    display: grid;
+    place-items: center;
+}
+.brand-busy-logo {
+    width: 40px;
+    height: 40px;
+    position: relative;
+    z-index: 1;
+}
+.brand-busy-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 3px solid rgba(15, 118, 110, 0.18);
+    border-top-color: var(--brand);
+    animation: brand-busy-spin 0.9s linear infinite;
+}
+@keyframes brand-busy-spin {
+    to { transform: rotate(360deg); }
+}
+.brand-busy-title {
+    margin: 0 0 8px;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--ink);
+}
+.brand-busy-detail {
+    margin: 0;
+    font-size: 0.92rem;
+    color: var(--gray);
+    line-height: 1.45;
+}
+
 /* ---------- Auth / Login ---------- */
 .login-section {
     padding-top: 28px;
@@ -227,9 +294,10 @@ html {
         radial-gradient(520px 300px at 0% 100%, rgba(11, 31, 51, 0.06), transparent 55%),
         linear-gradient(180deg, #EBF1F5 0%, var(--bg) 55%);
     position: relative;
-    /* Do not use overflow:hidden here — it clips the IDE toolbar under sticky nav */
-    overflow-x: clip;
-    overflow-y: visible;
+    /* Keep visible so sticky analysis rail / IDE toolbar are not trapped.
+       Decorative blobs are constrained in animations.css so they don't
+       extend the document past the footer. */
+    overflow: visible;
 }
 
 .login-section.padding-top-bottom {
@@ -1014,7 +1082,8 @@ html {
     grid-template-columns: 52px 1fr;
     min-height: 280px;
     max-height: 460px;
-    overflow: auto;
+    /* Textarea owns the scroll; keep the shell from adding a second bar. */
+    overflow: hidden;
 }
 
 .debug-form .mb-4:has(.ide-editor),
@@ -1154,6 +1223,7 @@ html {
 .ide-readonly .ide-body-readonly {
     min-height: 220px;
     max-height: 520px;
+    overflow: auto;
 }
 .ide-copy-btn {
     margin-left: auto;
@@ -1193,9 +1263,10 @@ html {
     line-height: 1.55;
     tab-size: 4;
     white-space: pre;
-    overflow: auto;
+    /* Scroll on .ide-body-readonly only — nested overflow here doubles bars. */
+    overflow: visible;
     min-height: 220px;
-    max-height: 520px;
+    max-height: none;
 }
 .ide-code code {
     font-family: inherit;

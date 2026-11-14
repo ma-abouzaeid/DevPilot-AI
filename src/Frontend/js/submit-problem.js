@@ -16,7 +16,6 @@
     const codeMeta = document.getElementById("code-meta");
     const ideBody = document.querySelector(".ide-body");
     const correctedHost = document.getElementById("corrected-code-host");
-    const providerRow = document.getElementById("provider-row");
     const analysisRail = document.getElementById("analysis-rail");
     const analysisLog = document.getElementById("analysis-log");
     const analysisIdle = document.getElementById("analysis-idle");
@@ -62,10 +61,6 @@
             return false;
         }
         return true;
-    }
-
-    function isAdminViewer() {
-        return !!(window.DevPilotApi && typeof window.DevPilotApi.isAdmin === "function" && window.DevPilotApi.isAdmin());
     }
 
     function updateIdeChrome() {
@@ -451,7 +446,6 @@
             steps: parsedSolution.steps,
             correctedCode: parsedSolution.code,
             notes: null,
-            providerUsed: "Saved attempt",
             proposedSolution: proposed
         };
     }
@@ -464,8 +458,6 @@
         resultPanel.classList.remove("d-none");
 
         document.getElementById("result-code").textContent = data.problemCode || "";
-        document.getElementById("result-provider").textContent = data.providerUsed || "AI";
-        providerRow.classList.toggle("d-none", !isAdminViewer());
 
         resultModeLabel.textContent = opts.resumed
             ? "Continuing ticket — confirm if this solved it"
@@ -603,6 +595,13 @@
         if (!lastResult || !requireAuth()) return;
 
         btnSolved.disabled = true;
+        btnUnsolved.disabled = true;
+        if (window.DevPilotBusy) {
+            window.DevPilotBusy.show(
+                "Creating your article & challenge…",
+                "DevPilot is publishing knowledge from this fix. You’ll open the article next."
+            );
+        }
         try {
             const feedbackUrl = new URL(
                 "/api/Problems/" + lastResult.problemId + "/attempts/" + lastResult.debuggingAttemptId + "/feedback",
@@ -622,37 +621,23 @@
                 throw new Error(response.message || "Failed to submit feedback.");
             }
 
-            // Keep the current structured solution on screen. Replacing it with the
-            // feedback payload used to wipe corrected code when parsing fell back.
-            if (response && response.data) {
-                const incoming = response.data;
-                if (incoming.correctedCode || incoming.CorrectedCode) {
-                    lastResult.correctedCode = incoming.correctedCode || incoming.CorrectedCode;
-                }
-                if (incoming.location || incoming.Location) {
-                    lastResult.location = incoming.location || incoming.Location;
-                }
-                if (incoming.rootCause || incoming.RootCause) {
-                    lastResult.rootCause = incoming.rootCause || incoming.RootCause;
-                }
-                if (incoming.solutionSummary || incoming.SolutionSummary) {
-                    lastResult.solutionSummary = incoming.solutionSummary || incoming.SolutionSummary;
-                }
-                if ((incoming.steps || incoming.Steps || []).length) {
-                    lastResult.steps = incoming.steps || incoming.Steps;
-                }
-                renderResult(lastResult, { followUp: false });
-            }
+            const articleId =
+                (response.data && (response.data.knowledgeArticleId || response.data.KnowledgeArticleId || response.data.articleId || response.data.ArticleId)) ||
+                null;
+            const problemId = lastResult.problemId;
+            const target = articleId
+                ? "article-details.html?id=" + encodeURIComponent(articleId)
+                : "article-details.html?problemId=" + encodeURIComponent(problemId);
 
-            resultModeLabel.textContent = "Marked as solved — knowledge article published";
-            providerRow.classList.add("d-none");
-            feedbackActions.classList.add("d-none");
-            feedbackMessage.classList.remove("d-none");
-            feedbackMessage.textContent = "Great — solution saved. A published knowledge article and a practice challenge were created.";
+            if (window.DevPilotBusy) {
+                window.DevPilotBusy.show("Almost done…", "Redirecting to your new article.");
+            }
+            window.location.href = target;
         } catch (err) {
+            if (window.DevPilotBusy) window.DevPilotBusy.hide();
             showAlert(err.message || "Failed to submit feedback.", "danger");
-        } finally {
             btnSolved.disabled = false;
+            btnUnsolved.disabled = false;
         }
     }
 

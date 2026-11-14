@@ -76,10 +76,6 @@
         meta.textContent = "Ln " + row + " · Col " + col;
     }
 
-    function isAdminViewer() {
-        return !!(window.DevPilotApi && typeof window.DevPilotApi.isAdmin === "function" && window.DevPilotApi.isAdmin());
-    }
-
     function scoreRow(label, value) {
         const score = Math.max(0, Math.min(100, Number(value) || 0));
         return (
@@ -108,8 +104,7 @@
             advice: pick(data, "advice", "Advice"),
             detailedReport: pick(data, "detailedReport", "DetailedReport"),
             submittedCode: pick(data, "submittedCode", "SubmittedCode"),
-            submittedAt: pick(data, "submittedAt", "SubmittedAt"),
-            providerUsed: pick(data, "providerUsed", "ProviderUsed")
+            submittedAt: pick(data, "submittedAt", "SubmittedAt")
         };
     }
 
@@ -122,9 +117,6 @@
                 : '<span class="badge-soft open">Needs work</span>') +
             '<span class="challenge-feedback-points"><i class="fa-solid fa-star"></i> ' +
             data.pointsAwarded + " / " + data.maxPoints + " pts</span>" +
-            (isAdminViewer() && data.providerUsed
-                ? '<span class="challenge-feedback-provider">Provider: ' + escapeHtml(data.providerUsed) + "</span>"
-                : "") +
             "</div>" +
             (data.feedbackSummary
                 ? '<section class="challenge-feedback-block"><h3>Feedback</h3><p>' + escapeHtml(data.feedbackSummary) + "</p></section>"

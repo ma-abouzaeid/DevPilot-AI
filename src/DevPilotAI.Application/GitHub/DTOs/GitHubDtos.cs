@@ -66,7 +66,18 @@ public record GitHubCodeReviewResultDto(
     string Summary,
     IReadOnlyList<string> ReviewedPaths,
     IReadOnlyList<GitHubCodeReviewFindingDto> Findings,
-    string ProviderUsed
+    string ProviderUsed,
+    DateTime? ReviewedAt = null
+);
+
+public record GitHubCodeReviewListItemDto(
+    int CodeReviewId,
+    string RepositoryFullName,
+    string Branch,
+    string SummaryPreview,
+    int FindingsCount,
+    DateTime ReviewedAt,
+    string? TargetFiles
 );
 
 public class GitHubDebugRequestDto

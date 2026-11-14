@@ -135,6 +135,27 @@ public class GitHubController : ControllerBase
         return Ok(ApiResponse<GitHubCodeReviewResultDto>.SuccessResult(result, "Code review completed.", GetTraceId()));
     }
 
+    [HttpGet("reviews")]
+    [Authorize]
+    public async Task<IActionResult> ListReviews(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = GetRequiredAuthenticatedUserId();
+        var result = await _gitHubService.ListCodeReviewsAsync(userId, page, pageSize, cancellationToken);
+        return Ok(ApiResponse<PagedResultDto<GitHubCodeReviewListItemDto>>.SuccessResult(result, "Saved code reviews loaded.", GetTraceId()));
+    }
+
+    [HttpGet("reviews/{id:int}")]
+    [Authorize]
+    public async Task<IActionResult> GetReview(int id, CancellationToken cancellationToken)
+    {
+        var userId = GetRequiredAuthenticatedUserId();
+        var result = await _gitHubService.GetCodeReviewAsync(userId, id, cancellationToken);
+        return Ok(ApiResponse<GitHubCodeReviewResultDto>.SuccessResult(result, "Code review loaded.", GetTraceId()));
+    }
+
     [HttpPost("debug")]
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.AiAnalysis)]

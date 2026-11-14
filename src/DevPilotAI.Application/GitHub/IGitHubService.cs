@@ -1,3 +1,4 @@
+using DevPilotAI.Application.Common.Models;
 using DevPilotAI.Application.GitHub.DTOs;
 using DevPilotAI.Application.Problems.DTOs;
 
@@ -14,5 +15,7 @@ public interface IGitHubService
     Task<IReadOnlyList<GitHubTreeItemDto>> GetRepositoryTreeAsync(int userId, string fullName, string? branch = null, CancellationToken cancellationToken = default);
     Task<GitHubFileDto> GetFileAsync(int userId, string fullName, string path, string? branch = null, CancellationToken cancellationToken = default);
     Task<GitHubCodeReviewResultDto> ReviewAsync(int userId, GitHubCodeReviewRequestDto dto, CancellationToken cancellationToken = default);
+    Task<PagedResultDto<GitHubCodeReviewListItemDto>> ListCodeReviewsAsync(int userId, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default);
+    Task<GitHubCodeReviewResultDto> GetCodeReviewAsync(int userId, int codeReviewId, CancellationToken cancellationToken = default);
     Task<DebuggingResultDto> DebugFromFileAsync(int userId, GitHubDebugRequestDto dto, CancellationToken cancellationToken = default);
 }

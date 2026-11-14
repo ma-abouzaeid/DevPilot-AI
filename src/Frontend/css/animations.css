@@ -109,11 +109,12 @@
 }
 
 .login-section::after {
-    width: 520px;
-    height: 520px;
-    bottom: -240px;
-    right: -140px;
-    background: radial-gradient(circle at center, rgba(138, 43, 226, 0.16), rgba(138, 43, 226, 0) 68%);
+    width: 360px;
+    height: 360px;
+    /* Stay inside the section box — negative offsets were stretching past the footer. */
+    bottom: 8%;
+    right: 4%;
+    background: radial-gradient(circle at center, rgba(15, 118, 110, 0.14), rgba(15, 118, 110, 0) 68%);
     animation: drift-b 28s ease-in-out infinite alternate;
 }
 

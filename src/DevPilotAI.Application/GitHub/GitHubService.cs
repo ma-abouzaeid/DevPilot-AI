@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
+using DevPilotAI.Application.Common.Models;
 using DevPilotAI.Application.GitHub.DTOs;
 using DevPilotAI.Application.Plans;
 using DevPilotAI.Application.Problems;
@@ -492,7 +493,91 @@ public class GitHubService : IGitHubService
                 f.Description,
                 f.SuggestedFix
             )).ToList(),
-            ai.ProviderName
+            ai.ProviderName,
+            review.ReviewedAt
+        );
+    }
+
+    public async Task<PagedResultDto<GitHubCodeReviewListItemDto>> ListCodeReviewsAsync(
+        int userId,
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50);
+
+        var query = _db.CodeReviews.AsNoTracking()
+            .Where(r => r.UserId == userId);
+
+        var total = await query.CountAsync(cancellationToken);
+        var rows = await query
+            .Include(r => r.GitHubRepository)
+            .Include(r => r.Findings)
+            .OrderByDescending(r => r.ReviewedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        var items = rows.Select(r =>
+        {
+            var repoName = r.GitHubRepository?.FullName;
+            if (string.IsNullOrWhiteSpace(repoName))
+            {
+                repoName = "Repository unavailable";
+            }
+
+            var summary = r.ReviewSummary ?? string.Empty;
+            if (summary.Length > 160) summary = summary[..160] + "…";
+
+            return new GitHubCodeReviewListItemDto(
+                r.CodeReviewId,
+                repoName,
+                r.BranchName,
+                summary,
+                r.Findings.Count,
+                r.ReviewedAt,
+                r.TargetTargetRef
+            );
+        }).ToList();
+
+        return new PagedResultDto<GitHubCodeReviewListItemDto>(items, total, page, pageSize);
+    }
+
+    public async Task<GitHubCodeReviewResultDto> GetCodeReviewAsync(
+        int userId,
+        int codeReviewId,
+        CancellationToken cancellationToken = default)
+    {
+        var review = await _db.CodeReviews.AsNoTracking()
+            .Include(r => r.GitHubRepository)
+            .Include(r => r.Findings)
+            .FirstOrDefaultAsync(r => r.CodeReviewId == codeReviewId && r.UserId == userId, cancellationToken)
+            ?? throw AppError.NotFound("Code review was not found.");
+
+        var paths = (review.TargetTargetRef ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+
+        return new GitHubCodeReviewResultDto(
+            review.CodeReviewId,
+            review.GitHubRepository?.FullName ?? "Repository unavailable",
+            review.BranchName,
+            review.ReviewSummary,
+            paths,
+            review.Findings
+                .OrderByDescending(f => f.Severity)
+                .ThenBy(f => f.FilePath)
+                .Select(f => new GitHubCodeReviewFindingDto(
+                    f.FilePath,
+                    f.LineNumber,
+                    f.Severity.ToString(),
+                    f.Category,
+                    f.Description,
+                    f.SuggestedFix
+                )).ToList(),
+            "Saved",
+            review.ReviewedAt
         );
     }
 
