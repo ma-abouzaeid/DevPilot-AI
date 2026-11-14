@@ -1885,3 +1885,131 @@ body.brand-busy-open { overflow: hidden; }
 }
 
 [tabindex="-1"]:focus { outline: none; }
+
+/* —— Guided page tour —— */
+.tour-launch-btn {
+    position: fixed;
+    right: 1.1rem;
+    bottom: 1.1rem;
+    z-index: 1080;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 0.65rem 1rem;
+    font-family: var(--font-body);
+    font-weight: 650;
+    font-size: 0.92rem;
+    box-shadow: 0 10px 28px rgba(11, 31, 51, 0.12);
+    transition: transform 0.18s ease, border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+}
+.tour-launch-btn:hover {
+    border-color: var(--brand);
+    color: var(--brand);
+    transform: translateY(-1px);
+}
+.tour-launch-btn.is-active {
+    background: var(--brand);
+    border-color: var(--brand);
+    color: #fff;
+}
+.tour-root {
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+    pointer-events: none;
+}
+.tour-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+    pointer-events: auto;
+    background: transparent;
+}
+.tour-spotlight {
+    position: fixed;
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(11, 31, 51, 0.55);
+    border: 2px solid rgba(15, 118, 110, 0.85);
+    background: transparent;
+    pointer-events: auto;
+    transition: top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease;
+    z-index: 1091;
+}
+.tour-popover {
+    position: fixed;
+    z-index: 1092;
+    width: min(340px, calc(100vw - 24px));
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1rem 1rem 0.9rem;
+    box-shadow: 0 18px 40px rgba(11, 31, 51, 0.18);
+    pointer-events: auto;
+    font-family: var(--font-body);
+}
+.tour-close {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.55rem;
+    border: 0;
+    background: transparent;
+    color: var(--gray);
+    width: 2rem;
+    height: 2rem;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.tour-close:hover {
+    color: var(--ink);
+    background: var(--surface-muted);
+}
+.tour-progress {
+    font-size: 0.78rem;
+    font-weight: 650;
+    color: var(--brand);
+    margin-bottom: 0.35rem;
+    padding-right: 1.5rem;
+}
+.tour-title {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    margin: 0 0 0.35rem;
+    color: var(--ink);
+    padding-right: 1.5rem;
+}
+.tour-body {
+    margin: 0 0 0.9rem;
+    color: var(--gray);
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+.tour-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+.tour-actions .btn {
+    width: auto;
+    min-width: 4.5rem;
+}
+.tour-target-active {
+    position: relative;
+    z-index: 1093 !important;
+}
+
+@media (max-width: 576px) {
+    .tour-launch-btn {
+        right: 0.75rem;
+        bottom: 0.75rem;
+        padding: 0.6rem 0.85rem;
+    }
+    .tour-launch-btn span {
+        display: none;
+    }
+}

@@ -16,3 +16,13 @@ if (footerBox) {
         </div>
     </footer>`;
 }
+
+// Guided tour (floating Tour button) — load once on every page that includes footer.js
+(function loadTourScript() {
+    if (window.DevPilotTour) return;
+    if (document.querySelector('script[src*="tour.js"]')) return;
+    const script = document.createElement("script");
+    script.src = "js/tour.js";
+    script.defer = true;
+    document.body.appendChild(script);
+})();
