@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using DevPilotAI.Application.Common;
 using DevPilotAI.Application.Common.Exceptions;
+using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Application.Common.Models;
 using DevPilotAI.Application.Support;
 using DevPilotAI.Application.Support.DTOs;
@@ -8,6 +9,7 @@ using DevPilotAI.Infrastructure.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 
 namespace DevPilotAI.API.Controllers;
 
@@ -18,10 +20,12 @@ namespace DevPilotAI.API.Controllers;
 public class SupportTicketsController : ControllerBase
 {
     private readonly ISupportTicketService _tickets;
+    private readonly IApplicationDbContext _db;
 
-    public SupportTicketsController(ISupportTicketService tickets)
+    public SupportTicketsController(ISupportTicketService tickets, IApplicationDbContext db)
     {
         _tickets = tickets;
+        _db = db;
     }
 
     private string GetTraceId() =>
@@ -43,11 +47,26 @@ public class SupportTicketsController : ControllerBase
         return userId;
     }
 
-    private bool IsAdmin() =>
-        User.IsInRole(AppRoles.Admin) ||
-        User.Claims.Any(c =>
-            (c.Type == ClaimTypes.Role || c.Type.Equals("role", StringComparison.OrdinalIgnoreCase)) &&
+    private static bool HasAdminClaim(ClaimsPrincipal user) =>
+        user.IsInRole(AppRoles.Admin) ||
+        user.Claims.Any(c =>
+            (c.Type == ClaimTypes.Role ||
+             c.Type.Equals("role", StringComparison.OrdinalIgnoreCase) ||
+             c.Type.EndsWith("/role", StringComparison.OrdinalIgnoreCase) ||
+             c.Type.EndsWith("/claims/role", StringComparison.OrdinalIgnoreCase)) &&
             string.Equals(c.Value, AppRoles.Admin, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Matches AdminPolicy: JWT Admin claim OR Admin row in UserRoles.
+    /// </summary>
+    private async Task<bool> IsAdminAsync(CancellationToken cancellationToken)
+    {
+        if (HasAdminClaim(User)) return true;
+
+        var userId = GetRequiredUserId();
+        return await _db.UserRoles.AsNoTracking()
+            .AnyAsync(ur => ur.UserId == userId && ur.Role.Name == AppRoles.Admin, cancellationToken);
+    }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateSupportTicketDto dto, CancellationToken cancellationToken)
@@ -66,21 +85,26 @@ public class SupportTicketsController : ControllerBase
     [HttpGet("{ticketId:int}")]
     public async Task<IActionResult> Get(int ticketId, CancellationToken cancellationToken)
     {
-        var result = await _tickets.GetAsync(ticketId, GetRequiredUserId(), IsAdmin(), cancellationToken);
+        var result = await _tickets.GetAsync(ticketId, GetRequiredUserId(), await IsAdminAsync(cancellationToken), cancellationToken);
         return Ok(ApiResponse<SupportTicketDetailsDto>.SuccessResult(result, "Ticket loaded.", GetTraceId()));
     }
 
     [HttpGet("{ticketId:int}/messages")]
     public async Task<IActionResult> ListMessages(int ticketId, CancellationToken cancellationToken)
     {
-        var result = await _tickets.ListMessagesAsync(ticketId, GetRequiredUserId(), IsAdmin(), cancellationToken);
+        var result = await _tickets.ListMessagesAsync(ticketId, GetRequiredUserId(), await IsAdminAsync(cancellationToken), cancellationToken);
         return Ok(ApiResponse<IReadOnlyList<SupportTicketMessageDto>>.SuccessResult(result, "Messages loaded.", GetTraceId()));
     }
 
     [HttpPost("{ticketId:int}/messages")]
     public async Task<IActionResult> SendMessage(int ticketId, [FromBody] SendSupportMessageDto dto, CancellationToken cancellationToken)
     {
-        var result = await _tickets.SendMessageAsync(ticketId, GetRequiredUserId(), IsAdmin(), dto?.Body ?? string.Empty, cancellationToken);
+        var result = await _tickets.SendMessageAsync(
+            ticketId,
+            GetRequiredUserId(),
+            await IsAdminAsync(cancellationToken),
+            dto?.Body ?? string.Empty,
+            cancellationToken);
         return Ok(ApiResponse<SupportTicketMessageDto>.SuccessResult(result, "Message sent.", GetTraceId()));
     }
 

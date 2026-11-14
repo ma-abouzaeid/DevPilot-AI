@@ -997,16 +997,20 @@
         box.scrollTop = box.scrollHeight;
     }
 
+    function setTicketsUnreadBadge(count) {
+        var badge = document.getElementById("tickets-unread-badge");
+        if (!badge) return;
+        var n = Number(count) || 0;
+        badge.textContent = String(n);
+        badge.classList.toggle("d-none", n < 1);
+    }
+
     async function refreshTicketNotifications() {
         var res = await api("/api/support-tickets/admin/notifications");
         var data = res.data || {};
         var items = data.items || data.Items || [];
         var unread = data.unread ?? data.Unread ?? 0;
-        var badge = document.getElementById("tickets-unread-badge");
-        if (badge) {
-            badge.textContent = String(unread);
-            badge.classList.toggle("d-none", !unread);
-        }
+        setTicketsUnreadBadge(unread);
 
         var host = document.getElementById("tickets-notifications");
         if (!host) return;
@@ -1044,6 +1048,15 @@
         var status = document.getElementById("tickets-status").value;
         var res = await api("/api/support-tickets", null, status ? { status: status } : null);
         var items = res.data || [];
+        // Fallback badge: open tickets should always surface a count even if notifications lagged.
+        var openCount = items.filter(function (t) {
+            return String(t.status || t.Status || "").toLowerCase() === "open";
+        }).length;
+        if (!status || String(status).toLowerCase() === "open" || String(status).toLowerCase() === "all") {
+            var badge = document.getElementById("tickets-unread-badge");
+            var current = badge && !badge.classList.contains("d-none") ? Number(badge.textContent) || 0 : 0;
+            if (openCount > current) setTicketsUnreadBadge(openCount);
+        }
         var host = document.getElementById("admin-tickets-list");
         if (!items.length) {
             host.innerHTML = '<div class="empty-state">No tickets for this filter.</div>';
@@ -1071,14 +1084,16 @@
 
     function renderAdminTicketDetail(ticket, messages) {
         var id = ticket.supportTicketId || ticket.SupportTicketId;
-        var canAccept = !!(ticket.canAccept || ticket.CanAccept);
+        var status = ticket.status || ticket.Status || "";
+        var statusLower = String(status).toLowerCase();
+        // Admin page: Open tickets are always acceptable even if API flag lagged.
+        var canAccept = !!(ticket.canAccept || ticket.CanAccept) || statusLower === "open";
         var canResolve = !!(ticket.canResolve || ticket.CanResolve);
         var canChat = !!(ticket.canChat || ticket.CanChat);
-        var status = ticket.status || ticket.Status || "";
         var resolution = ticket.resolutionSummary || ticket.ResolutionSummary || "";
 
         var actions = "";
-        if (canAccept) {
+        if (canAccept && statusLower === "open") {
             actions += '<button type="button" class="btn btn-primary btn-sm" id="admin-accept-ticket">Accept ticket</button>';
         }
         if (canResolve) {

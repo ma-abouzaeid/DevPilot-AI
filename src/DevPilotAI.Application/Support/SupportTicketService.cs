@@ -50,12 +50,19 @@ public class SupportTicketService : ISupportTicketService
             .Select(u => u.Name)
             .FirstOrDefaultAsync(cancellationToken) ?? "Developer";
 
-        await NotifyAllAdminsAsync(
-            ticket.SupportTicketId,
-            "TICKET_OPENED",
-            "New support ticket",
-            $"{creatorName} opened {ticket.TicketCode}: {ticket.Title}",
-            cancellationToken);
+        try
+        {
+            await NotifyAllAdminsAsync(
+                ticket.SupportTicketId,
+                "TICKET_OPENED",
+                "New support ticket",
+                $"{creatorName} opened {ticket.TicketCode}: {ticket.Title}",
+                cancellationToken);
+        }
+        catch
+        {
+            // Ticket is already saved — never fail create because notifications/SignalR failed.
+        }
 
         return await MapDetailsAsync(ticket.SupportTicketId, userId, isAdmin: false, cancellationToken);
     }
@@ -329,6 +336,8 @@ public class SupportTicketService : ISupportTicketService
         CancellationToken cancellationToken = default)
     {
         if (take < 1 || take > 100) take = 30;
+        await BackfillOpenTicketNotificationsAsync(adminUserId, cancellationToken);
+
         return await _db.AdminNotifications.AsNoTracking()
             .Where(n => n.AdminUserId == adminUserId)
             .OrderByDescending(n => n.CreatedAt)
@@ -347,6 +356,7 @@ public class SupportTicketService : ISupportTicketService
 
     public Task<int> CountUnreadAdminNotificationsAsync(int adminUserId, CancellationToken cancellationToken = default)
     {
+        // Backfill runs in ListAdminNotificationsAsync (same request loads both).
         return _db.AdminNotifications.CountAsync(
             n => n.AdminUserId == adminUserId && !n.IsRead,
             cancellationToken);
@@ -443,6 +453,17 @@ public class SupportTicketService : ISupportTicketService
         );
     }
 
+    private async Task<List<int>> GetAdminUserIdsAsync(CancellationToken cancellationToken)
+    {
+        // Ignore soft-delete filters so role lookup stays reliable.
+        return await _db.UserRoles.AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(ur => ur.Role.Name == AppRoles.Admin)
+            .Select(ur => ur.UserId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+    }
+
     private async Task NotifyAllAdminsAsync(
         int ticketId,
         string type,
@@ -451,12 +472,7 @@ public class SupportTicketService : ISupportTicketService
         CancellationToken cancellationToken,
         int? excludeAdminUserId = null)
     {
-        var adminIds = await _db.UserRoles.AsNoTracking()
-            .Where(ur => ur.Role.Name == AppRoles.Admin)
-            .Select(ur => ur.UserId)
-            .Distinct()
-            .ToListAsync(cancellationToken);
-
+        var adminIds = await GetAdminUserIdsAsync(cancellationToken);
         foreach (var adminId in adminIds)
         {
             if (excludeAdminUserId.HasValue && adminId == excludeAdminUserId.Value) continue;
@@ -472,6 +488,15 @@ public class SupportTicketService : ISupportTicketService
         string body,
         CancellationToken cancellationToken)
     {
+        var alreadyExists = await _db.AdminNotifications.AsNoTracking()
+            .AnyAsync(n =>
+                n.AdminUserId == adminUserId &&
+                n.SupportTicketId == ticketId &&
+                n.Type == type &&
+                !n.IsRead,
+                cancellationToken);
+        if (alreadyExists) return;
+
         var notification = new AdminNotification
         {
             AdminUserId = adminUserId,
@@ -485,17 +510,65 @@ public class SupportTicketService : ISupportTicketService
         _db.AdminNotifications.Add(notification);
         await _db.SaveChangesAsync(cancellationToken);
 
-        await _realtime.AdminNotificationAsync(
-            adminUserId,
-            new AdminNotificationDto(
-                notification.AdminNotificationId,
-                ticketId,
-                notification.Type,
-                notification.Title,
-                notification.Body,
-                false,
-                notification.CreatedAt),
-            cancellationToken);
+        try
+        {
+            await _realtime.AdminNotificationAsync(
+                adminUserId,
+                new AdminNotificationDto(
+                    notification.AdminNotificationId,
+                    ticketId,
+                    notification.Type,
+                    notification.Title,
+                    notification.Body,
+                    false,
+                    notification.CreatedAt),
+                cancellationToken);
+        }
+        catch
+        {
+            // Persisted notification is enough; live push is best-effort.
+        }
+    }
+
+    /// <summary>
+    /// Creates missing TICKET_OPENED notifications for open tickets (covers tickets created before notify worked).
+    /// </summary>
+    private async Task BackfillOpenTicketNotificationsAsync(int adminUserId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var openTickets = await _db.SupportTickets.AsNoTracking()
+                .Where(t => t.Status == SupportTicketStatus.Open)
+                .Select(t => new { t.SupportTicketId, t.TicketCode, t.Title, CreatorName = t.CreatedByUser.Name })
+                .ToListAsync(cancellationToken);
+
+            if (openTickets.Count == 0) return;
+
+            var existingTicketIds = await _db.AdminNotifications.AsNoTracking()
+                .Where(n =>
+                    n.AdminUserId == adminUserId &&
+                    n.Type == "TICKET_OPENED" &&
+                    n.SupportTicketId != null)
+                .Select(n => n.SupportTicketId!.Value)
+                .ToListAsync(cancellationToken);
+            var existing = existingTicketIds.ToHashSet();
+
+            foreach (var ticket in openTickets)
+            {
+                if (existing.Contains(ticket.SupportTicketId)) continue;
+                await NotifyAdminAsync(
+                    adminUserId,
+                    ticket.SupportTicketId,
+                    "TICKET_OPENED",
+                    "New support ticket",
+                    $"{ticket.CreatorName} opened {ticket.TicketCode}: {ticket.Title}",
+                    cancellationToken);
+            }
+        }
+        catch
+        {
+            // Don't break the notifications/tickets UI if backfill fails.
+        }
     }
 
     private async Task<string> GenerateTicketCodeAsync(CancellationToken cancellationToken)
