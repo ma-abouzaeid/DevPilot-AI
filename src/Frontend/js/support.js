@@ -86,7 +86,10 @@
         });
 
         hubConnection.on("ticketResolved", function (ticket) {
-            if (activeTicketId) renderDetail(ticket, []);
+            const id = ticket && (ticket.supportTicketId || ticket.SupportTicketId);
+            if (id && Number(id) === Number(activeTicketId)) {
+                openTicket(id, false);
+            }
             loadTickets();
             leaveTicketRoom();
         });
@@ -192,10 +195,13 @@
             chatHtml = '<div class="alert alert-success-soft mb-0">Waiting for an admin to accept this ticket. Chat unlocks after Accept.</div>';
         } else if (String(status).toLowerCase() === "resolved") {
             chatHtml =
-                '<div class="alert alert-success-soft">' +
+                '<div class="alert alert-success-soft mb-3">' +
                 "<strong>Resolved</strong><br>" + escapeHtml(resolution || "No resolution notes.") +
                 "</div>" +
-                '<p class="text-gray small mb-0">Chat history was deleted when the ticket was closed.</p>';
+                '<div class="support-chat" id="chat-panel">' +
+                '<div class="support-chat-label"><span>Conversation</span>' +
+                '<div class="support-chat-legend"><span class="leg-admin">Admin left</span><span class="leg-user">You right</span></div></div>' +
+                '<div class="support-chat-messages" id="chat-messages"></div></div>';
         } else if (canChat) {
             chatHtml =
                 '<div class="support-chat" id="chat-panel">' +
@@ -273,7 +279,8 @@
             const ticket = detailRes.data;
             let messages = [];
             const canChat = !!(ticket.canChat || ticket.CanChat);
-            if (canChat) {
+            const statusLower = String(ticket.status || ticket.Status || "").toLowerCase();
+            if (canChat || statusLower === "resolved") {
                 const msgRes = await api("/api/support-tickets/" + ticketId + "/messages");
                 messages = msgRes.data || [];
             } else {

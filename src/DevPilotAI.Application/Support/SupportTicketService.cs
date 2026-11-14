@@ -200,12 +200,6 @@ public class SupportTicketService : ISupportTicketService
         ticket.ResolvedAt = DateTime.UtcNow;
         ticket.UpdatedAt = DateTime.UtcNow;
 
-        // Hard-delete chat history; keep ticket + resolution.
-        var messages = await _db.SupportTicketMessages
-            .Where(m => m.SupportTicketId == ticketId)
-            .ToListAsync(cancellationToken);
-        _db.SupportTicketMessages.RemoveRange(messages);
-
         await _db.SaveChangesAsync(cancellationToken);
 
         var details = await MapDetailsAsync(ticketId, adminUserId, isAdmin: true, cancellationToken);
@@ -219,7 +213,7 @@ public class SupportTicketService : ISupportTicketService
         bool isAdmin,
         CancellationToken cancellationToken = default)
     {
-        await EnsureCanAccessChatAsync(ticketId, userId, isAdmin, cancellationToken);
+        await EnsureCanViewMessagesAsync(ticketId, userId, isAdmin, cancellationToken);
 
         return await _db.SupportTicketMessages.AsNoTracking()
             .Where(m => m.SupportTicketId == ticketId)
@@ -337,6 +331,30 @@ public class SupportTicketService : ISupportTicketService
 
         // Other admins cannot join the chat room.
         throw AppError.Forbidden("Only the ticket owner and assigned admin can use this chat.");
+    }
+
+    private async Task EnsureCanViewMessagesAsync(
+        int ticketId,
+        int userId,
+        bool isAdmin,
+        CancellationToken cancellationToken)
+    {
+        var ticket = await _db.SupportTickets.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.SupportTicketId == ticketId, cancellationToken)
+            ?? throw AppError.NotFound("Support ticket was not found.");
+
+        var isOwner = ticket.CreatedByUserId == userId;
+        var isAssignee = ticket.AssignedAdminUserId == userId;
+
+        if (ticket.Status == SupportTicketStatus.Assigned || ticket.Status == SupportTicketStatus.Resolved)
+        {
+            if (isOwner || isAssignee || isAdmin)
+            {
+                return;
+            }
+        }
+
+        throw AppError.Forbidden("You cannot view this conversation.");
     }
 
     public async Task<IReadOnlyList<AdminNotificationDto>> ListAdminNotificationsAsync(

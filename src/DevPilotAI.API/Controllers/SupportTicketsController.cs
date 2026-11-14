@@ -130,7 +130,7 @@ public class SupportTicketsController : ControllerBase
     public async Task<IActionResult> Resolve(int ticketId, [FromBody] ResolveSupportTicketDto dto, CancellationToken cancellationToken)
     {
         var result = await _tickets.ResolveAsync(ticketId, GetRequiredUserId(), dto, cancellationToken);
-        return Ok(ApiResponse<SupportTicketDetailsDto>.SuccessResult(result, "Ticket resolved. Chat history deleted.", GetTraceId()));
+        return Ok(ApiResponse<SupportTicketDetailsDto>.SuccessResult(result, "Ticket resolved.", GetTraceId()));
     }
 
     [HttpGet("admin/notifications")]

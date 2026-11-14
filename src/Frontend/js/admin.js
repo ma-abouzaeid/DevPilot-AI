@@ -1126,23 +1126,26 @@
             actions +=
                 '<form id="admin-resolve-form" class="support-resolve-box">' +
                 '<label class="form-label" for="admin-resolution">How was it resolved?</label>' +
-                '<textarea class="form-control mb-2" id="admin-resolution" rows="3" maxlength="4000" required placeholder="Write the problem outcome and fix summary. Chat history will be deleted."></textarea>' +
-                '<button type="submit" class="btn btn-success btn-sm">Resolve & delete chat</button>' +
+                '<textarea class="form-control mb-2" id="admin-resolution" rows="3" maxlength="4000" required placeholder="Write the problem outcome and fix summary."></textarea>' +
+                '<button type="submit" class="btn btn-success btn-sm">Resolve ticket</button>' +
                 "</form>";
         }
+
+        var chatShell =
+            '<div class="support-chat" id="admin-chat-panel">' +
+            '<div class="support-chat-label"><span>Conversation</span>' +
+            '<div class="support-chat-legend"><span class="leg-user">User left</span><span class="leg-admin">Admin right</span></div></div>' +
+            '<div class="support-chat-messages" id="admin-chat-messages"></div>';
 
         var chatHtml = "";
         if (statusLower === "resolved") {
             chatHtml =
-                '<div class="alert alert-success-soft mt-3 mb-0"><strong>Resolved</strong><br>' +
+                '<div class="alert alert-success-soft mt-3 mb-3"><strong>Resolved</strong><br>' +
                 escapeHtml(resolution || "No notes.") +
-                '</div><p class="text-gray small mt-2 mb-0">Chat history was hard-deleted.</p>';
+                "</div>" + chatShell + "</div>";
         } else if (canChat) {
             chatHtml =
-                '<div class="support-chat" id="admin-chat-panel">' +
-                '<div class="support-chat-label"><span>Conversation</span>' +
-                '<div class="support-chat-legend"><span class="leg-user">User left</span><span class="leg-admin">Admin right</span></div></div>' +
-                '<div class="support-chat-messages" id="admin-chat-messages"></div>' +
+                chatShell +
                 '<form id="admin-chat-form" class="support-chat-form">' +
                 '<input type="text" class="form-control" id="admin-chat-input" maxlength="4000" placeholder="Reply to the user…" required>' +
                 '<button type="submit" class="btn btn-primary">Send</button>' +
@@ -1195,7 +1198,7 @@
                         method: "POST",
                         body: JSON.stringify({ resolutionSummary: summary })
                     });
-                    showAlert("Ticket resolved. Chat history deleted.", "success");
+                    showAlert("Ticket resolved.", "success");
                     await openAdminTicket(id, false);
                     await loadAdminTicketsList();
                 } catch (err) { onError(err); }
@@ -1244,7 +1247,8 @@
             var ticket = detailRes.data;
             var messages = [];
             var canChat = !!(ticket.canChat || ticket.CanChat);
-            if (canChat) {
+            var statusLower = String(ticket.status || ticket.Status || "").toLowerCase();
+            if (canChat || statusLower === "resolved") {
                 var msgRes = await api("/api/support-tickets/" + ticketId + "/messages");
                 messages = msgRes.data || [];
             }
