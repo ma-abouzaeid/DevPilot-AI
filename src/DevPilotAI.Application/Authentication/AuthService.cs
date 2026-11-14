@@ -106,6 +106,23 @@ public class AuthService : IAuthService
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             });
+
+            var periodStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            _dbContext.UsagePeriods.Add(new UsagePeriod
+            {
+                UserId = user.UserId,
+                PlanId = defaultPlan.PlanId,
+                PeriodStart = periodStart,
+                PeriodEnd = periodStart.AddMonths(1),
+                CreditsAllocated = defaultPlan.CreditsPerPeriod,
+                CreditsReserved = 0,
+                CreditsUsed = 0,
+                CreditsRefunded = 0,
+                RequestCount = 0,
+                TokenCount = 0,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 

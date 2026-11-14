@@ -762,6 +762,16 @@ namespace DevPilotAI.Infrastructure.Migrations
                             Key = "monthly_ai_credits",
                             Name = "Monthly AI Credits",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            FeatureId = 3,
+                            Category = "AI",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "AI code review directly from connected GitHub repositories.",
+                            Key = "github_code_review",
+                            Name = "GitHub Code Review",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
                 });
 
@@ -956,12 +966,28 @@ namespace DevPilotAI.Infrastructure.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CreditsPerPeriod = 100,
                             Currency = "USD",
-                            Description = "Default Free tier with standard AI quota.",
+                            Description = "Debug with AI, practice challenges, and publish knowledge. 100 credits / month.",
                             IsDefault = true,
                             IsPublic = true,
                             Name = "Free",
                             PeriodType = "Monthly",
                             Price = 0.00m,
+                            Status = "Active",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            PlanId = 2,
+                            Code = "PRO",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreditsPerPeriod = 1000,
+                            Currency = "USD",
+                            Description = "Higher AI credits plus GitHub Code Review for teams that ship faster.",
+                            IsDefault = false,
+                            IsPublic = true,
+                            Name = "Pro",
+                            PeriodType = "Monthly",
+                            Price = 19.00m,
                             Status = "Active",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
@@ -1015,6 +1041,45 @@ namespace DevPilotAI.Infrastructure.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             IsEnabled = true,
                             LimitValue = 100,
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            PlanId = 1,
+                            FeatureId = 3,
+                            ConfigJson = "{\"enabled\": false}",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsEnabled = false,
+                            LimitValue = 0,
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            PlanId = 2,
+                            FeatureId = 1,
+                            ConfigJson = "{\"enabled\": true}",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsEnabled = true,
+                            LimitValue = 1000,
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            PlanId = 2,
+                            FeatureId = 2,
+                            ConfigJson = "{\"credits\": 1000}",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsEnabled = true,
+                            LimitValue = 1000,
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            PlanId = 2,
+                            FeatureId = 3,
+                            ConfigJson = "{\"enabled\": true}",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsEnabled = true,
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
                 });

@@ -197,6 +197,19 @@ public class PlanAndUsageEntityTests
         var features = await context.Features.ToListAsync();
         Assert.Contains(features, f => f.Key == "ai_debugging");
         Assert.Contains(features, f => f.Key == "monthly_ai_credits");
+        Assert.Contains(features, f => f.Key == "github_code_review");
+
+        var proPlan = await context.Plans.FirstOrDefaultAsync(p => p.Code == "PRO");
+        Assert.NotNull(proPlan);
+        Assert.Equal(1000, proPlan.CreditsPerPeriod);
+
+        var freeReview = await context.PlanFeatures.FirstOrDefaultAsync(pf => pf.PlanId == freePlan.PlanId && pf.FeatureId == 3);
+        Assert.NotNull(freeReview);
+        Assert.False(freeReview.IsEnabled);
+
+        var proReview = await context.PlanFeatures.FirstOrDefaultAsync(pf => pf.PlanId == proPlan.PlanId && pf.FeatureId == 3);
+        Assert.NotNull(proReview);
+        Assert.True(proReview.IsEnabled);
     }
 
     [Fact]

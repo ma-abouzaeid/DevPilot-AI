@@ -16,6 +16,7 @@ if (footerBox) {
                 <li class="d-inline-block"><a href="index.html">Home</a></li>
                 <li class="d-inline-block"><a href="articles.html">Articles</a></li>
                 <li class="d-inline-block"><a href="challenges.html">Challenges</a></li>
+                <li class="d-inline-block"><a href="plans.html">Plans</a></li>
                 <li class="d-inline-block"><a href="about.html">About</a></li>
                 <li class="d-inline-block"><a href="community.html">Community</a></li>` +
             (isLoggedIn ? `<li class="d-inline-block"><a href="settings.html">Settings</a></li>` : "") +

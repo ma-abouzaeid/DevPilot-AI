@@ -3,6 +3,7 @@ using System.Text.Json;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Application.GitHub.DTOs;
+using DevPilotAI.Application.Plans;
 using DevPilotAI.Application.Problems;
 using DevPilotAI.Application.Problems.DTOs;
 using DevPilotAI.Domain.Entities;
@@ -31,6 +32,7 @@ public class GitHubService : IGitHubService
     private readonly IAIGateway _aiGateway;
     private readonly IProblemService _problemService;
     private readonly IConfiguration _configuration;
+    private readonly IPlanUsageService? _planUsageService;
 
     public GitHubService(
         IApplicationDbContext db,
@@ -38,7 +40,8 @@ public class GitHubService : IGitHubService
         ITokenProtector protector,
         IAIGateway aiGateway,
         IProblemService problemService,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IPlanUsageService? planUsageService = null)
     {
         _db = db;
         _gitHub = gitHub;
@@ -46,6 +49,7 @@ public class GitHubService : IGitHubService
         _aiGateway = aiGateway;
         _problemService = problemService;
         _configuration = configuration;
+        _planUsageService = planUsageService;
     }
 
     public async Task<GitHubConnectionStatusDto> GetConnectionStatusAsync(int userId, CancellationToken cancellationToken = default)
@@ -244,6 +248,11 @@ public class GitHubService : IGitHubService
         GitHubCodeReviewRequestDto dto,
         CancellationToken cancellationToken = default)
     {
+        if (_planUsageService != null)
+        {
+            await _planUsageService.EnsureFeatureAsync(userId, PlanFeatureKeys.GitHubCodeReview, cancellationToken);
+        }
+
         var (account, accessToken) = await GetConnectedAccountAsync(userId, cancellationToken);
         var (owner, repoName) = SplitFullName(dto.FullName);
         var branch = string.IsNullOrWhiteSpace(dto.Branch) ? "main" : dto.Branch.Trim();
@@ -336,6 +345,16 @@ public class GitHubService : IGitHubService
             userPrompt.AppendLine();
             userPrompt.AppendLine($"--- FILE: {path} ---");
             userPrompt.AppendLine(content);
+        }
+
+        if (_planUsageService != null)
+        {
+            await _planUsageService.ChargeCreditsAsync(
+                userId,
+                CreditCosts.CodeReview,
+                $"GitHub code review for {dto.FullName}",
+                referenceId: $"github-review:{dto.FullName}",
+                cancellationToken);
         }
 
         var ai = await _aiGateway.ExecuteAsync(new AIGatewayRequest(

@@ -313,13 +313,15 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
             b.HasIndex(ul => ul.CreatedAt);
         });
 
+        var seedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
         modelBuilder.Entity<Plan>().HasData(
             new Plan
             {
                 PlanId = 1,
                 Name = "Free",
                 Code = "FREE",
-                Description = "Default Free tier with standard AI quota.",
+                Description = "Debug with AI, practice challenges, and publish knowledge. 100 credits / month.",
                 Status = "Active",
                 IsDefault = true,
                 IsPublic = true,
@@ -327,8 +329,24 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
                 CreditsPerPeriod = 100,
                 Price = 0.00m,
                 Currency = "USD",
-                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-                UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                CreatedAt = seedAt,
+                UpdatedAt = seedAt
+            },
+            new Plan
+            {
+                PlanId = 2,
+                Name = "Pro",
+                Code = "PRO",
+                Description = "Higher AI credits plus GitHub Code Review for teams that ship faster.",
+                Status = "Active",
+                IsDefault = false,
+                IsPublic = true,
+                PeriodType = "Monthly",
+                CreditsPerPeriod = 1000,
+                Price = 19.00m,
+                Currency = "USD",
+                CreatedAt = seedAt,
+                UpdatedAt = seedAt
             }
         );
 
@@ -340,8 +358,8 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
                 Name = "AI Debugging",
                 Description = "Access to AI debugging assistant.",
                 Category = "AI",
-                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-                UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                CreatedAt = seedAt,
+                UpdatedAt = seedAt
             },
             new Feature
             {
@@ -350,8 +368,18 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
                 Name = "Monthly AI Credits",
                 Description = "Total AI credits available per billing cycle.",
                 Category = "Quota",
-                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-                UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                CreatedAt = seedAt,
+                UpdatedAt = seedAt
+            },
+            new Feature
+            {
+                FeatureId = 3,
+                Key = "github_code_review",
+                Name = "GitHub Code Review",
+                Description = "AI code review directly from connected GitHub repositories.",
+                Category = "AI",
+                CreatedAt = seedAt,
+                UpdatedAt = seedAt
             }
         );
 
@@ -363,8 +391,8 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
                 IsEnabled = true,
                 LimitValue = 100,
                 ConfigJson = "{\"enabled\": true}",
-                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-                UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                CreatedAt = seedAt,
+                UpdatedAt = seedAt
             },
             new PlanFeature
             {
@@ -373,8 +401,48 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
                 IsEnabled = true,
                 LimitValue = 100,
                 ConfigJson = "{\"credits\": 100}",
-                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-                UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                CreatedAt = seedAt,
+                UpdatedAt = seedAt
+            },
+            new PlanFeature
+            {
+                PlanId = 1,
+                FeatureId = 3,
+                IsEnabled = false,
+                LimitValue = 0,
+                ConfigJson = "{\"enabled\": false}",
+                CreatedAt = seedAt,
+                UpdatedAt = seedAt
+            },
+            new PlanFeature
+            {
+                PlanId = 2,
+                FeatureId = 1,
+                IsEnabled = true,
+                LimitValue = 1000,
+                ConfigJson = "{\"enabled\": true}",
+                CreatedAt = seedAt,
+                UpdatedAt = seedAt
+            },
+            new PlanFeature
+            {
+                PlanId = 2,
+                FeatureId = 2,
+                IsEnabled = true,
+                LimitValue = 1000,
+                ConfigJson = "{\"credits\": 1000}",
+                CreatedAt = seedAt,
+                UpdatedAt = seedAt
+            },
+            new PlanFeature
+            {
+                PlanId = 2,
+                FeatureId = 3,
+                IsEnabled = true,
+                LimitValue = null,
+                ConfigJson = "{\"enabled\": true}",
+                CreatedAt = seedAt,
+                UpdatedAt = seedAt
             }
         );
 

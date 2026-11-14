@@ -1,6 +1,7 @@
 using DevPilotAI.Application.Authentication;
 using DevPilotAI.Application.Challenges;
 using DevPilotAI.Application.GitHub;
+using DevPilotAI.Application.Plans;
 using DevPilotAI.Application.Problems;
 using DevPilotAI.Application.Users;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IGitHubService, GitHubService>();
         services.AddScoped<IChallengeService, ChallengeService>();
+        services.AddScoped<IPlanUsageService, PlanUsageService>();
 
         return services;
     }

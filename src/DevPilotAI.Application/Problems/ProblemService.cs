@@ -1,12 +1,12 @@
 using DevPilotAI.Application.Challenges;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
+using DevPilotAI.Application.Common.Models;
+using DevPilotAI.Application.Plans;
+using DevPilotAI.Application.Problems.DTOs;
 using DevPilotAI.Domain.Entities;
 using DevPilotAI.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
-
-using DevPilotAI.Application.Common.Models;
-using DevPilotAI.Application.Problems.DTOs;
 
 namespace DevPilotAI.Application.Problems;
 
@@ -16,17 +16,20 @@ public class ProblemService : IProblemService
     private readonly IAIGateway _aiGateway;
     private readonly ISimilarityEngine? _similarityEngine;
     private readonly IChallengeService? _challengeService;
+    private readonly IPlanUsageService? _planUsageService;
 
     public ProblemService(
         IApplicationDbContext dbContext,
         IAIGateway aiGateway,
         ISimilarityEngine? similarityEngine = null,
-        IChallengeService? challengeService = null)
+        IChallengeService? challengeService = null,
+        IPlanUsageService? planUsageService = null)
     {
         _dbContext = dbContext;
         _aiGateway = aiGateway;
         _similarityEngine = similarityEngine;
         _challengeService = challengeService;
+        _planUsageService = planUsageService;
     }
 
     public async Task<DebuggingResultDto> SubmitProblemAsync(CreateProblemDto dto, CancellationToken cancellationToken = default)
@@ -774,6 +777,17 @@ public class ProblemService : IProblemService
             request.SourceCode,
             request.Logs,
             existingSolution);
+
+        if (_planUsageService != null)
+        {
+            await _planUsageService.EnsureFeatureAsync(problem.UserId, PlanFeatureKeys.AiDebugging, cancellationToken);
+            await _planUsageService.ChargeCreditsAsync(
+                problem.UserId,
+                CreditCosts.ForTaskType(taskType),
+                $"AI {taskType} for problem {problem.ProblemCode}",
+                referenceId: $"problem:{problem.ProblemId}:{taskType}",
+                cancellationToken);
+        }
 
         var aiResponse = await _aiGateway.ExecuteAsync(new AIGatewayRequest(
             SystemPrompt: sysPrompt,

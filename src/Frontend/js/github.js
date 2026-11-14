@@ -174,6 +174,20 @@
         }
     }
 
+    async function refreshReviewGate() {
+        const gate = document.getElementById("review-plan-gate");
+        const btn = document.getElementById("btn-review");
+        try {
+            const url = new URL("/api/Plans/me", API_BASE).href;
+            const res = await window.DevPilotApi.request(url);
+            const canReview = res.ok && res.data && (res.data.canUseCodeReview || res.data.CanUseCodeReview);
+            gate.classList.toggle("d-none", !!canReview);
+            btn.disabled = !canReview;
+        } catch (e) {
+            gate.classList.add("d-none");
+        }
+    }
+
     async function runReview() {
         hideAlert();
         if (!selectedRepo) {
@@ -196,13 +210,19 @@
                 method: "POST",
                 body: JSON.stringify(payload)
             });
-            if (!res.ok || !res.data) throw new Error(res.message || "Review failed");
+            if (!res.ok || !res.data) {
+                if (res.errorCode === "PLAN_FEATURE_REQUIRED" || res.errorCode === "INSUFFICIENT_CREDITS") {
+                    document.getElementById("review-plan-gate").classList.remove("d-none");
+                }
+                throw new Error(res.message || "Review failed");
+            }
             renderReviewResult(res.data);
         } catch (err) {
             showAlert(err.message || "Review failed", "danger");
         } finally {
             btn.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> Run code review';
+            refreshReviewGate();
         }
     }
 
@@ -275,11 +295,15 @@
     });
 
     document.getElementById("tab-debug").addEventListener("click", function () { setMode("debug"); });
-    document.getElementById("tab-review").addEventListener("click", function () { setMode("review"); });
+    document.getElementById("tab-review").addEventListener("click", function () {
+        setMode("review");
+        refreshReviewGate();
+    });
     btnConnect.addEventListener("click", function () { connect().catch(function (err) { showAlert(err.message, "danger"); }); });
     btnDisconnect.addEventListener("click", function () { disconnect().catch(function (err) { showAlert(err.message, "danger"); }); });
     document.getElementById("btn-debug").addEventListener("click", runDebug);
     document.getElementById("btn-review").addEventListener("click", runReview);
+    refreshReviewGate();
 
     const params = new URLSearchParams(window.location.search);
     if (params.get("connected") === "1") {

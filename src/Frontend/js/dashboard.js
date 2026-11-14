@@ -100,6 +100,24 @@
         }
     }
 
+    async function loadPlanUsage() {
+        try {
+            const url = new URL("/api/Plans/me", API_BASE).href;
+            const res = await window.DevPilotApi.request(url);
+            if (!res.ok || !res.data) return;
+            const d = res.data;
+            document.getElementById("plan-name").textContent = d.planName || d.PlanName || d.planCode || d.PlanCode || "—";
+            document.getElementById("plan-credits").textContent = String(d.creditsRemaining ?? d.CreditsRemaining ?? 0);
+            const used = d.creditsUsed ?? d.CreditsUsed ?? 0;
+            const allocated = d.creditsAllocated ?? d.CreditsAllocated ?? 0;
+            const review = d.canUseCodeReview || d.CanUseCodeReview;
+            document.getElementById("plan-credits-meta").textContent =
+                used + " / " + allocated + " used · " + (review ? "Code Review on" : "Code Review = Pro");
+        } catch (e) {
+            document.getElementById("plan-credits-meta").textContent = "Usage unavailable";
+        }
+    }
+
     async function loadChallengeStats() {
         const activity = document.getElementById("leaderboard");
         const rankEl = document.getElementById("stat-rank");
@@ -149,5 +167,6 @@
 
     loadProfile();
     loadMyProblems();
+    loadPlanUsage();
     loadChallengeStats();
 })();

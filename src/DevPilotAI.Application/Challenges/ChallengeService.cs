@@ -2,6 +2,7 @@ using System.Text.Json;
 using DevPilotAI.Application.Challenges.DTOs;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
+using DevPilotAI.Application.Plans;
 using DevPilotAI.Domain.Entities;
 using DevPilotAI.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -14,11 +15,13 @@ public class ChallengeService : IChallengeService
 
     private readonly IApplicationDbContext _db;
     private readonly IAIGateway _aiGateway;
+    private readonly IPlanUsageService? _planUsageService;
 
-    public ChallengeService(IApplicationDbContext db, IAIGateway aiGateway)
+    public ChallengeService(IApplicationDbContext db, IAIGateway aiGateway, IPlanUsageService? planUsageService = null)
     {
         _db = db;
         _aiGateway = aiGateway;
+        _planUsageService = planUsageService;
     }
 
     public async Task<Challenge?> GenerateFromSolvedProblemAsync(
@@ -68,6 +71,24 @@ public class ChallengeService : IChallengeService
 
             Create a mini challenge for other developers to practice this fix.
             """;
+
+        if (_planUsageService != null)
+        {
+            try
+            {
+                await _planUsageService.ChargeCreditsAsync(
+                    problem.UserId,
+                    CreditCosts.ChallengeGeneration,
+                    $"Challenge generation for problem {problem.ProblemCode}",
+                    referenceId: $"challenge-gen:{problem.ProblemId}",
+                    cancellationToken);
+            }
+            catch
+            {
+                // Soft-fail: solving a problem should not break because credits ran out.
+                return null;
+            }
+        }
 
         var ai = await _aiGateway.ExecuteAsync(new AIGatewayRequest(
             SystemPrompt: systemPrompt,
@@ -282,6 +303,16 @@ public class ChallengeService : IChallengeService
 
             Related original bug title: {challenge.Problem.Title}
             """;
+
+        if (_planUsageService != null)
+        {
+            await _planUsageService.ChargeCreditsAsync(
+                userId,
+                CreditCosts.ChallengeEvaluation,
+                $"Challenge evaluation #{challengeId}",
+                referenceId: $"challenge-eval:{challengeId}:{attempt.ChallengeAttemptId}",
+                cancellationToken);
+        }
 
         var ai = await _aiGateway.ExecuteAsync(new AIGatewayRequest(
             SystemPrompt: systemPrompt,
