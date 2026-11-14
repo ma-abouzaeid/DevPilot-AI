@@ -122,6 +122,52 @@
         }
     }
 
+    async function loadSavedArticles() {
+        const box = document.getElementById("saved-articles-list");
+        if (!box) return;
+
+        try {
+            const url = new URL("/api/Problems/articles/saved", API_BASE);
+            url.searchParams.set("page", "1");
+            url.searchParams.set("pageSize", "8");
+            const res = await window.DevPilotApi.request(url.href);
+            if (!res.ok) {
+                throw new Error(res.message || "Failed to load saved articles");
+            }
+
+            const items = (res.data && (res.data.items || res.data.Items)) || [];
+            if (!items.length) {
+                box.innerHTML =
+                    '<div class="empty-state">' +
+                    "<p>No saved articles yet. Browse the knowledge base and tap Save on anything useful.</p>" +
+                    '<a class="btn btn-outline-card mt-2" href="articles.html">Browse articles</a>' +
+                    "</div>";
+                return;
+            }
+
+            box.innerHTML = items.map(function (a) {
+                const articleId = a.knowledgeArticleId || a.KnowledgeArticleId;
+                const code = a.articleCode || a.ArticleCode || a.problemCode || a.ProblemCode || "";
+                const title = a.title || a.Title || "Untitled article";
+                const framework = a.framework || a.Framework || "";
+                const href = "article-details.html?id=" + encodeURIComponent(articleId);
+                return (
+                    '<div class="list-row">' +
+                    "<div>" +
+                    '<a class="link-blue" href="' + href + '">' + escapeHtml(title) + "</a>" +
+                    '<div class="text-gray small">' + escapeHtml(code) +
+                    (framework ? (" · " + escapeHtml(framework)) : "") +
+                    "</div>" +
+                    "</div>" +
+                    '<span class="badge-soft solved">Saved</span>' +
+                    "</div>"
+                );
+            }).join("");
+        } catch (e) {
+            box.innerHTML = '<div class="empty-state">Could not load your saved articles right now.</div>';
+        }
+    }
+
     async function loadChallengeStats() {
         const activity = document.getElementById("leaderboard");
         const rankEl = document.getElementById("stat-rank");
@@ -171,6 +217,7 @@
 
     loadProfile();
     loadMyProblems();
+    loadSavedArticles();
     loadPlanUsage();
     loadChallengeStats();
 })();

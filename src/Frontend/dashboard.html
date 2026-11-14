@@ -84,6 +84,15 @@
                                 </a>
                             </div>
                             <div class="col-md-6">
+                                <a class="quick-action" href="#saved-articles">
+                                    <i class="fa-solid fa-bookmark"></i>
+                                    <div>
+                                        <strong>Saved Articles</strong>
+                                        <div class="text-gray small">Jump back to articles you bookmarked</div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-md-6">
                                 <a class="quick-action" href="challenges.html">
                                     <i class="fa-solid fa-code"></i>
                                     <div>
@@ -113,13 +122,23 @@
                         </div>
                     </div>
 
-                    <div class="surface-card">
+                    <div class="surface-card mb-4">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <h2 class="h5 mb-0">Recent Problems</h2>
                             <a href="submit-problem.html" class="link-blue small">New problem</a>
                         </div>
                         <div id="recent-problems">
                             <div class="empty-state">Loading recent activity…</div>
+                        </div>
+                    </div>
+
+                    <div class="surface-card" id="saved-articles">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h2 class="h5 mb-0"><i class="fa-solid fa-bookmark text-accent-brand me-2"></i>Saved Articles</h2>
+                            <a href="articles.html?view=saved" class="link-blue small">View all</a>
+                        </div>
+                        <div id="saved-articles-list">
+                            <div class="empty-state">Loading saved articles…</div>
                         </div>
                     </div>
                 </div>
