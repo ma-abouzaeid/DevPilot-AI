@@ -518,7 +518,7 @@
             btnUnsolved.disabled = false;
         }
 
-        resultCard.scrollIntoView({ behavior: "smooth", block: "start" });
+        resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
     function renderReviewResult(data) {
@@ -550,7 +550,7 @@
             "<h3 class=\"h6\">Summary</h3><p>" + escapeHtml(data.summary || data.Summary || "") + "</p>" +
             '<p class="text-gray small">Reviewed: ' + paths + "</p>" +
             "<h3 class=\"h6\">Findings</h3>" + findings;
-        resultCard.scrollIntoView({ behavior: "smooth", block: "start" });
+        resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
     reposList.addEventListener("click", async function (e) {

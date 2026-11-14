@@ -99,9 +99,14 @@
                 '<span class="challenge-list-points-label">pts max' +
                 (best != null ? " · best " + best : "") +
                 "</span></div>" +
-                '<a class="btn btn-primary" href="challenge-details.html?id=' + encodeURIComponent(id) + '">' +
-                (solved ? "Retry" : "Solve") + "</a>" +
-                "</div></article>"
+                '<div class="challenge-list-actions">' +
+                (solved
+                    ? '<a class="btn btn-outline-card" style="width:auto;" href="challenge-details.html?id=' +
+                      encodeURIComponent(id) + '&mode=view">View</a>' +
+                      '<a class="btn btn-primary" style="width:auto;" href="challenge-details.html?id=' +
+                      encodeURIComponent(id) + '">Retry</a>'
+                    : '<a class="btn btn-primary" href="challenge-details.html?id=' + encodeURIComponent(id) + '">Solve</a>') +
+                "</div></div></article>"
             );
         }).join("");
     }

@@ -272,16 +272,55 @@ public class ChallengeService : IChallengeService
 
         bool solved = false;
         int? best = null;
+        ChallengeAttemptReviewDto? latestAttempt = null;
         if (currentUserId.HasValue)
         {
             var attempts = await _db.ChallengeAttempts.AsNoTracking()
                 .Where(a => a.ChallengeId == challengeId && a.UserId == currentUserId.Value && a.Evaluation != null)
-                .Select(a => new { a.Evaluation!.IsPassed, a.Evaluation.PointsAwarded })
+                .Select(a => new
+                {
+                    a.ChallengeAttemptId,
+                    a.SubmittedCode,
+                    a.SubmittedAt,
+                    a.StartedAt,
+                    a.Evaluation!.IsPassed,
+                    a.Evaluation.PointsAwarded,
+                    a.Evaluation.CorrectnessScore,
+                    a.Evaluation.CodeQualityScore,
+                    a.Evaluation.SecurityScore,
+                    a.Evaluation.FeedbackSummary,
+                    a.Evaluation.Advice,
+                    a.Evaluation.DetailedReport,
+                    a.Evaluation.EvaluatedAt
+                })
                 .ToListAsync(cancellationToken);
+
             if (attempts.Count > 0)
             {
                 solved = attempts.Any(a => a.IsPassed);
                 best = attempts.Max(a => a.PointsAwarded);
+
+                // Prefer best passed attempt; otherwise the highest-scoring attempt.
+                var reviewSource = attempts
+                    .OrderByDescending(a => a.IsPassed)
+                    .ThenByDescending(a => a.PointsAwarded)
+                    .ThenByDescending(a => a.EvaluatedAt)
+                    .First();
+
+                latestAttempt = new ChallengeAttemptReviewDto(
+                    ChallengeAttemptId: reviewSource.ChallengeAttemptId,
+                    IsPassed: reviewSource.IsPassed,
+                    CorrectnessScore: reviewSource.CorrectnessScore,
+                    CodeQualityScore: reviewSource.CodeQualityScore,
+                    SecurityScore: reviewSource.SecurityScore,
+                    PointsAwarded: reviewSource.PointsAwarded,
+                    MaxPoints: c.MaxPoints,
+                    FeedbackSummary: reviewSource.FeedbackSummary ?? string.Empty,
+                    Advice: reviewSource.Advice ?? string.Empty,
+                    DetailedReport: reviewSource.DetailedReport ?? string.Empty,
+                    SubmittedCode: reviewSource.SubmittedCode ?? string.Empty,
+                    SubmittedAt: reviewSource.SubmittedAt ?? reviewSource.StartedAt
+                );
             }
         }
 
@@ -297,7 +336,8 @@ public class ChallengeService : IChallengeService
             c.ProblemCode,
             c.KnowledgeArticleId,
             solved,
-            best
+            best,
+            latestAttempt
         );
     }
 

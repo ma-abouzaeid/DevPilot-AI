@@ -14,6 +14,21 @@ public record ChallengeListItemDto(
     int? BestPointsForCurrentUser
 );
 
+public record ChallengeAttemptReviewDto(
+    int ChallengeAttemptId,
+    bool IsPassed,
+    int CorrectnessScore,
+    int CodeQualityScore,
+    int SecurityScore,
+    int PointsAwarded,
+    int MaxPoints,
+    string FeedbackSummary,
+    string Advice,
+    string DetailedReport,
+    string SubmittedCode,
+    DateTime SubmittedAt
+);
+
 public record ChallengeDetailsDto(
     int ChallengeId,
     string Title,
@@ -26,7 +41,8 @@ public record ChallengeDetailsDto(
     string? ProblemCode,
     int? KnowledgeArticleId,
     bool SolvedByCurrentUser,
-    int? BestPointsForCurrentUser
+    int? BestPointsForCurrentUser,
+    ChallengeAttemptReviewDto? LatestAttempt = null
 );
 
 public class SubmitChallengeSolutionDto

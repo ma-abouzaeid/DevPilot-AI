@@ -502,7 +502,7 @@
         btnSolved.classList.remove("d-none");
         btnUnsolved.disabled = false;
 
-        resultPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+        resultPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
     function guessExtension(data) {

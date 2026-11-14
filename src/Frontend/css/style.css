@@ -168,11 +168,18 @@ a { text-decoration: none; color: inherit; }
 /* ---------- Navbar ---------- */
 .nav-dark,
 .nav-brand {
-    background: rgba(255, 255, 255, 0.92);
+    position: sticky;
+    top: 0;
+    z-index: 1040;
+    background: rgba(255, 255, 255, 0.96);
     border-bottom: 1px solid var(--border);
     backdrop-filter: blur(10px);
     padding-top: 10px;
     padding-bottom: 10px;
+}
+
+html {
+    scroll-padding-top: 88px;
 }
 
 .nav-dark .nav-link,
@@ -220,7 +227,14 @@ a { text-decoration: none; color: inherit; }
         radial-gradient(520px 300px at 0% 100%, rgba(11, 31, 51, 0.06), transparent 55%),
         linear-gradient(180deg, #EBF1F5 0%, var(--bg) 55%);
     position: relative;
-    overflow: hidden;
+    /* Do not use overflow:hidden here — it clips the IDE toolbar under sticky nav */
+    overflow-x: clip;
+    overflow-y: visible;
+}
+
+.login-section.padding-top-bottom {
+    padding-top: 36px;
+    padding-bottom: 80px;
 }
 
 .login-section::before {
@@ -683,7 +697,7 @@ a { text-decoration: none; color: inherit; }
 
 /* ---------- App pages ---------- */
 .page-shell {
-    padding: 48px 0 72px;
+    padding: 56px 0 72px;
     background:
         radial-gradient(640px 320px at 100% 0%, rgba(15, 118, 110, 0.08), transparent 60%),
         var(--bg);
@@ -952,6 +966,7 @@ a { text-decoration: none; color: inherit; }
     overflow: hidden;
     background: #0A1929;
     box-shadow: 0 16px 36px rgba(11, 31, 51, 0.18);
+    scroll-margin-top: 96px;
 }
 
 .ide-toolbar {
@@ -961,6 +976,9 @@ a { text-decoration: none; color: inherit; }
     padding: 10px 14px;
     background: #071521;
     border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
 }
 
 .ide-dots {
@@ -996,6 +1014,12 @@ a { text-decoration: none; color: inherit; }
     grid-template-columns: 52px 1fr;
     min-height: 280px;
     max-height: 460px;
+    overflow: auto;
+}
+
+.debug-form .mb-4:has(.ide-editor),
+.debug-form .mb-3 {
+    scroll-margin-top: 96px;
 }
 
 .ide-gutter {
@@ -1062,6 +1086,9 @@ a { text-decoration: none; color: inherit; }
     background: rgba(15, 118, 110, 0.06);
 }
 
+.debug-result {
+    scroll-margin-top: 96px;
+}
 .debug-result .result-block {
     border-top: 1px solid var(--border);
     padding: 1rem 0;
@@ -1463,6 +1490,16 @@ a { text-decoration: none; color: inherit; }
     justify-content: space-between;
     gap: 12px;
     min-width: 120px;
+}
+.challenge-list-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+.ide-textarea.is-readonly {
+    cursor: default;
+    color: #CBD5E1;
 }
 .challenge-list-points {
     text-align: right;
