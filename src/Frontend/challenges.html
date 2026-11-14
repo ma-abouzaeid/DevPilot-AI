@@ -23,47 +23,26 @@
         <div class="container">
             <span class="page-kicker"><i class="fa-solid fa-trophy"></i> Practice Arena</span>
             <h1 class="page-title">Challenges that make the <span class="text-accent-brand">fix stick</span></h1>
-            <p class="page-lead">After AI explains a solution, apply it yourself. Get feedback, earn points, and climb the leaderboard.</p>
+            <p class="page-lead">Solve mini versions of real bugs, earn AI-graded points, and climb the leaderboard.</p>
 
-            <div class="row g-4">
-                <div class="col-md-6 col-lg-4">
-                    <div class="surface-card h-100">
-                        <span class="badge-soft progress mb-2">Beginner</span>
-                        <h3 class="h5">Fix the Null Check</h3>
-                        <p class="text-gray">Guard a service method against null user objects and return a clean 404.</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-accent-brand"><i class="fa-solid fa-star"></i> 50 pts</span>
-                            <button class="btn btn-primary btn-sm" disabled>Coming soon</button>
+            <div class="row g-4 mb-4">
+                <div class="col-lg-8">
+                    <div class="surface-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h2 class="h5 mb-0">Available challenges</h2>
+                            <span class="text-gray small" id="my-challenge-stats">Loading…</span>
+                        </div>
+                        <div class="row g-3" id="challenges-grid">
+                            <div class="col-12"><div class="empty-state">Loading challenges…</div></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="surface-card h-100">
-                        <span class="badge-soft ai mb-2">Intermediate</span>
-                        <h3 class="h5">JWT Refresh Rotation</h3>
-                        <p class="text-gray">Implement refresh token rotation and detect reuse attacks safely.</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-accent-brand"><i class="fa-solid fa-star"></i> 120 pts</span>
-                            <button class="btn btn-primary btn-sm" disabled>Coming soon</button>
-                        </div>
+                <div class="col-lg-4">
+                    <div class="surface-card">
+                        <h2 class="h5 mb-3"><i class="fa-solid fa-medal text-accent-brand me-2"></i>Leaderboard</h2>
+                        <div id="leaderboard"><div class="empty-state">Loading…</div></div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="surface-card h-100">
-                        <span class="badge-soft open mb-2">Advanced</span>
-                        <h3 class="h5">CORS Middleware Order</h3>
-                        <p class="text-gray">Place CORS correctly in the ASP.NET pipeline and unlock frontend calls.</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-accent-brand"><i class="fa-solid fa-star"></i> 90 pts</span>
-                            <button class="btn btn-primary btn-sm" disabled>Coming soon</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="alert alert-success-soft mt-4">
-                <i class="fa-solid fa-circle-info text-primary-brand me-2"></i>
-                Challenge evaluation + GitHub submission will connect to the backend Challenge entities already in the database model.
             </div>
         </div>
     </section>
@@ -75,6 +54,7 @@
     <script src="js/navbar.js"></script>
     <script src="js/footer.js"></script>
     <script src="js/animations.js"></script>
+    <script src="js/challenges.js"></script>
 </body>
 
 </html>

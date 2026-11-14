@@ -388,7 +388,13 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("bit");
+
                     b.Property<int?>("KnowledgeArticleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxPoints")
                         .HasColumnType("int");
 
                     b.Property<int>("ProblemId")
@@ -439,6 +445,9 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.Property<DateTime?>("SubmittedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("SubmittedCode")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
@@ -459,6 +468,10 @@ namespace DevPilotAI.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ChallengeEvaluationId"));
 
+                    b.Property<string>("Advice")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("ChallengeAttemptId")
                         .HasColumnType("int");
 
@@ -478,6 +491,12 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.Property<string>("FeedbackSummary")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsPassed")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("PointsAwarded")
+                        .HasColumnType("int");
 
                     b.Property<int>("SecurityScore")
                         .HasColumnType("int");

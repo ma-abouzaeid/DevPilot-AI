@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="images/logo-mark.svg">
+    <title>Solve Challenge - DevPilot AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.0/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/media.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+
+<body>
+    <div id="navbar" data-active="challenges"></div>
+
+    <section class="page-shell">
+        <div class="container">
+            <a href="challenges.html" class="link-blue small"><i class="fa-solid fa-arrow-left"></i> All challenges</a>
+            <div id="page-alert" class="alert d-none mt-3" role="alert"></div>
+            <div id="challenge-root">
+                <div class="empty-state">Loading challenge…</div>
+            </div>
+        </div>
+    </section>
+
+    <div id="footer"></div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="js/config.js"></script>
+    <script src="js/api-client.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/footer.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/challenge-details.js"></script>
+</body>
+
+</html>

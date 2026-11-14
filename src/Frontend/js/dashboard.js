@@ -44,7 +44,6 @@
 
     async function loadMyProblems() {
         const box = document.getElementById("recent-problems");
-        const activity = document.getElementById("leaderboard");
         try {
             const url = new URL("/api/Problems/mine?recentCount=8", API_BASE).href;
             const res = await window.DevPilotApi.request(url);
@@ -60,15 +59,8 @@
 
             document.getElementById("stat-open").textContent = String(openCount);
             document.getElementById("stat-solved").textContent = String(solvedCount);
-            document.getElementById("stat-rank").textContent = String(totalCount);
-            document.getElementById("stat-credits").textContent = "—";
-
-            if (activity) {
-                activity.innerHTML =
-                    '<div class="list-row"><div><strong>Total tickets</strong><div class="text-gray small">Your debugging history</div></div><strong>' + totalCount + "</strong></div>" +
-                    '<div class="list-row"><div><strong>Still open</strong><div class="text-gray small">Need follow-up</div></div><strong>' + openCount + "</strong></div>" +
-                    '<div class="list-row"><div><strong>Solved</strong><div class="text-gray small">Published as knowledge</div></div><strong>' + solvedCount + "</strong></div>";
-            }
+            // totalCount kept for future widgets
+            void totalCount;
 
             if (!items.length) {
                 box.innerHTML =
@@ -97,12 +89,57 @@
             }).join("");
         } catch (e) {
             box.innerHTML = '<div class="empty-state">Could not load your recent problems right now.</div>';
+        }
+    }
+
+    async function loadChallengeStats() {
+        const activity = document.getElementById("leaderboard");
+        const rankEl = document.getElementById("stat-rank");
+        const pointsEl = document.getElementById("stat-credits");
+        try {
+            const url = new URL("/api/Challenges/leaderboard?top=5", API_BASE).href;
+            const res = await window.DevPilotApi.request(url);
+            if (!res.ok || !res.data) throw new Error("leaderboard failed");
+
+            const data = res.data;
+            const points = data.totalPoints ?? data.TotalPoints ?? 0;
+            const solved = data.challengesSolved ?? data.ChallengesSolved ?? 0;
+            const rank = data.rank ?? data.Rank;
+            rankEl.textContent = rank ? ("#" + rank) : "—";
+            pointsEl.textContent = String(points);
+
+            const top = data.top || data.Top || [];
+            if (!top.length) {
+                activity.innerHTML =
+                    '<div class="empty-state">No challenge points yet. <a class="link-blue" href="challenges.html">Solve a challenge</a></div>';
+                return;
+            }
+
+            activity.innerHTML = top.map(function (row) {
+                const r = row.rank ?? row.Rank;
+                const name = row.displayName || row.DisplayName || "Developer";
+                const pts = row.totalPoints ?? row.TotalPoints ?? 0;
+                const cls = r === 1 ? "" : (r === 2 ? "silver" : (r === 3 ? "bronze" : ""));
+                return (
+                    '<div class="leaderboard-item">' +
+                    '<div class="rank-pill ' + cls + '">' + r + "</div>" +
+                    '<div class="flex-grow-1"><strong>' + escapeHtml(name) + "</strong>" +
+                    '<div class="text-gray small">' + (row.challengesSolved ?? row.ChallengesSolved ?? 0) + " solved</div></div>" +
+                    '<strong class="text-accent-brand">' + pts + "</strong></div>"
+                );
+            }).join("") +
+                '<div class="text-gray small mt-2">You: ' + points + " pts · " + solved + " solved" +
+                (rank ? (" · #" + rank) : "") + "</div>";
+        } catch (e) {
+            rankEl.textContent = "—";
+            pointsEl.textContent = "—";
             if (activity) {
-                activity.innerHTML = '<div class="empty-state">Activity unavailable.</div>';
+                activity.innerHTML = '<div class="empty-state">Challenge stats unavailable.</div>';
             }
         }
     }
 
     loadProfile();
     loadMyProblems();
+    loadChallengeStats();
 })();

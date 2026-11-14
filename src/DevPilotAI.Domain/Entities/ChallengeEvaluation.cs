@@ -9,7 +9,10 @@ public class ChallengeEvaluation
     public int CorrectnessScore { get; set; }
     public int CodeQualityScore { get; set; }
     public int SecurityScore { get; set; }
+    public int PointsAwarded { get; set; }
+    public bool IsPassed { get; set; }
     public string FeedbackSummary { get; set; } = string.Empty;
+    public string Advice { get; set; } = string.Empty;
     public string DetailedReport { get; set; } = string.Empty;
     public DateTime EvaluatedAt { get; set; } = DateTime.UtcNow;
 }

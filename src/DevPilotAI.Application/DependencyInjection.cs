@@ -1,4 +1,5 @@
 using DevPilotAI.Application.Authentication;
+using DevPilotAI.Application.Challenges;
 using DevPilotAI.Application.GitHub;
 using DevPilotAI.Application.Problems;
 using DevPilotAI.Application.Users;
@@ -14,6 +15,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IGitHubService, GitHubService>();
+        services.AddScoped<IChallengeService, ChallengeService>();
 
         return services;
     }

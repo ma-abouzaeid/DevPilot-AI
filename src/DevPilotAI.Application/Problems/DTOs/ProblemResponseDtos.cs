@@ -109,5 +109,6 @@ public record KnowledgeArticleDetailsDto(
     DateTime CreatedAt,
     DateTime? ResolvedAt,
     string? RootCause,
-    string? SolutionSummary
+    string? SolutionSummary,
+    int? ChallengeId = null
 );

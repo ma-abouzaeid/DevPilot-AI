@@ -10,6 +10,7 @@ public class ChallengeAttempt
     public User User { get; set; } = null!;
 
     public string? GitHubRepoUrl { get; set; }
+    public string? SubmittedCode { get; set; }
     public string Status { get; set; } = "InProgress";
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public DateTime? SubmittedAt { get; set; }

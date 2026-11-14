@@ -54,6 +54,11 @@
             const summary = data.summary || data.Summary || "";
             const rootCause = data.rootCause || data.RootCause || "";
             const content = data.contentMarkdown || data.ContentMarkdown || summary;
+            const challengeId = data.challengeId ?? data.ChallengeId;
+            const challengeHref = challengeId
+                ? ("challenge-details.html?id=" + encodeURIComponent(challengeId))
+                : "challenges.html";
+            const challengeLabel = challengeId ? "Solve this challenge" : "Browse challenges";
 
             root.innerHTML =
                 '<div class="surface-card mb-4">' +
@@ -78,7 +83,7 @@
                 '<div class="surface-card mb-3">' +
                 "<h3 class=\"h5\">Practice this fix</h3>" +
                 '<p class="text-gray">Take a short challenge to apply the solution yourself.</p>' +
-                '<a class="btn btn-primary w-100 mb-2" href="challenges.html">Start Challenge</a>' +
+                '<a class="btn btn-primary w-100 mb-2" href="' + challengeHref + '">' + challengeLabel + "</a>" +
                 '<a class="btn btn-outline-card w-100" href="submit-problem.html">Debug your own issue</a>' +
                 "</div>" +
                 '<div class="alert alert-success-soft">' +

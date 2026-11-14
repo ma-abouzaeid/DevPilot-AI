@@ -17,6 +17,9 @@ public class Challenge : ISoftDeletable
     public string Requirements { get; set; } = string.Empty;
     public string StarterCode { get; set; } = string.Empty;
     public ChallengeDifficulty Difficulty { get; set; } = ChallengeDifficulty.Intermediate;
+    /// <summary>Maximum points a solver can earn for this challenge.</summary>
+    public int MaxPoints { get; set; } = 100;
+    public bool IsPublished { get; set; } = true;
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

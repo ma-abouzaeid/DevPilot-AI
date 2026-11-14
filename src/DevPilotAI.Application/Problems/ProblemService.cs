@@ -1,3 +1,4 @@
+using DevPilotAI.Application.Challenges;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Domain.Entities;
@@ -14,15 +15,18 @@ public class ProblemService : IProblemService
     private readonly IApplicationDbContext _dbContext;
     private readonly IAIGateway _aiGateway;
     private readonly ISimilarityEngine? _similarityEngine;
+    private readonly IChallengeService? _challengeService;
 
     public ProblemService(
         IApplicationDbContext dbContext,
         IAIGateway aiGateway,
-        ISimilarityEngine? similarityEngine = null)
+        ISimilarityEngine? similarityEngine = null,
+        IChallengeService? challengeService = null)
     {
         _dbContext = dbContext;
         _aiGateway = aiGateway;
         _similarityEngine = similarityEngine;
+        _challengeService = challengeService;
     }
 
     public async Task<DebuggingResultDto> SubmitProblemAsync(CreateProblemDto dto, CancellationToken cancellationToken = default)
@@ -324,6 +328,19 @@ public class ProblemService : IProblemService
             };
 
             _dbContext.ArticleVersions.Add(version);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            if (_challengeService != null)
+            {
+                try
+                {
+                    await _challengeService.GenerateFromSolvedProblemAsync(problem, article, attempt, cancellationToken);
+                }
+                catch
+                {
+                    // Challenge generation must not block marking a problem as solved.
+                }
+            }
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -631,6 +648,11 @@ public class ProblemService : IProblemService
             .Select(r => r.Framework)
             .FirstOrDefault();
 
+        var challengeId = await _dbContext.Challenges.AsNoTracking()
+            .Where(c => c.KnowledgeArticleId == article.KnowledgeArticleId && c.IsPublished && !c.IsDeleted)
+            .Select(c => (int?)c.ChallengeId)
+            .FirstOrDefaultAsync(cancellationToken);
+
         return new KnowledgeArticleDetailsDto(
             KnowledgeArticleId: article.KnowledgeArticleId,
             ProblemId: article.ProblemId,
@@ -644,7 +666,8 @@ public class ProblemService : IProblemService
             CreatedAt: article.CreatedAt,
             ResolvedAt: article.Problem.ResolvedAt,
             RootCause: solution?.RootCause,
-            SolutionSummary: solution?.Summary
+            SolutionSummary: solution?.Summary,
+            ChallengeId: challengeId
         );
     }
 
