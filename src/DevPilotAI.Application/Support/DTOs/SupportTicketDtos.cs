@@ -25,6 +25,9 @@ public class SendSupportMessageDto
     [Required]
     [StringLength(4000, MinimumLength = 1)]
     public string Body { get; set; } = string.Empty;
+
+    /// <summary>True when the message is sent from the admin tickets UI.</summary>
+    public bool AsAdmin { get; set; }
 }
 
 public record SupportTicketListItemDto(

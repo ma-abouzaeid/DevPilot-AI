@@ -104,7 +104,8 @@ public class SupportTicketsController : ControllerBase
             GetRequiredUserId(),
             await IsAdminAsync(cancellationToken),
             dto?.Body ?? string.Empty,
-            cancellationToken);
+            cancellationToken,
+            asAdmin: dto?.AsAdmin == true);
         return Ok(ApiResponse<SupportTicketMessageDto>.SuccessResult(result, "Message sent.", GetTraceId()));
     }
 

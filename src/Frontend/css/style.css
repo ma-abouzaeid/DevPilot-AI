@@ -1937,10 +1937,14 @@ body.brand-busy-open { overflow: hidden; }
     padding: 0.75rem 0.85rem;
     color: var(--ink);
     font-family: var(--font-body);
+    transition: border-color 0.15s ease, background 0.15s ease;
 }
 .support-ticket-item:hover,
 .support-ticket-item.is-active {
     border-color: var(--brand);
+}
+.support-ticket-item.is-active {
+    background: var(--brand-soft);
 }
 .support-ticket-item.is-unread {
     background: var(--brand-soft);
@@ -1948,49 +1952,172 @@ body.brand-busy-open { overflow: hidden; }
 .support-detail-card {
     min-height: 420px;
 }
-.support-chat {
-    border-top: 1px solid var(--border);
-    padding-top: 0.85rem;
+.support-ticket-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: flex-start;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--border);
 }
+.support-ticket-head .ticket-code {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 0.2rem;
+}
+.support-ticket-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+.support-ticket-meta-row li {
+    font-size: 0.82rem;
+    color: var(--gray);
+}
+.support-ticket-meta-row strong {
+    color: var(--ink);
+    font-weight: 600;
+}
+.support-resolve-box {
+    margin: 1rem 0 0;
+    padding: 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, #fff 0%, var(--bg) 100%);
+}
+.support-resolve-box .form-label {
+    font-weight: 600;
+    color: var(--ink);
+}
+.support-chat {
+    margin-top: 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, #F7FAFC 0%, #EEF3F7 100%);
+    overflow: hidden;
+}
+.support-chat-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.7);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--ink);
+}
+.support-chat-legend {
+    display: flex;
+    gap: 0.75rem;
+    font-weight: 500;
+    color: var(--gray);
+}
+.support-chat-legend span::before {
+    content: "";
+    display: inline-block;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    margin-right: 0.3rem;
+    vertical-align: middle;
+}
+.support-chat-legend .leg-user::before { background: #94A3B8; }
+.support-chat-legend .leg-admin::before { background: var(--brand); }
 .support-chat-messages {
     display: flex;
     flex-direction: column;
-    gap: 0.65rem;
-    max-height: 320px;
+    align-items: stretch;
+    gap: 0.55rem;
+    max-height: 340px;
     overflow: auto;
-    margin-bottom: 0.75rem;
-    padding-right: 0.25rem;
+    padding: 0.85rem;
 }
 .support-chat-bubble {
-    max-width: 85%;
+    max-width: min(78%, 28rem);
+    width: fit-content;
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 0.65rem 0.8rem;
-    background: var(--surface-muted);
+    border-radius: 14px;
+    padding: 0.55rem 0.75rem 0.65rem;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    align-self: flex-start;
 }
+.support-chat-bubble.is-user {
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    background: #fff;
+    border-color: var(--border);
+}
+.support-chat-bubble.is-admin,
 .support-chat-bubble.is-mine {
     align-self: flex-end;
+    border-bottom-right-radius: 4px;
     background: var(--brand-soft);
-    border-color: rgba(15, 118, 110, 0.25);
+    border-color: rgba(15, 118, 110, 0.28);
+}
+.support-chat-bubble .role-tag {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    margin-right: 0.35rem;
+}
+.support-chat-bubble.is-user .role-tag {
+    background: var(--surface-muted);
+    color: var(--gray);
+}
+.support-chat-bubble.is-admin .role-tag,
+.support-chat-bubble.is-mine .role-tag {
+    background: rgba(15, 118, 110, 0.15);
+    color: var(--brand);
 }
 .support-chat-bubble p {
     margin: 0;
     white-space: pre-wrap;
+    color: var(--ink);
+    line-height: 1.45;
 }
 .support-chat-meta {
     display: flex;
     justify-content: space-between;
+    align-items: baseline;
     gap: 0.75rem;
-    margin-bottom: 0.25rem;
-    font-size: 0.8rem;
+    margin-bottom: 0.2rem;
+    font-size: 0.75rem;
+    color: var(--gray);
+}
+.support-chat-meta strong {
+    color: var(--ink);
+    font-weight: 600;
 }
 .support-chat-form {
     display: flex;
     gap: 0.5rem;
+    padding: 0.75rem;
+    border-top: 1px solid var(--border);
+    background: #fff;
+}
+.support-chat-form .form-control {
+    border-radius: 999px;
+    padding-left: 1rem;
 }
 .support-chat-form .btn {
     width: auto;
     white-space: nowrap;
+    border-radius: 999px;
+    padding-inline: 1.1rem;
 }
 #tickets-unread-badge {
     margin-left: 0.25rem;

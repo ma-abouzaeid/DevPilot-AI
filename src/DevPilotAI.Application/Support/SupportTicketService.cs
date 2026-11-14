@@ -229,7 +229,7 @@ public class SupportTicketService : ISupportTicketService
                 m.SupportTicketId,
                 m.SenderUserId,
                 m.SenderUser.Name,
-                m.SenderUserId != m.SupportTicket.CreatedByUserId,
+                m.IsFromAdmin,
                 m.Body,
                 m.CreatedAt
             ))
@@ -241,7 +241,8 @@ public class SupportTicketService : ISupportTicketService
         int userId,
         bool isAdmin,
         string body,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool asAdmin = false)
     {
         await EnsureCanAccessChatAsync(ticketId, userId, isAdmin, cancellationToken);
 
@@ -262,10 +263,18 @@ public class SupportTicketService : ISupportTicketService
             throw AppError.Conflict("Cannot chat on a resolved ticket.", "TICKET_RESOLVED");
         }
 
+        // Prefer explicit UI context so the same account can play user + admin in tests.
+        var fromAdmin = isAdmin && asAdmin;
+        if (!fromAdmin && isAdmin && userId != ticket.CreatedByUserId)
+        {
+            fromAdmin = true;
+        }
+
         var message = new SupportTicketMessage
         {
             SupportTicketId = ticketId,
             SenderUserId = userId,
+            IsFromAdmin = fromAdmin,
             Body = text,
             CreatedAt = DateTime.UtcNow
         };
@@ -283,7 +292,7 @@ public class SupportTicketService : ISupportTicketService
             ticketId,
             userId,
             senderName,
-            userId != ticket.CreatedByUserId,
+            message.IsFromAdmin,
             message.Body,
             message.CreatedAt);
 

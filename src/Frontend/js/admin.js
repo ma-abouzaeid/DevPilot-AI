@@ -1007,12 +1007,15 @@
         if (!box) return;
         var empty = box.querySelector(".empty-state");
         if (empty) empty.remove();
-        var mine = Number(msg.senderUserId || msg.SenderUserId) === Number(myAdminUserId());
+        // Side by role (not sender id) so same-account tests still split left/right.
+        var fromAdmin = !!(msg.isFromAdmin || msg.IsFromAdmin);
         var row = document.createElement("div");
-        row.className = "support-chat-bubble" + (mine ? " is-mine" : "");
+        row.className = "support-chat-bubble " + (fromAdmin ? "is-admin is-mine" : "is-user");
+        var role = fromAdmin ? "Admin" : "User";
         row.innerHTML =
-            '<div class="support-chat-meta"><strong>' + escapeHtml(msg.senderName || msg.SenderName || "User") + "</strong>" +
-            '<span class="text-gray">' + escapeHtml(formatTicketDate(msg.createdAt || msg.CreatedAt)) + "</span></div>" +
+            '<div class="support-chat-meta"><span><span class="role-tag">' + role + "</span><strong>" +
+            escapeHtml(msg.senderName || msg.SenderName || role) + "</strong></span>" +
+            "<span>" + escapeHtml(formatTicketDate(msg.createdAt || msg.CreatedAt)) + "</span></div>" +
             "<p>" + escapeHtml(msg.body || msg.Body || "") + "</p>";
         box.appendChild(row);
         box.scrollTop = box.scrollHeight;
@@ -1112,6 +1115,8 @@
         var canResolve = !!(ticket.canResolve || ticket.CanResolve);
         var canChat = !!(ticket.canChat || ticket.CanChat);
         var resolution = ticket.resolutionSummary || ticket.ResolutionSummary || "";
+        var userName = ticket.createdByName || ticket.CreatedByName || "—";
+        var adminName = ticket.assignedAdminName || ticket.AssignedAdminName || "—";
 
         var actions = "";
         if (canAccept && statusLower === "open") {
@@ -1119,7 +1124,7 @@
         }
         if (canResolve) {
             actions +=
-                '<form id="admin-resolve-form" class="mt-3">' +
+                '<form id="admin-resolve-form" class="support-resolve-box">' +
                 '<label class="form-label" for="admin-resolution">How was it resolved?</label>' +
                 '<textarea class="form-control mb-2" id="admin-resolution" rows="3" maxlength="4000" required placeholder="Write the problem outcome and fix summary. Chat history will be deleted."></textarea>' +
                 '<button type="submit" class="btn btn-success btn-sm">Resolve & delete chat</button>' +
@@ -1127,20 +1132,22 @@
         }
 
         var chatHtml = "";
-        if (String(status).toLowerCase() === "resolved") {
+        if (statusLower === "resolved") {
             chatHtml =
-                '<div class="alert alert-success-soft mt-3"><strong>Resolved</strong><br>' +
+                '<div class="alert alert-success-soft mt-3 mb-0"><strong>Resolved</strong><br>' +
                 escapeHtml(resolution || "No notes.") +
-                '</div><p class="text-gray small mb-0">Chat history was hard-deleted.</p>';
+                '</div><p class="text-gray small mt-2 mb-0">Chat history was hard-deleted.</p>';
         } else if (canChat) {
             chatHtml =
-                '<div class="support-chat mt-3" id="admin-chat-panel">' +
+                '<div class="support-chat" id="admin-chat-panel">' +
+                '<div class="support-chat-label"><span>Conversation</span>' +
+                '<div class="support-chat-legend"><span class="leg-user">User left</span><span class="leg-admin">Admin right</span></div></div>' +
                 '<div class="support-chat-messages" id="admin-chat-messages"></div>' +
                 '<form id="admin-chat-form" class="support-chat-form">' +
                 '<input type="text" class="form-control" id="admin-chat-input" maxlength="4000" placeholder="Reply to the user…" required>' +
                 '<button type="submit" class="btn btn-primary">Send</button>' +
                 "</form></div>";
-        } else if (String(status).toLowerCase() === "assigned") {
+        } else if (statusLower === "assigned") {
             chatHtml = '<div class="alert alert-warning mt-3 mb-0">This ticket is assigned to another admin. Chat is locked to the assignee only.</div>';
         } else {
             chatHtml = '<div class="text-gray small mt-3">Accept the ticket to unlock chat with the user.</div>';
@@ -1148,15 +1155,17 @@
 
         var detail = document.getElementById("admin-ticket-detail");
         detail.innerHTML =
-            '<div class="d-flex flex-wrap justify-content-between gap-2 mb-2">' +
-            "<div><h2 class=\"h5 mb-1\">" + escapeHtml(ticket.ticketCode || ticket.TicketCode || "") + "</h2>" +
+            '<div class="support-ticket-head">' +
+            "<div><p class=\"ticket-code\">" + escapeHtml(ticket.ticketCode || ticket.TicketCode || "") + "</p>" +
             '<p class="text-gray small mb-0">' + escapeHtml(formatTicketDate(ticket.createdAt || ticket.CreatedAt)) + "</p></div>" +
             ticketStatusBadge(status) + "</div>" +
-            "<h3 class=\"h6\">" + escapeHtml(ticket.title || ticket.Title || "") + "</h3>" +
-            '<p class="text-gray">' + escapeHtml(ticket.description || ticket.Description || "") + "</p>" +
-            '<p class="text-gray small">User: ' + escapeHtml(ticket.createdByName || ticket.CreatedByName || "") +
-            " · Admin: " + escapeHtml(ticket.assignedAdminName || ticket.AssignedAdminName || "—") + "</p>" +
-            '<div class="d-flex flex-wrap gap-2">' + actions + "</div>" + chatHtml;
+            "<h3 class=\"h6 mb-1\">" + escapeHtml(ticket.title || ticket.Title || "") + "</h3>" +
+            '<p class="text-gray mb-0">' + escapeHtml(ticket.description || ticket.Description || "") + "</p>" +
+            '<ul class="support-ticket-meta-row">' +
+            "<li><strong>User</strong> " + escapeHtml(userName) + "</li>" +
+            "<li><strong>Admin</strong> " + escapeHtml(adminName) + "</li>" +
+            "</ul>" +
+            '<div class="d-flex flex-wrap gap-2 mt-3">' + actions + "</div>" + chatHtml;
 
         var box = document.getElementById("admin-chat-messages");
         if (box) {
@@ -1208,11 +1217,11 @@
                         if (Number(ticketsState.joinedId) !== Number(id)) {
                             await joinAdminTicketRoom(id);
                         }
-                        await conn.invoke("SendMessage", id, body);
+                        await conn.invoke("SendMessage", id, body, true);
                     } else {
                         var sent = await api("/api/support-tickets/" + id + "/messages", {
                             method: "POST",
-                            body: JSON.stringify({ body: body })
+                            body: JSON.stringify({ body: body, asAdmin: true })
                         });
                         if (sent.data) appendAdminChatMessage(sent.data);
                     }

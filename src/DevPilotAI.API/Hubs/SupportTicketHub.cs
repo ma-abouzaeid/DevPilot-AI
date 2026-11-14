@@ -43,11 +43,11 @@ public class SupportTicketHub : Hub
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, TicketGroup(ticketId));
     }
 
-    public async Task SendMessage(int ticketId, string body)
+    public async Task SendMessage(int ticketId, string body, bool asAdmin = false)
     {
         var userId = GetRequiredUserId();
         var isAdmin = IsAdmin(Context.User);
-        await _tickets.SendMessageAsync(ticketId, userId, isAdmin, body, Context.ConnectionAborted);
+        await _tickets.SendMessageAsync(ticketId, userId, isAdmin, body, Context.ConnectionAborted, asAdmin);
     }
 
     private int GetRequiredUserId()

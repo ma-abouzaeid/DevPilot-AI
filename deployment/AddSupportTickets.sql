@@ -34,6 +34,7 @@ BEGIN
         [SupportTicketMessageId] BIGINT IDENTITY(1,1) NOT NULL,
         [SupportTicketId] INT NOT NULL,
         [SenderUserId] INT NOT NULL,
+        [IsFromAdmin] BIT NOT NULL CONSTRAINT [DF_SupportTicketMessages_IsFromAdmin] DEFAULT (0),
         [Body] NVARCHAR(4000) NOT NULL,
         [CreatedAt] DATETIME2 NOT NULL,
         CONSTRAINT [PK_SupportTicketMessages] PRIMARY KEY ([SupportTicketMessageId]),

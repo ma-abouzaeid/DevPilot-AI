@@ -218,6 +218,7 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
         {
             b.HasKey(x => x.SupportTicketMessageId);
             b.Property(x => x.Body).HasMaxLength(4000).IsRequired();
+            b.Property(x => x.IsFromAdmin).HasDefaultValue(false);
             b.HasIndex(x => x.SupportTicketId);
             b.HasIndex(x => x.CreatedAt);
             b.HasOne(x => x.SupportTicket)

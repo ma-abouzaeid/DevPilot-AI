@@ -1674,6 +1674,11 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsFromAdmin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<int>("SenderUserId")
                         .HasColumnType("int");
 

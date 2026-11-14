@@ -124,15 +124,18 @@
         const empty = box.querySelector(".empty-state");
         if (empty) empty.remove();
 
-        const mine = Number(msg.senderUserId || msg.SenderUserId) === Number(getMyUserId());
-        const name = msg.senderName || msg.SenderName || "User";
+        const fromAdmin = !!(msg.isFromAdmin || msg.IsFromAdmin);
+        // User page: my messages on the right, admin on the left.
+        const name = msg.senderName || msg.SenderName || (fromAdmin ? "Admin" : "You");
         const body = msg.body || msg.Body || "";
         const created = formatDate(msg.createdAt || msg.CreatedAt);
         const row = document.createElement("div");
-        row.className = "support-chat-bubble" + (mine ? " is-mine" : "");
+        row.className = "support-chat-bubble " + (fromAdmin ? "is-admin" : "is-user is-mine");
+        const role = fromAdmin ? "Admin" : "You";
         row.innerHTML =
-            '<div class="support-chat-meta"><strong>' + escapeHtml(name) + "</strong>" +
-            '<span class="text-gray">' + escapeHtml(created) + "</span></div>" +
+            '<div class="support-chat-meta"><span><span class="role-tag">' + role + "</span><strong>" +
+            escapeHtml(name) + "</strong></span>" +
+            "<span>" + escapeHtml(created) + "</span></div>" +
             "<p>" + escapeHtml(body) + "</p>";
         box.appendChild(row);
         box.scrollTop = box.scrollHeight;
@@ -196,6 +199,8 @@
         } else if (canChat) {
             chatHtml =
                 '<div class="support-chat" id="chat-panel">' +
+                '<div class="support-chat-label"><span>Conversation</span>' +
+                '<div class="support-chat-legend"><span class="leg-admin">Admin left</span><span class="leg-user">You right</span></div></div>' +
                 '<div class="support-chat-messages" id="chat-messages"></div>' +
                 '<form id="chat-form" class="support-chat-form">' +
                 '<input type="text" class="form-control" id="chat-input" maxlength="4000" placeholder="Type a message…" required>' +
@@ -241,11 +246,11 @@
                         if (Number(joinedTicketId) !== Number(id)) {
                             await joinTicketRoom(id);
                         }
-                        await conn.invoke("SendMessage", id, body);
+                        await conn.invoke("SendMessage", id, body, false);
                     } else {
                         const sent = await api("/api/support-tickets/" + id + "/messages", {
                             method: "POST",
-                            body: JSON.stringify({ body: body })
+                            body: JSON.stringify({ body: body, asAdmin: false })
                         });
                         if (sent.data) appendMessage(sent.data);
                     }
