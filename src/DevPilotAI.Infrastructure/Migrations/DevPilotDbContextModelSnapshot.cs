@@ -268,6 +268,99 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.ToTable("AIUsageEvents");
                 });
 
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.ArticleComment", b =>
+                {
+                    b.Property<long>("ArticleCommentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ArticleCommentId"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("KnowledgeArticleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ArticleCommentId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("KnowledgeArticleId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ArticleComments");
+                });
+
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.ArticleLike", b =>
+                {
+                    b.Property<long>("ArticleLikeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ArticleLikeId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("KnowledgeArticleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ArticleLikeId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("KnowledgeArticleId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("ArticleLikes");
+                });
+
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.ArticleSave", b =>
+                {
+                    b.Property<long>("ArticleSaveId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ArticleSaveId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("KnowledgeArticleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ArticleSaveId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("KnowledgeArticleId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("ArticleSaves");
+                });
+
             modelBuilder.Entity("DevPilotAI.Domain.Entities.ArticleVersion", b =>
                 {
                     b.Property<int>("ArticleVersionId")
@@ -1453,6 +1546,96 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.ToTable("SimilarityMatches");
                 });
 
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.SystemErrorLog", b =>
+                {
+                    b.Property<long>("SystemErrorLogId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("SystemErrorLogId"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ErrorCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ExceptionMessage")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("ExceptionType")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("HttpMethod")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("QueryString")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ResponseJson")
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StackTrace")
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("StatusCode")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TraceId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("SystemErrorLogId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("ErrorCode");
+
+                    b.HasIndex("StatusCode");
+
+                    b.HasIndex("TraceId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SystemErrorLogs");
+                });
+
             modelBuilder.Entity("DevPilotAI.Domain.Entities.UsageLedger", b =>
                 {
                     b.Property<long>("UsageLedgerId")
@@ -1761,6 +1944,63 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.ArticleComment", b =>
+                {
+                    b.HasOne("DevPilotAI.Domain.Entities.KnowledgeArticle", "KnowledgeArticle")
+                        .WithMany("Comments")
+                        .HasForeignKey("KnowledgeArticleId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("DevPilotAI.Domain.Entities.User", "User")
+                        .WithMany("ArticleComments")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("KnowledgeArticle");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.ArticleLike", b =>
+                {
+                    b.HasOne("DevPilotAI.Domain.Entities.KnowledgeArticle", "KnowledgeArticle")
+                        .WithMany("Likes")
+                        .HasForeignKey("KnowledgeArticleId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("DevPilotAI.Domain.Entities.User", "User")
+                        .WithMany("ArticleLikes")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("KnowledgeArticle");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.ArticleSave", b =>
+                {
+                    b.HasOne("DevPilotAI.Domain.Entities.KnowledgeArticle", "KnowledgeArticle")
+                        .WithMany("Saves")
+                        .HasForeignKey("KnowledgeArticleId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("DevPilotAI.Domain.Entities.User", "User")
+                        .WithMany("ArticleSaves")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("KnowledgeArticle");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DevPilotAI.Domain.Entities.ArticleVersion", b =>
                 {
                     b.HasOne("DevPilotAI.Domain.Entities.KnowledgeArticle", "KnowledgeArticle")
@@ -2045,6 +2285,16 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.Navigation("ProblemRequest");
                 });
 
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.SystemErrorLog", b =>
+                {
+                    b.HasOne("DevPilotAI.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DevPilotAI.Domain.Entities.UsageLedger", b =>
                 {
                     b.HasOne("DevPilotAI.Domain.Entities.AIUsageEvent", "AIUsageEvent")
@@ -2202,6 +2452,12 @@ namespace DevPilotAI.Infrastructure.Migrations
                 {
                     b.Navigation("Challenges");
 
+                    b.Navigation("Comments");
+
+                    b.Navigation("Likes");
+
+                    b.Navigation("Saves");
+
                     b.Navigation("Versions");
                 });
 
@@ -2255,6 +2511,12 @@ namespace DevPilotAI.Infrastructure.Migrations
             modelBuilder.Entity("DevPilotAI.Domain.Entities.User", b =>
                 {
                     b.Navigation("AIUsageEvents");
+
+                    b.Navigation("ArticleComments");
+
+                    b.Navigation("ArticleLikes");
+
+                    b.Navigation("ArticleSaves");
 
                     b.Navigation("AuditLogs");
 

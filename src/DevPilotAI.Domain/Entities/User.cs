@@ -23,4 +23,7 @@ public class User : ISoftDeletable
     public ICollection<AIUsageEvent> AIUsageEvents { get; set; } = new List<AIUsageEvent>();
     public ICollection<UsagePeriod> UsagePeriods { get; set; } = new List<UsagePeriod>();
     public ICollection<UsageLedger> UsageLedgers { get; set; } = new List<UsageLedger>();
+    public ICollection<ArticleLike> ArticleLikes { get; set; } = new List<ArticleLike>();
+    public ICollection<ArticleSave> ArticleSaves { get; set; } = new List<ArticleSave>();
+    public ICollection<ArticleComment> ArticleComments { get; set; } = new List<ArticleComment>();
 }

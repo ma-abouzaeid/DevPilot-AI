@@ -1048,6 +1048,224 @@ public class ProblemService : IProblemService
         return bestMatch;
     }
 
+    public async Task<ArticleEngagementDto> GetArticleEngagementAsync(
+        int knowledgeArticleId,
+        int? viewerUserId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var articleExists = await _dbContext.KnowledgeArticles.AsNoTracking()
+            .AnyAsync(a => a.KnowledgeArticleId == knowledgeArticleId && a.IsPublished, cancellationToken);
+        if (!articleExists)
+        {
+            throw AppError.NotFound("Published article was not found.");
+        }
+
+        var likesCount = await _dbContext.ArticleLikes.CountAsync(l => l.KnowledgeArticleId == knowledgeArticleId, cancellationToken);
+        var savesCount = await _dbContext.ArticleSaves.CountAsync(s => s.KnowledgeArticleId == knowledgeArticleId, cancellationToken);
+        var commentsCount = await _dbContext.ArticleComments.CountAsync(c => c.KnowledgeArticleId == knowledgeArticleId, cancellationToken);
+
+        var likedByMe = viewerUserId.HasValue && await _dbContext.ArticleLikes
+            .AnyAsync(l => l.KnowledgeArticleId == knowledgeArticleId && l.UserId == viewerUserId.Value, cancellationToken);
+        var savedByMe = viewerUserId.HasValue && await _dbContext.ArticleSaves
+            .AnyAsync(s => s.KnowledgeArticleId == knowledgeArticleId && s.UserId == viewerUserId.Value, cancellationToken);
+
+        var comments = await _dbContext.ArticleComments.AsNoTracking()
+            .Where(c => c.KnowledgeArticleId == knowledgeArticleId)
+            .OrderByDescending(c => c.CreatedAt)
+            .Take(100)
+            .Select(c => new ArticleCommentDto(
+                c.ArticleCommentId,
+                c.UserId,
+                c.User.Name,
+                c.Body,
+                c.CreatedAt,
+                viewerUserId.HasValue && c.UserId == viewerUserId.Value
+            ))
+            .ToListAsync(cancellationToken);
+
+        return new ArticleEngagementDto(
+            knowledgeArticleId,
+            likesCount,
+            commentsCount,
+            savesCount,
+            likedByMe,
+            savedByMe,
+            comments
+        );
+    }
+
+    public async Task<ArticleToggleResultDto> ToggleArticleLikeAsync(
+        int knowledgeArticleId,
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsurePublishedArticleAsync(knowledgeArticleId, cancellationToken);
+
+        var existing = await _dbContext.ArticleLikes
+            .FirstOrDefaultAsync(l => l.KnowledgeArticleId == knowledgeArticleId && l.UserId == userId, cancellationToken);
+
+        var active = false;
+        if (existing == null)
+        {
+            _dbContext.ArticleLikes.Add(new ArticleLike
+            {
+                KnowledgeArticleId = knowledgeArticleId,
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow
+            });
+            active = true;
+        }
+        else
+        {
+            _dbContext.ArticleLikes.Remove(existing);
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        var count = await _dbContext.ArticleLikes.CountAsync(l => l.KnowledgeArticleId == knowledgeArticleId, cancellationToken);
+        return new ArticleToggleResultDto(active, count);
+    }
+
+    public async Task<ArticleToggleResultDto> ToggleArticleSaveAsync(
+        int knowledgeArticleId,
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsurePublishedArticleAsync(knowledgeArticleId, cancellationToken);
+
+        var existing = await _dbContext.ArticleSaves
+            .FirstOrDefaultAsync(s => s.KnowledgeArticleId == knowledgeArticleId && s.UserId == userId, cancellationToken);
+
+        var active = false;
+        if (existing == null)
+        {
+            _dbContext.ArticleSaves.Add(new ArticleSave
+            {
+                KnowledgeArticleId = knowledgeArticleId,
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow
+            });
+            active = true;
+        }
+        else
+        {
+            _dbContext.ArticleSaves.Remove(existing);
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        var count = await _dbContext.ArticleSaves.CountAsync(s => s.KnowledgeArticleId == knowledgeArticleId, cancellationToken);
+        return new ArticleToggleResultDto(active, count);
+    }
+
+    public async Task<ArticleCommentDto> AddArticleCommentAsync(
+        int knowledgeArticleId,
+        int userId,
+        string body,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsurePublishedArticleAsync(knowledgeArticleId, cancellationToken);
+
+        var text = (body ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            throw AppError.InvalidRequest("Comment cannot be empty.", "INVALID_REQUEST", nameof(body));
+        }
+
+        if (text.Length > 2000)
+        {
+            text = text[..2000];
+        }
+
+        var comment = new ArticleComment
+        {
+            KnowledgeArticleId = knowledgeArticleId,
+            UserId = userId,
+            Body = text,
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.ArticleComments.Add(comment);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var userName = await _dbContext.Users.AsNoTracking()
+            .Where(u => u.UserId == userId)
+            .Select(u => u.Name)
+            .FirstOrDefaultAsync(cancellationToken) ?? "Developer";
+
+        return new ArticleCommentDto(
+            comment.ArticleCommentId,
+            userId,
+            userName,
+            comment.Body,
+            comment.CreatedAt,
+            true
+        );
+    }
+
+    public async Task DeleteArticleCommentAsync(
+        int knowledgeArticleId,
+        long commentId,
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        var comment = await _dbContext.ArticleComments
+            .FirstOrDefaultAsync(c => c.ArticleCommentId == commentId && c.KnowledgeArticleId == knowledgeArticleId, cancellationToken)
+            ?? throw AppError.NotFound("Comment was not found.");
+
+        if (comment.UserId != userId)
+        {
+            throw AppError.Forbidden("You can only delete your own comments.");
+        }
+
+        _dbContext.SoftDelete(comment);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<PagedResultDto<KnowledgeArticleListItemDto>> ListSavedArticlesAsync(
+        int userId,
+        int page = 1,
+        int pageSize = 12,
+        CancellationToken cancellationToken = default)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1 || pageSize > 100) pageSize = 12;
+
+        var query = _dbContext.ArticleSaves.AsNoTracking()
+            .Where(s => s.UserId == userId && s.KnowledgeArticle.IsPublished)
+            .Select(s => s.KnowledgeArticle);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(a => a.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(a => new KnowledgeArticleListItemDto(
+                a.KnowledgeArticleId,
+                a.ProblemId,
+                a.ArticleCode,
+                a.Problem.ProblemCode,
+                a.Title,
+                a.Summary,
+                a.Problem.ProblemRequests
+                    .OrderByDescending(r => r.CreatedAt)
+                    .Select(r => r.Framework)
+                    .FirstOrDefault(),
+                a.CreatedAt,
+                a.Problem.ResolvedAt
+            ))
+            .ToListAsync(cancellationToken);
+
+        return new PagedResultDto<KnowledgeArticleListItemDto>(items, totalCount, page, pageSize);
+    }
+
+    private async Task EnsurePublishedArticleAsync(int knowledgeArticleId, CancellationToken cancellationToken)
+    {
+        var exists = await _dbContext.KnowledgeArticles.AsNoTracking()
+            .AnyAsync(a => a.KnowledgeArticleId == knowledgeArticleId && a.IsPublished, cancellationToken);
+        if (!exists)
+        {
+            throw AppError.NotFound("Published article was not found.");
+        }
+    }
+
     private static string TruncateForAudit(string? value, int max)
     {
         if (string.IsNullOrWhiteSpace(value)) return string.Empty;

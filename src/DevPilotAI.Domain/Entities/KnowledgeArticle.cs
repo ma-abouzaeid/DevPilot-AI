@@ -19,4 +19,7 @@ public class KnowledgeArticle : ISoftDeletable
 
     public ICollection<ArticleVersion> Versions { get; set; } = new List<ArticleVersion>();
     public ICollection<Challenge> Challenges { get; set; } = new List<Challenge>();
+    public ICollection<ArticleLike> Likes { get; set; } = new List<ArticleLike>();
+    public ICollection<ArticleSave> Saves { get; set; } = new List<ArticleSave>();
+    public ICollection<ArticleComment> Comments { get; set; } = new List<ArticleComment>();
 }

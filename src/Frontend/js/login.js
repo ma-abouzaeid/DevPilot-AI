@@ -136,10 +136,11 @@ function validateForm() {
 
 // next page after login
 function getNextPage() {
-    const redirect = new URLSearchParams(window.location.search).get("redirect")
+    const params = new URLSearchParams(window.location.search)
+    const redirect = params.get("redirect") || params.get("next")
 
-    // only page names, no external links
-    if (redirect && /^[a-z0-9-]+\.html$/i.test(redirect)) {
+    // local HTML pages only (optional query string), no external links
+    if (redirect && /^[a-z0-9-]+\.html(?:\?[a-z0-9_&=%+.-]*)?$/i.test(redirect)) {
         return redirect
     }
     return DASHBOARD_PAGE

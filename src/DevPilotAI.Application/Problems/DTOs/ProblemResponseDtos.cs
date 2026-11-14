@@ -121,3 +121,27 @@ public record KnowledgeArticleDetailsDto(
     string? SolutionSummary,
     int? ChallengeId = null
 );
+
+public record ArticleCommentDto(
+    long ArticleCommentId,
+    int UserId,
+    string UserName,
+    string Body,
+    DateTime CreatedAt,
+    bool IsMine
+);
+
+public record ArticleEngagementDto(
+    int KnowledgeArticleId,
+    int LikesCount,
+    int CommentsCount,
+    int SavesCount,
+    bool LikedByMe,
+    bool SavedByMe,
+    IReadOnlyList<ArticleCommentDto> Comments
+);
+
+public record ArticleToggleResultDto(
+    bool Active,
+    int Count
+);

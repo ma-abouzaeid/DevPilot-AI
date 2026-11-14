@@ -23,6 +23,9 @@ public interface IApplicationDbContext
 
     DbSet<KnowledgeArticle> KnowledgeArticles { get; }
     DbSet<ArticleVersion> ArticleVersions { get; }
+    DbSet<ArticleLike> ArticleLikes { get; }
+    DbSet<ArticleSave> ArticleSaves { get; }
+    DbSet<ArticleComment> ArticleComments { get; }
 
     DbSet<Challenge> Challenges { get; }
     DbSet<ChallengeAttempt> ChallengeAttempts { get; }

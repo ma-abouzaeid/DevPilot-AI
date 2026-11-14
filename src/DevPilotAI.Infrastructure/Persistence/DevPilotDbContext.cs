@@ -29,6 +29,9 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
 
     public DbSet<KnowledgeArticle> KnowledgeArticles => Set<KnowledgeArticle>();
     public DbSet<ArticleVersion> ArticleVersions => Set<ArticleVersion>();
+    public DbSet<ArticleLike> ArticleLikes => Set<ArticleLike>();
+    public DbSet<ArticleSave> ArticleSaves => Set<ArticleSave>();
+    public DbSet<ArticleComment> ArticleComments => Set<ArticleComment>();
 
     public DbSet<Challenge> Challenges => Set<Challenge>();
     public DbSet<ChallengeAttempt> ChallengeAttempts => Set<ChallengeAttempt>();
@@ -139,6 +142,50 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
 
             b.HasIndex(sm => sm.ProblemRequestId);
             b.HasIndex(sm => sm.MatchedProblemId);
+        });
+
+        modelBuilder.Entity<ArticleLike>(b =>
+        {
+            b.HasKey(x => x.ArticleLikeId);
+            b.HasIndex(x => new { x.KnowledgeArticleId, x.UserId }).IsUnique();
+            b.HasOne(x => x.KnowledgeArticle)
+                .WithMany(a => a.Likes)
+                .HasForeignKey(x => x.KnowledgeArticleId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(x => x.User)
+                .WithMany(u => u.ArticleLikes)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<ArticleSave>(b =>
+        {
+            b.HasKey(x => x.ArticleSaveId);
+            b.HasIndex(x => new { x.KnowledgeArticleId, x.UserId }).IsUnique();
+            b.HasOne(x => x.KnowledgeArticle)
+                .WithMany(a => a.Saves)
+                .HasForeignKey(x => x.KnowledgeArticleId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(x => x.User)
+                .WithMany(u => u.ArticleSaves)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<ArticleComment>(b =>
+        {
+            b.HasKey(x => x.ArticleCommentId);
+            b.Property(x => x.Body).HasMaxLength(2000).IsRequired();
+            b.HasIndex(x => x.KnowledgeArticleId);
+            b.HasIndex(x => x.CreatedAt);
+            b.HasOne(x => x.KnowledgeArticle)
+                .WithMany(a => a.Comments)
+                .HasForeignKey(x => x.KnowledgeArticleId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(x => x.User)
+                .WithMany(u => u.ArticleComments)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<AuditLog>(b =>

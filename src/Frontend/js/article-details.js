@@ -285,6 +285,244 @@
         });
     }
 
+    function requireAuth() {
+        if (window.DevPilotApi && window.DevPilotApi.isAuthenticated()) return true;
+        const page = (window.location.pathname.split("/").pop() || "article-details.html") + window.location.search;
+        window.location.href = "login.html?redirect=" + encodeURIComponent(page);
+        return false;
+    }
+
+    function renderComments(comments) {
+        const list = Array.isArray(comments) ? comments : [];
+        if (!list.length) {
+            return '<p class="text-gray mb-0" id="comments-empty">No comments yet. Be the first to share a tip.</p>';
+        }
+
+        return list.map(function (c) {
+            const commentId = c.articleCommentId || c.ArticleCommentId;
+            const name = c.userName || c.UserName || "Developer";
+            const body = c.body || c.Body || "";
+            const created = formatDate(c.createdAt || c.CreatedAt);
+            const isMine = !!(c.isMine || c.IsMine);
+            return (
+                '<div class="article-comment" data-comment-id="' + escapeHtml(commentId) + '">' +
+                '<div class="article-comment-meta">' +
+                "<strong>" + escapeHtml(name) + "</strong>" +
+                '<span class="text-gray">' + escapeHtml(created) + "</span>" +
+                (isMine
+                    ? '<button type="button" class="article-comment-delete" data-delete-comment="' + escapeHtml(commentId) + '" title="Delete comment"><i class="fa-regular fa-trash-can"></i></button>'
+                    : "") +
+                "</div>" +
+                '<p class="mb-0">' + escapeHtml(body) + "</p>" +
+                "</div>"
+            );
+        }).join("");
+    }
+
+    function applyEngagement(state) {
+        const likeBtn = document.getElementById("btn-like");
+        const saveBtn = document.getElementById("btn-save");
+        const likeCount = document.getElementById("like-count");
+        const saveCount = document.getElementById("save-count");
+        const commentCount = document.getElementById("comment-count");
+        const commentsList = document.getElementById("comments-list");
+
+        if (likeCount) likeCount.textContent = String(state.likesCount || 0);
+        if (saveCount) saveCount.textContent = String(state.savesCount || 0);
+        if (commentCount) commentCount.textContent = String(state.commentsCount || 0);
+
+        if (likeBtn) {
+            likeBtn.classList.toggle("is-active", !!state.likedByMe);
+            likeBtn.setAttribute("aria-pressed", state.likedByMe ? "true" : "false");
+            likeBtn.innerHTML = (state.likedByMe
+                ? '<i class="fa-solid fa-heart"></i> Liked'
+                : '<i class="fa-regular fa-heart"></i> Like') +
+                ' <span class="article-engage-count" id="like-count">' + (state.likesCount || 0) + "</span>";
+        }
+
+        if (saveBtn) {
+            saveBtn.classList.toggle("is-active", !!state.savedByMe);
+            saveBtn.setAttribute("aria-pressed", state.savedByMe ? "true" : "false");
+            saveBtn.innerHTML = (state.savedByMe
+                ? '<i class="fa-solid fa-bookmark"></i> Saved'
+                : '<i class="fa-regular fa-bookmark"></i> Save') +
+                ' <span class="article-engage-count" id="save-count">' + (state.savesCount || 0) + "</span>";
+        }
+
+        if (commentsList) {
+            commentsList.innerHTML = renderComments(state.comments || []);
+        }
+    }
+
+    async function loadEngagement(articleId) {
+        const url = new URL("/api/Problems/articles/" + articleId + "/engagement", API_BASE).href;
+        const opts = window.DevPilotApi.isAuthenticated() ? {} : { skipAuth: true };
+        const res = await window.DevPilotApi.request(url, opts);
+        if (!res.ok || !res.data) {
+            throw new Error(res.message || "Could not load engagement");
+        }
+
+        const data = res.data;
+        return {
+            likesCount: data.likesCount ?? data.LikesCount ?? 0,
+            commentsCount: data.commentsCount ?? data.CommentsCount ?? 0,
+            savesCount: data.savesCount ?? data.SavesCount ?? 0,
+            likedByMe: !!(data.likedByMe ?? data.LikedByMe),
+            savedByMe: !!(data.savedByMe ?? data.SavedByMe),
+            comments: data.comments || data.Comments || []
+        };
+    }
+
+    function wireEngagement(articleId) {
+        const likeBtn = document.getElementById("btn-like");
+        const saveBtn = document.getElementById("btn-save");
+        const shareBtn = document.getElementById("btn-share");
+        const commentForm = document.getElementById("comment-form");
+        const commentInput = document.getElementById("comment-body");
+        const commentsList = document.getElementById("comments-list");
+        const feedback = document.getElementById("engage-feedback");
+
+        function showFeedback(message, isError) {
+            if (!feedback) return;
+            feedback.textContent = message;
+            feedback.classList.toggle("is-error", !!isError);
+            feedback.classList.remove("d-none");
+            setTimeout(function () { feedback.classList.add("d-none"); }, 2500);
+        }
+
+        if (likeBtn) {
+            likeBtn.addEventListener("click", async function () {
+                if (!requireAuth()) return;
+                likeBtn.disabled = true;
+                try {
+                    const url = new URL("/api/Problems/articles/" + articleId + "/like", API_BASE).href;
+                    const res = await window.DevPilotApi.request(url, { method: "POST" });
+                    if (!res.ok || !res.data) throw new Error(res.message || "Like failed");
+                    const active = !!(res.data.active ?? res.data.Active);
+                    const count = res.data.count ?? res.data.Count ?? 0;
+                    likeBtn.classList.toggle("is-active", active);
+                    likeBtn.setAttribute("aria-pressed", active ? "true" : "false");
+                    likeBtn.innerHTML = (active
+                        ? '<i class="fa-solid fa-heart"></i> Liked'
+                        : '<i class="fa-regular fa-heart"></i> Like') +
+                        ' <span class="article-engage-count" id="like-count">' + count + "</span>";
+                } catch (e) {
+                    showFeedback(e.message || "Like failed", true);
+                } finally {
+                    likeBtn.disabled = false;
+                }
+            });
+        }
+
+        if (saveBtn) {
+            saveBtn.addEventListener("click", async function () {
+                if (!requireAuth()) return;
+                saveBtn.disabled = true;
+                try {
+                    const url = new URL("/api/Problems/articles/" + articleId + "/save", API_BASE).href;
+                    const res = await window.DevPilotApi.request(url, { method: "POST" });
+                    if (!res.ok || !res.data) throw new Error(res.message || "Save failed");
+                    const active = !!(res.data.active ?? res.data.Active);
+                    const count = res.data.count ?? res.data.Count ?? 0;
+                    saveBtn.classList.toggle("is-active", active);
+                    saveBtn.setAttribute("aria-pressed", active ? "true" : "false");
+                    saveBtn.innerHTML = (active
+                        ? '<i class="fa-solid fa-bookmark"></i> Saved'
+                        : '<i class="fa-regular fa-bookmark"></i> Save') +
+                        ' <span class="article-engage-count" id="save-count">' + count + "</span>";
+                    showFeedback(active ? "Article saved." : "Removed from saved.");
+                } catch (e) {
+                    showFeedback(e.message || "Save failed", true);
+                } finally {
+                    saveBtn.disabled = false;
+                }
+            });
+        }
+
+        if (shareBtn) {
+            shareBtn.addEventListener("click", async function () {
+                const shareUrl = window.location.href;
+                const title = document.querySelector(".page-title")?.textContent || "DevPilot article";
+                try {
+                    if (navigator.share) {
+                        await navigator.share({ title: title, url: shareUrl });
+                        showFeedback("Shared.");
+                        return;
+                    }
+                } catch (e) {
+                    if (e && e.name === "AbortError") return;
+                }
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    try {
+                        await navigator.clipboard.writeText(shareUrl);
+                        showFeedback("Link copied.");
+                        return;
+                    } catch (e) { /* fall through */ }
+                }
+                fallbackCopy(shareUrl);
+                showFeedback("Link copied.");
+            });
+        }
+
+        if (commentForm && commentInput) {
+            commentForm.addEventListener("submit", async function (e) {
+                e.preventDefault();
+                if (!requireAuth()) return;
+                const body = commentInput.value.trim();
+                if (!body) {
+                    showFeedback("Write a comment first.", true);
+                    return;
+                }
+
+                const submitBtn = commentForm.querySelector('button[type="submit"]');
+                if (submitBtn) submitBtn.disabled = true;
+                try {
+                    const url = new URL("/api/Problems/articles/" + articleId + "/comments", API_BASE).href;
+                    const res = await window.DevPilotApi.request(url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ body: body })
+                    });
+                    if (!res.ok || !res.data) throw new Error(res.message || "Comment failed");
+                    commentInput.value = "";
+                    const state = await loadEngagement(articleId);
+                    applyEngagement(state);
+                    showFeedback("Comment posted.");
+                } catch (err) {
+                    showFeedback(err.message || "Comment failed", true);
+                } finally {
+                    if (submitBtn) submitBtn.disabled = false;
+                }
+            });
+        }
+
+        if (commentsList) {
+            commentsList.addEventListener("click", async function (e) {
+                const btn = e.target.closest("[data-delete-comment]");
+                if (!btn) return;
+                if (!requireAuth()) return;
+                const commentId = btn.getAttribute("data-delete-comment");
+                if (!commentId) return;
+                btn.disabled = true;
+                try {
+                    const url = new URL(
+                        "/api/Problems/articles/" + articleId + "/comments/" + encodeURIComponent(commentId),
+                        API_BASE
+                    ).href;
+                    const res = await window.DevPilotApi.request(url, { method: "DELETE" });
+                    if (!res.ok) throw new Error(res.message || "Delete failed");
+                    const state = await loadEngagement(articleId);
+                    applyEngagement(state);
+                    showFeedback("Comment deleted.");
+                } catch (err) {
+                    showFeedback(err.message || "Delete failed", true);
+                    btn.disabled = false;
+                }
+            });
+        }
+    }
+
     async function load() {
         const key = id || problemId || code;
         if (!key) {
@@ -300,6 +538,7 @@
             }
 
             const data = res.data;
+            const articleId = data.knowledgeArticleId || data.KnowledgeArticleId;
             const title = data.title || data.Title || "Knowledge article";
             const articleCode = data.articleCode || data.ArticleCode || "";
             const problemCode = data.problemCode || data.ProblemCode || "";
@@ -312,6 +551,7 @@
                 ? ("challenge-details.html?id=" + encodeURIComponent(challengeId))
                 : "challenges.html";
             const challengeLabel = challengeId ? "Solve this challenge" : "Browse challenges";
+            const loggedIn = window.DevPilotApi && window.DevPilotApi.isAuthenticated();
 
             root.innerHTML =
                 '<div class="surface-card mb-4">' +
@@ -322,14 +562,37 @@
                 "</div>" +
                 '<h1 class="page-title mb-2">' + escapeHtml(title) + "</h1>" +
                 (summary ? '<p class="article-lead mb-2">' + escapeHtml(summary) + "</p>" : "") +
-                '<p class="text-gray mb-0">Updated ' + escapeHtml(formatDate(data.resolvedAt || data.ResolvedAt || data.createdAt || data.CreatedAt)) + "</p>" +
+                '<p class="text-gray mb-3">Updated ' + escapeHtml(formatDate(data.resolvedAt || data.ResolvedAt || data.createdAt || data.CreatedAt)) + "</p>" +
+                '<div class="article-engage-bar" id="engage-bar">' +
+                '<button type="button" class="article-engage-btn" id="btn-like" aria-pressed="false">' +
+                '<i class="fa-regular fa-heart"></i> Like <span class="article-engage-count" id="like-count">0</span></button>' +
+                '<button type="button" class="article-engage-btn" id="btn-save" aria-pressed="false">' +
+                '<i class="fa-regular fa-bookmark"></i> Save <span class="article-engage-count" id="save-count">0</span></button>' +
+                '<button type="button" class="article-engage-btn" id="btn-share">' +
+                '<i class="fa-solid fa-share-nodes"></i> Share</button>' +
+                '<span class="article-engage-meta"><i class="fa-regular fa-comment"></i> <span id="comment-count">0</span> comments</span>' +
+                "</div>" +
+                '<p class="article-engage-feedback d-none" id="engage-feedback" role="status"></p>' +
                 "</div>" +
 
                 '<div class="row g-4">' +
                 '<div class="col-lg-8">' +
-                '<article class="surface-card content-prose article-body">' +
+                '<article class="surface-card content-prose article-body mb-4">' +
                 renderRichMarkdown(content) +
                 "</article>" +
+                '<section class="surface-card article-comments" id="comments-section">' +
+                '<h2 class="h5 mb-3">Comments</h2>' +
+                (loggedIn
+                    ? ('<form id="comment-form" class="article-comment-form mb-3">' +
+                        '<label class="form-label" for="comment-body">Add a comment</label>' +
+                        '<textarea id="comment-body" class="form-control" rows="3" maxlength="2000" placeholder="Share a tip, ask a follow-up, or note what worked for you…" required></textarea>' +
+                        '<div class="d-flex justify-content-end mt-2">' +
+                        '<button type="submit" class="btn btn-primary btn-sm">Post comment</button>' +
+                        "</div></form>")
+                    : '<p class="text-gray mb-3">Log in to leave a comment. <a class="link-blue" href="login.html?redirect=' +
+                        encodeURIComponent((window.location.pathname.split("/").pop() || "article-details.html") + window.location.search) + '">Sign in</a></p>') +
+                '<div id="comments-list" class="article-comments-list"></div>' +
+                "</section>" +
                 "</div>" +
                 '<div class="col-lg-4">' +
                 '<div class="surface-card mb-3">' +
@@ -346,6 +609,20 @@
                 "</div>";
 
             wireCopyButtons(root);
+            if (articleId) {
+                wireEngagement(articleId);
+                try {
+                    const state = await loadEngagement(articleId);
+                    applyEngagement(state);
+                } catch (engageErr) {
+                    const feedback = document.getElementById("engage-feedback");
+                    if (feedback) {
+                        feedback.textContent = engageErr.message || "Engagement unavailable.";
+                        feedback.classList.add("is-error");
+                        feedback.classList.remove("d-none");
+                    }
+                }
+            }
         } catch (e) {
             root.innerHTML = '<div class="surface-card empty-state">' + escapeHtml(e.message || "Failed to load article") + "</div>";
         }

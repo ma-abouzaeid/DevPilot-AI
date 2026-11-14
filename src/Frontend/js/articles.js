@@ -6,7 +6,10 @@
     const techToggle = document.getElementById("tech-toggle");
     const techToggleLabel = document.getElementById("tech-toggle-label");
     const techMenu = document.getElementById("tech-menu");
+    const viewAllBtn = document.getElementById("view-all");
+    const viewSavedBtn = document.getElementById("view-saved");
     const selectedTechs = new Set();
+    let currentView = "all";
 
     function escapeHtml(value) {
         return String(value || "")
@@ -85,6 +88,35 @@
         techToggle.classList.toggle("is-open", open);
     }
 
+    function setView(view) {
+        currentView = view === "saved" ? "saved" : "all";
+        if (viewAllBtn) viewAllBtn.classList.toggle("is-active", currentView === "all");
+        if (viewSavedBtn) viewSavedBtn.classList.toggle("is-active", currentView === "saved");
+        if (form) form.classList.toggle("d-none", currentView === "saved");
+    }
+
+    function renderArticleCards(items) {
+        return items.map(function (a) {
+            const articleId = a.knowledgeArticleId || a.KnowledgeArticleId;
+            const code = a.articleCode || a.ArticleCode || a.problemCode || a.ProblemCode || "";
+            const title = a.title || a.Title || "Untitled";
+            const summary = a.summary || a.Summary || "Structured debugging knowledge from a real developer issue.";
+            const framework = a.framework || a.Framework || "";
+            return (
+                '<div class="col-md-6 col-lg-4">' +
+                '<a class="article-tile" href="article-details.html?id=' + encodeURIComponent(articleId) + '">' +
+                '<div class="d-flex justify-content-between align-items-center">' +
+                '<span class="badge-soft ai">' + escapeHtml(code) + "</span>" +
+                '<span class="badge-soft solved">Published</span>' +
+                "</div>" +
+                "<h3>" + escapeHtml(title) + "</h3>" +
+                '<p class="text-gray mb-2">' + escapeHtml(summary) + "</p>" +
+                (framework ? '<div class="text-gray small">' + escapeHtml(framework) + "</div>" : "") +
+                "</a></div>"
+            );
+        }).join("");
+    }
+
     async function loadArticles(q, technologies) {
         grid.innerHTML = '<div class="col-12"><div class="empty-state">Searching knowledge base…</div></div>';
         try {
@@ -108,27 +140,48 @@
                 return;
             }
 
-            grid.innerHTML = items.map(function (a) {
-                const articleId = a.knowledgeArticleId || a.KnowledgeArticleId;
-                const code = a.articleCode || a.ArticleCode || a.problemCode || a.ProblemCode || "";
-                const title = a.title || a.Title || "Untitled";
-                const summary = a.summary || a.Summary || "Structured debugging knowledge from a real developer issue.";
-                const framework = a.framework || a.Framework || "";
-                return (
-                    '<div class="col-md-6 col-lg-4">' +
-                    '<a class="article-tile" href="article-details.html?id=' + encodeURIComponent(articleId) + '">' +
-                    '<div class="d-flex justify-content-between align-items-center">' +
-                    '<span class="badge-soft ai">' + escapeHtml(code) + "</span>" +
-                    '<span class="badge-soft solved">Published</span>' +
-                    "</div>" +
-                    "<h3>" + escapeHtml(title) + "</h3>" +
-                    '<p class="text-gray mb-2">' + escapeHtml(summary) + "</p>" +
-                    (framework ? '<div class="text-gray small">' + escapeHtml(framework) + "</div>" : "") +
-                    "</a></div>"
-                );
-            }).join("");
+            grid.innerHTML = renderArticleCards(items);
         } catch (e) {
             grid.innerHTML = '<div class="col-12"><div class="empty-state">Could not load articles. Check API connection.</div></div>';
+        }
+    }
+
+    async function loadSavedArticles() {
+        if (!window.DevPilotApi.isAuthenticated()) {
+            window.location.href = "login.html?redirect=" + encodeURIComponent("articles.html?view=saved");
+            return;
+        }
+
+        grid.innerHTML = '<div class="col-12"><div class="empty-state">Loading saved articles…</div></div>';
+        try {
+            const url = new URL("/api/Problems/articles/saved", API_BASE);
+            url.searchParams.set("page", "1");
+            url.searchParams.set("pageSize", "24");
+            const res = await window.DevPilotApi.request(url.href);
+            const items = (res.data && (res.data.items || res.data.Items)) || [];
+
+            if (!items.length) {
+                grid.innerHTML =
+                    '<div class="col-12"><div class="empty-state surface-card">' +
+                    "<p>You have no saved articles yet. Open an article and tap Save.</p>" +
+                    '<button type="button" class="btn btn-primary mt-2" id="back-to-all">Browse articles</button>' +
+                    "</div></div>";
+                const back = document.getElementById("back-to-all");
+                if (back) {
+                    back.addEventListener("click", function () {
+                        setView("all");
+                        loadArticles(
+                            document.getElementById("search-q").value.trim(),
+                            Array.from(selectedTechs)
+                        );
+                    });
+                }
+                return;
+            }
+
+            grid.innerHTML = renderArticleCards(items);
+        } catch (e) {
+            grid.innerHTML = '<div class="col-12"><div class="empty-state">Could not load saved articles.</div></div>';
         }
     }
 
@@ -144,12 +197,37 @@
     form.addEventListener("submit", function (e) {
         e.preventDefault();
         setTechMenuOpen(false);
+        setView("all");
         loadArticles(
             document.getElementById("search-q").value.trim(),
             Array.from(selectedTechs)
         );
     });
 
+    if (viewAllBtn) {
+        viewAllBtn.addEventListener("click", function () {
+            setView("all");
+            loadArticles(
+                document.getElementById("search-q").value.trim(),
+                Array.from(selectedTechs)
+            );
+        });
+    }
+
+    if (viewSavedBtn) {
+        viewSavedBtn.addEventListener("click", function () {
+            setView("saved");
+            loadSavedArticles();
+        });
+    }
+
     loadTechnologies();
-    loadArticles("", []);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("view") === "saved") {
+        setView("saved");
+        loadSavedArticles();
+    } else {
+        setView("all");
+        loadArticles("", []);
+    }
 })();

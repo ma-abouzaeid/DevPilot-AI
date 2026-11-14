@@ -198,6 +198,66 @@ public class ProblemsController : ControllerBase
         return Ok(ApiResponse<IReadOnlyList<string>>.SuccessResult(result, "Article technologies loaded.", GetTraceId()));
     }
 
+    [HttpGet("articles/saved")]
+    [Authorize]
+    public async Task<IActionResult> ListSavedArticles(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 12,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = GetRequiredAuthenticatedUserId();
+        var result = await _problemService.ListSavedArticlesAsync(userId, page, pageSize, cancellationToken);
+        return Ok(ApiResponse<PagedResultDto<KnowledgeArticleListItemDto>>.SuccessResult(result, "Saved articles loaded.", GetTraceId()));
+    }
+
+    [HttpGet("articles/{articleId:int}/engagement")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetArticleEngagement(int articleId, CancellationToken cancellationToken)
+    {
+        var viewerId = TryGetAuthenticatedUserId();
+        var result = await _problemService.GetArticleEngagementAsync(articleId, viewerId, cancellationToken);
+        return Ok(ApiResponse<ArticleEngagementDto>.SuccessResult(result, "Article engagement loaded.", GetTraceId()));
+    }
+
+    [HttpPost("articles/{articleId:int}/like")]
+    [Authorize]
+    public async Task<IActionResult> ToggleArticleLike(int articleId, CancellationToken cancellationToken)
+    {
+        var userId = GetRequiredAuthenticatedUserId();
+        var result = await _problemService.ToggleArticleLikeAsync(articleId, userId, cancellationToken);
+        return Ok(ApiResponse<ArticleToggleResultDto>.SuccessResult(result, result.Active ? "Article liked." : "Like removed.", GetTraceId()));
+    }
+
+    [HttpPost("articles/{articleId:int}/save")]
+    [Authorize]
+    public async Task<IActionResult> ToggleArticleSave(int articleId, CancellationToken cancellationToken)
+    {
+        var userId = GetRequiredAuthenticatedUserId();
+        var result = await _problemService.ToggleArticleSaveAsync(articleId, userId, cancellationToken);
+        return Ok(ApiResponse<ArticleToggleResultDto>.SuccessResult(result, result.Active ? "Article saved." : "Article unsaved.", GetTraceId()));
+    }
+
+    [HttpPost("articles/{articleId:int}/comments")]
+    [Authorize]
+    public async Task<IActionResult> AddArticleComment(
+        int articleId,
+        [FromBody] CreateArticleCommentDto dto,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetRequiredAuthenticatedUserId();
+        var result = await _problemService.AddArticleCommentAsync(articleId, userId, dto?.Body ?? string.Empty, cancellationToken);
+        return Ok(ApiResponse<ArticleCommentDto>.SuccessResult(result, "Comment added.", GetTraceId()));
+    }
+
+    [HttpDelete("articles/{articleId:int}/comments/{commentId:long}")]
+    [Authorize]
+    public async Task<IActionResult> DeleteArticleComment(int articleId, long commentId, CancellationToken cancellationToken)
+    {
+        var userId = GetRequiredAuthenticatedUserId();
+        await _problemService.DeleteArticleCommentAsync(articleId, commentId, userId, cancellationToken);
+        return Ok(ApiResponse<object?>.SuccessResult(null, "Comment deleted.", GetTraceId()));
+    }
+
     [HttpGet("articles/{idOrCode}")]
     [AllowAnonymous]
     public async Task<IActionResult> GetPublishedArticle(string idOrCode, CancellationToken cancellationToken)
