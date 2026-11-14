@@ -35,16 +35,20 @@ public record GitHubFileDto(
 );
 
 public record GitHubCodeReviewRequestDto(
+    [Required]
+    [StringLength(200)]
     [property: Required]
     [property: StringLength(200)]
     string FullName,
 
+    [StringLength(200)]
     [property: StringLength(200)]
     string? Branch = null,
 
     /// <summary>Specific files to review. Empty = auto-select top source files.</summary>
     IReadOnlyList<string>? Paths = null,
 
+    [Range(1, 12)]
     [property: Range(1, 12)]
     int MaxFiles = 6
 );
@@ -69,22 +73,31 @@ public record GitHubCodeReviewResultDto(
 );
 
 public record GitHubDebugRequestDto(
+    [Required]
+    [StringLength(200)]
     [property: Required]
     [property: StringLength(200)]
     string FullName,
 
+    [Required]
+    [StringLength(500)]
     [property: Required]
     [property: StringLength(500)]
     string Path,
 
+    [Required]
+    [MinLength(2)]
+    [StringLength(4000)]
     [property: Required]
     [property: MinLength(2)]
     [property: StringLength(4000)]
     string ErrorMessage,
 
+    [StringLength(200)]
     [property: StringLength(200)]
     string? Branch = null,
 
+    [StringLength(10000)]
     [property: StringLength(10000)]
     string? Description = null
 );

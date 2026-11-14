@@ -30,6 +30,9 @@ public record ChallengeDetailsDto(
 );
 
 public record SubmitChallengeSolutionDto(
+    [Required]
+    [MinLength(3)]
+    [StringLength(50000)]
     [property: Required]
     [property: MinLength(3)]
     [property: StringLength(50000)]
