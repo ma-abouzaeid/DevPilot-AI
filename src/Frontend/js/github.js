@@ -285,6 +285,15 @@
     if (params.get("connected") === "1") {
         showAlert("GitHub connected successfully" + (params.get("user") ? (" as @" + params.get("user")) : "") + ".", "success");
         window.history.replaceState({}, "", "github.html");
+    } else if (params.get("connected") === "0" || params.get("error")) {
+        const err = params.get("error") || "unknown";
+        const msg = params.get("message");
+        if (err === "access_denied") {
+            showAlert("GitHub authorization was cancelled. You can connect again anytime.", "warning");
+        } else {
+            showAlert(msg || ("GitHub connection failed: " + err), "danger");
+        }
+        window.history.replaceState({}, "", "github.html");
     }
 
     setMode("debug");

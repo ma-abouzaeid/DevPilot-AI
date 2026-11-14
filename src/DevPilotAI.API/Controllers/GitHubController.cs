@@ -60,13 +60,32 @@ public class GitHubController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Callback([FromQuery] string? code, [FromQuery] string? state, [FromQuery] string? error, CancellationToken cancellationToken)
     {
+        // Always send the browser back to the frontend — never dump raw JSON on cancel/deny.
         if (!string.IsNullOrWhiteSpace(error))
         {
-            return BadRequest(ApiResponse<object?>.FailureResult($"GitHub authorization failed: {error}", "GITHUB_OAUTH_DENIED", null, GetTraceId()));
+            var deniedUrl = _gitHubService.BuildFrontendReturnUrl(new Dictionary<string, string?>
+            {
+                ["connected"] = "0",
+                ["error"] = error
+            });
+            return Redirect(deniedUrl);
         }
 
-        var redirectUrl = await _gitHubService.HandleOAuthCallbackAsync(code ?? string.Empty, state ?? string.Empty, cancellationToken);
-        return Redirect(redirectUrl);
+        try
+        {
+            var redirectUrl = await _gitHubService.HandleOAuthCallbackAsync(code ?? string.Empty, state ?? string.Empty, cancellationToken);
+            return Redirect(redirectUrl);
+        }
+        catch (Exception ex)
+        {
+            var failedUrl = _gitHubService.BuildFrontendReturnUrl(new Dictionary<string, string?>
+            {
+                ["connected"] = "0",
+                ["error"] = "oauth_failed",
+                ["message"] = ex.Message
+            });
+            return Redirect(failedUrl);
+        }
     }
 
     [HttpDelete("disconnect")]

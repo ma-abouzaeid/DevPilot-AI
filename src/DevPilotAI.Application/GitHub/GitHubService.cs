@@ -119,12 +119,34 @@ public class GitHubService : IGitHubService
 
         await _db.SaveChangesAsync(cancellationToken);
 
-        var returnUrl = _configuration["GitHub:FrontendReturnUrl"]
-            ?? _configuration["Frontend:BaseUrl"]
-            ?? "http://localhost:5500/github.html";
+        return BuildFrontendReturnUrl(new Dictionary<string, string?>
+        {
+            ["connected"] = "1",
+            ["user"] = ghUser.Login
+        });
+    }
+
+    public string BuildFrontendReturnUrl(IReadOnlyDictionary<string, string?> query)
+    {
+        var returnUrl = _configuration["GitHub:FrontendReturnUrl"];
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            var baseUrl = (_configuration["Frontend:BaseUrl"] ?? "http://localhost:5500").TrimEnd('/');
+            returnUrl = $"{baseUrl}/github.html";
+        }
+
+        var parts = query
+            .Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
+            .Select(kv => $"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value!)}")
+            .ToList();
+
+        if (parts.Count == 0)
+        {
+            return returnUrl;
+        }
 
         var separator = returnUrl.Contains('?', StringComparison.Ordinal) ? "&" : "?";
-        return $"{returnUrl}{separator}connected=1&user={Uri.EscapeDataString(ghUser.Login)}";
+        return $"{returnUrl}{separator}{string.Join("&", parts)}";
     }
 
     public async Task DisconnectAsync(int userId, CancellationToken cancellationToken = default)

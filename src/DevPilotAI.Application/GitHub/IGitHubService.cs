@@ -8,6 +8,7 @@ public interface IGitHubService
     Task<GitHubConnectionStatusDto> GetConnectionStatusAsync(int userId, CancellationToken cancellationToken = default);
     Task<GitHubAuthorizeUrlDto> GetAuthorizeUrlAsync(int userId, CancellationToken cancellationToken = default);
     Task<string> HandleOAuthCallbackAsync(string code, string state, CancellationToken cancellationToken = default);
+    string BuildFrontendReturnUrl(IReadOnlyDictionary<string, string?> query);
     Task DisconnectAsync(int userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<GitHubRepoDto>> ListRepositoriesAsync(int userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<GitHubTreeItemDto>> GetRepositoryTreeAsync(int userId, string fullName, string? branch = null, CancellationToken cancellationToken = default);
