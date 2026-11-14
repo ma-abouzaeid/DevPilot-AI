@@ -106,6 +106,57 @@
         },
 
         /**
+         * Decodes JWT payload claims without verifying signature (client gating only).
+         * @returns {object|null}
+         */
+        getTokenClaims() {
+            const token = this.getAccessToken();
+            if (!token) return null;
+            const parts = token.split(".");
+            if (parts.length < 2) return null;
+            try {
+                const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+                const padded = payload + "=".repeat((4 - (payload.length % 4)) % 4);
+                return JSON.parse(atob(padded));
+            } catch (e) {
+                return null;
+            }
+        },
+
+        /**
+         * @returns {string[]}
+         */
+        getRoles() {
+            const claims = this.getTokenClaims();
+            if (!claims) return [];
+            const roleKeys = [
+                "role",
+                "roles",
+                "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+            ];
+            const roles = [];
+            roleKeys.forEach(function (key) {
+                const value = claims[key];
+                if (!value) return;
+                if (Array.isArray(value)) {
+                    value.forEach(function (r) { if (r) roles.push(String(r)); });
+                } else {
+                    roles.push(String(value));
+                }
+            });
+            return roles;
+        },
+
+        /**
+         * @returns {boolean}
+         */
+        isAdmin() {
+            return this.getRoles().some(function (r) {
+                return String(r).toLowerCase() === "admin";
+            });
+        },
+
+        /**
          * Ensures a token is formatted with the standard "Bearer <token>" scheme exactly once.
          * @param {string} token 
          * @returns {string}

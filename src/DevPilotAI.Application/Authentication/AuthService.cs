@@ -449,7 +449,8 @@ public class AuthService : IAuthService
             UserId: user.UserId,
             Name: user.Name,
             Email: user.Email,
-            EmailVerifiedAt: user.EmailVerifiedAt
+            EmailVerifiedAt: user.EmailVerifiedAt,
+            Roles: roles
         );
 
         return new LoginResponseDto(

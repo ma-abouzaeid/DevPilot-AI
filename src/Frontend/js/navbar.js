@@ -6,9 +6,15 @@ if (navbarBox) {
         ? window.DevPilotApi.isAuthenticated()
         : Boolean(localStorage.getItem("accessToken"));
 
+    const isAdmin = isLoggedIn
+        && typeof window.DevPilotApi !== "undefined"
+        && typeof window.DevPilotApi.isAdmin === "function"
+        && window.DevPilotApi.isAdmin();
+
     const authButtonsHtml = isLoggedIn
         ? `<div class="d-flex flex-wrap gap-2">
              <a class="btn btn-outline-light" href="dashboard.html">Dashboard</a>
+             ${isAdmin ? `<a class="btn btn-outline-light" href="admin.html">Admin</a>` : ""}
              <a class="btn btn-outline-light" href="settings.html">Settings</a>
              <button type="button" class="btn btn-danger" id="nav-logout-btn">Log Out</button>
            </div>`
@@ -16,6 +22,10 @@ if (navbarBox) {
              <a class="btn btn-outline-light" href="login.html">Login</a>
              <a class="btn btn-primary" href="register.html">Get Started</a>
            </div>`;
+
+    const adminNavItem = isAdmin
+        ? `<li class="nav-item"><a class="nav-link" data-page="admin" href="admin.html">Admin</a></li>`
+        : "";
 
     navbarBox.innerHTML = `
     <nav class="navbar navbar-expand-lg nav-brand" data-bs-theme="light">
@@ -35,6 +45,7 @@ if (navbarBox) {
                     <li class="nav-item"><a class="nav-link" data-page="articles" href="articles.html">Articles</a></li>
                     <li class="nav-item"><a class="nav-link" data-page="challenges" href="challenges.html">Challenges</a></li>
                     <li class="nav-item"><a class="nav-link" data-page="plans" href="plans.html">Plans</a></li>
+                    ${adminNavItem}
                     <li class="nav-item"><a class="nav-link" data-page="about" href="about.html">About</a></li>
                     <li class="nav-item"><a class="nav-link" data-page="community" href="community.html">Community</a></li>
                 </ul>

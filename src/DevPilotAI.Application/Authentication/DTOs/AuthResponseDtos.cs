@@ -5,7 +5,8 @@ public record UserDto(
     string Name,
     string Email,
     DateTime? EmailVerifiedAt,
-    string? PendingEmailChange = null
+    string? PendingEmailChange = null,
+    IReadOnlyList<string>? Roles = null
 );
 
 public record RegisterResponseDto(

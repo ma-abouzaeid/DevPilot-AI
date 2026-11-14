@@ -27,6 +27,17 @@ public static class SystemAuditEventTypes
     public const string ChallengeEvaluated = "CHALLENGE_EVALUATED";
     public const string GithubReviewCompleted = "GITHUB_REVIEW_COMPLETED";
     public const string GithubDebugStarted = "GITHUB_DEBUG_STARTED";
+    public const string UserDeactivated = "USER_DEACTIVATED";
+    public const string UserRestored = "USER_RESTORED";
+    public const string UserPlanAssigned = "USER_PLAN_ASSIGNED";
+    public const string PlanUpdated = "PLAN_UPDATED";
+    public const string ArticleUpdated = "ARTICLE_UPDATED";
+    public const string ArticlePublished = "ARTICLE_PUBLISHED";
+    public const string ArticleUnpublished = "ARTICLE_UNPUBLISHED";
+    public const string ArticleDeleted = "ARTICLE_DELETED";
+    public const string ArticleRestored = "ARTICLE_RESTORED";
+    public const string AdminRoleGranted = "ADMIN_ROLE_GRANTED";
+    public const string AdminRoleRevoked = "ADMIN_ROLE_REVOKED";
 }
 
 public class AuditEvent

@@ -1,3 +1,4 @@
+using DevPilotAI.Application.Admin;
 using DevPilotAI.Application.Authentication;
 using DevPilotAI.Application.Challenges;
 using DevPilotAI.Application.GitHub;
@@ -18,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<IGitHubService, GitHubService>();
         services.AddScoped<IChallengeService, ChallengeService>();
         services.AddScoped<IPlanUsageService, PlanUsageService>();
+        services.AddScoped<IAdminService, AdminService>();
 
         return services;
     }

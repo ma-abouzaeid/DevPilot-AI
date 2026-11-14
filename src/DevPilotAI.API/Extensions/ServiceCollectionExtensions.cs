@@ -128,7 +128,9 @@ public static class ServiceCollectionExtensions
                 ValidIssuer = jwtIssuer,
                 ValidAudience = jwtAudience,
                 IssuerSigningKey = JwtSecurityValidator.GetSecurityKey(jwtSecret),
-                ClockSkew = TimeSpan.Zero
+                ClockSkew = TimeSpan.Zero,
+                RoleClaimType = ClaimTypes.Role,
+                NameClaimType = ClaimTypes.NameIdentifier
             };
             options.Events = new JwtBearerEvents
             {

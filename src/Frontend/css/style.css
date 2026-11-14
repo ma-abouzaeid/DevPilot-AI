@@ -1059,4 +1059,32 @@ a { text-decoration: none; color: inherit; }
 .bg-white { background: var(--surface) !important; }
 .bg-light { background: var(--surface-muted) !important; }
 
+.admin-tabs .nav-link {
+    color: var(--ink);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    margin-right: 0.4rem;
+    margin-bottom: 0.4rem;
+}
+.admin-tabs .nav-link.active {
+    background: var(--brand);
+    border-color: var(--brand);
+    color: #fff;
+}
+.admin-table {
+    font-size: 0.92rem;
+}
+.admin-table thead th {
+    color: var(--gray);
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom-width: 1px;
+}
+.admin-actions .btn {
+    width: auto;
+    margin-bottom: 0.25rem;
+}
+
 [tabindex="-1"]:focus { outline: none; }

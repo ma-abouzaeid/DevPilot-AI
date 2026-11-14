@@ -1,4 +1,5 @@
 using DevPilotAI.Application.Authentication.DTOs;
+using DevPilotAI.Application.Common;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Domain.Entities;
@@ -74,6 +75,8 @@ public class UserService : IUserService
     public async Task<UserDto> GetCurrentProfileAsync(int userId, CancellationToken cancellationToken = default)
     {
         var user = await _dbContext.Users
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken)
             ?? throw AppError.NotFound($"User with ID {userId} was not found.");
 
@@ -83,6 +86,8 @@ public class UserService : IUserService
     public async Task<UserDto> UpdateCurrentProfileAsync(int userId, UpdateUserProfileRequestDto request, CancellationToken cancellationToken = default)
     {
         var user = await _dbContext.Users
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken)
             ?? throw AppError.NotFound($"User with ID {userId} was not found.");
 
@@ -159,6 +164,21 @@ public class UserService : IUserService
         }
     }
 
-    private static UserDto ToDto(User user) =>
-        new(user.UserId, user.Name, user.Email, user.EmailVerifiedAt);
+    private static UserDto ToDto(User user)
+    {
+        var roles = user.UserRoles
+            .Select(ur => ur.Role?.Name)
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Select(n => n!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(n => n)
+            .ToList();
+
+        if (roles.Count == 0)
+        {
+            roles.Add(AppRoles.Developer);
+        }
+
+        return new UserDto(user.UserId, user.Name, user.Email, user.EmailVerifiedAt, Roles: roles);
+    }
 }
