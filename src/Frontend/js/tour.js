@@ -9,283 +9,496 @@
         return (parts[parts.length - 1] || "index.html").toLowerCase() || "index.html";
     }
 
+    /** Control-focused tours only (fields, buttons, filters) — no navbar/titles. */
     /** @type {Record<string, Array<{selector:string,title:string,body:string}>>} */
     const PAGE_TOURS = {
         "index.html": [
             {
-                selector: ".navbar-brand, .logo",
-                title: "DevPilot AI",
-                body: "Your home base. Click the logo anytime to return to the landing page."
-            },
-            {
-                selector: ".navbar-nav",
-                title: "Main navigation",
-                body: "Jump between Debug, GitHub, Articles, Challenges, Plans, and more from here."
-            },
-            {
-                selector: ".hero-title",
-                title: "What DevPilot does",
-                body: "Debug with AI, learn from real fixes, and turn every solution into reusable knowledge."
-            },
-            {
-                selector: ".hero-section .btn-primary",
-                title: "Get started",
-                body: "Create an account to save progress, run AI debugs, and keep credits on your plan."
+                selector: ".hero-section a.btn-primary",
+                title: "Get Started",
+                body: "Creates your account so you can debug with AI, save articles, and keep credits."
             },
             {
                 selector: ".hero-section a[href='submit-problem.html']",
-                title: "Debug a problem",
-                body: "Paste code + the error message and let AI explain the root cause and fix."
+                title: "Debug a Problem",
+                body: "Opens the debugger: paste code + error and run AI analysis."
             },
             {
-                selector: ".hero-stats",
-                title: "Live platform stats",
-                body: "See how many developers, solved problems, articles, and challenges are on the platform."
+                selector: ".hero-section a[href='articles.html']",
+                title: "Explore Articles",
+                body: "Browse published fixes from real bugs — search, save, like, and comment."
             }
         ],
         "dashboard.html": [
             {
-                selector: ".page-title",
-                title: "Your workspace",
-                body: "This is your developer dashboard — open issues, saved knowledge, and quick actions live here."
+                selector: "a.quick-action[href='submit-problem.html']",
+                title: "Debug with AI",
+                body: "Opens the debugger to paste code and an error, then run AI analysis."
             },
             {
-                selector: ".stat-card",
-                title: "Progress at a glance",
-                body: "Track open vs solved problems, your challenge rank, and challenge points."
+                selector: "a.quick-action[href='articles.html']",
+                title: "Browse Knowledge",
+                body: "Opens the articles list to search published fixes by keyword or technology."
             },
             {
-                selector: ".quick-action",
-                title: "Quick actions",
-                body: "Start a debug, browse articles, open saved bookmarks, take a challenge, or connect GitHub."
+                selector: "a.quick-action[href='#saved-articles']",
+                title: "Saved Articles",
+                body: "Jumps to your bookmarked articles on this dashboard."
+            },
+            {
+                selector: "a.quick-action[href='challenges.html']",
+                title: "Take a Challenge",
+                body: "Opens practice challenges graded by AI so the fix sticks."
+            },
+            {
+                selector: "a.quick-action[href='github.html']",
+                title: "GitHub Review & Debug",
+                body: "Connect a repo, pick a file, then run Code Review or Debug without copy/paste."
+            },
+            {
+                selector: "a.quick-action[href='settings.html']",
+                title: "Account settings",
+                body: "Change your display name or password, or deactivate the account."
             },
             {
                 selector: "#recent-problems",
-                title: "Recent problems",
-                body: "Reopen tickets you already submitted. Use Continue to resume debugging or open the article when solved."
+                title: "Recent Problems list",
+                body: "Each row opens the ticket. Use Continue to resume debugging, or Article when it is solved."
             },
             {
-                selector: "#saved-articles",
-                title: "Saved articles",
-                body: "Articles you bookmarked appear here so you can jump back without searching again."
+                selector: "#saved-articles-list",
+                title: "Saved Articles list",
+                body: "Articles you tapped Save on. Click a title to reopen it."
             },
             {
-                selector: "#plan-credits, .surface-card .fa-coins",
-                title: "Plan & credits",
-                body: "See remaining AI credits and manage your plan when you need more capacity."
+                selector: "a[href='plans.html']",
+                title: "Manage plan",
+                body: "Opens Plans to see credits left and upgrade (Pro unlocks GitHub Code Review)."
             }
         ],
         "submit-problem.html": [
             {
-                selector: ".title-style, .page-title",
-                title: "AI Debugging",
-                body: "Submit a bug with only code and the error — DevPilot fills title and framework for you."
-            },
-            {
-                selector: "#ide-editor, #sourceCode",
-                title: "Code editor",
-                body: "Paste the code involved in the bug. Keep it focused on the failing snippet when possible."
+                selector: "#sourceCode",
+                title: "Your code",
+                body: "Required. Paste the code involved in the bug — keep it focused on the failing snippet."
             },
             {
                 selector: "#errorMessage",
                 title: "Error message",
-                body: "Paste the exact error text (exception, HTTP status, stack snippet). Better input = better analysis."
+                body: "Required. Paste the exact error text (exception, HTTP status, stack snippet)."
             },
             {
                 selector: "#description",
-                title: "Optional context",
-                body: "Add expected behavior or when it started. Helpful, but not required."
+                title: "Description (optional)",
+                body: "Extra context only — expected behavior, when it started, etc. Not required."
             },
             {
                 selector: "#submit-btn",
                 title: "Analyze with AI",
-                body: "Runs the analysis, uses credits from your plan, then shows root cause, steps, and corrected code."
+                body: "Sends the bug to AI, spends credits from your plan, then shows root cause, steps, and corrected code."
             },
             {
-                selector: "#result-panel, .debug-result",
-                title: "Results area",
-                body: "After analysis, the structured solution appears here. Mark solved to publish an article and challenge."
+                selector: "#feedback-actions",
+                title: "Solved / Still stuck",
+                body: "After analysis: Problem Solved publishes knowledge + challenge; Still stuck keeps the ticket open for follow-up."
             }
         ],
         "articles.html": [
             {
-                selector: ".page-title",
-                title: "Knowledge base",
-                body: "Browse published fixes from real developer problems — root cause, steps, and corrected code."
+                selector: "#view-all",
+                title: "All articles",
+                body: "Shows the full public knowledge base."
             },
             {
-                selector: "#articles-view-toggle, #view-saved",
-                title: "All vs Saved",
-                body: "Switch to Saved to see only articles you bookmarked (requires login)."
+                selector: "#view-saved",
+                title: "Saved",
+                body: "Shows only articles you bookmarked. Requires login."
             },
             {
-                selector: "#search-form, #search-q",
-                title: "Smart search",
-                body: "Search by title, error name, technology, article code, or keyword."
+                selector: "#search-q",
+                title: "Search box",
+                body: "Type a title, error name, technology, article code, or keyword."
             },
             {
-                selector: "#tech-multiselect, #tech-toggle",
+                selector: "#tech-toggle",
                 title: "Technology filter",
-                body: "Pick one or more frameworks/languages to narrow the list."
+                body: "Open this to multi-select frameworks/languages, then search."
             },
             {
-                selector: "#articles-grid",
-                title: "Article cards",
-                body: "Open any card to read the full article, then Like, Save, Share, or Comment."
+                selector: "#search-form button[type='submit']",
+                title: "Search button",
+                body: "Runs the search with your keyword and selected technologies."
+            },
+            {
+                selector: "#articles-grid .article-tile, #articles-grid a",
+                title: "Article card",
+                body: "Opens the full article where you can Like, Save, Share, and Comment."
             }
         ],
         "article-details.html": [
             {
-                selector: ".page-title",
-                title: "Article details",
-                body: "A structured write-up of a real fix: summary, steps, and corrected code."
+                selector: "#btn-like",
+                title: "Like",
+                body: "Toggles your like on this article. Requires login."
             },
             {
-                selector: "#engage-bar, .article-engage-bar",
-                title: "Engage",
-                body: "Like, Save for later, Share the link, or jump to comments. Login is required for like/save/comment."
+                selector: "#btn-save",
+                title: "Save",
+                body: "Bookmarks the article to your Saved list (dashboard + Articles → Saved). Requires login."
             },
             {
-                selector: ".article-body, #article-root article",
-                title: "Article body",
-                body: "Read the explanation and use Copy on IDE-style code blocks to try the fix locally."
+                selector: "#btn-share",
+                title: "Share",
+                body: "Copies the article link (or opens the device share sheet)."
             },
             {
-                selector: "#comments-section, .article-comments",
-                title: "Comments",
-                body: "Ask a follow-up or share what worked for you. You can delete your own comments."
+                selector: ".ide-copy-btn",
+                title: "Copy code",
+                body: "Copies the corrected code block so you can paste it into your editor."
+            },
+            {
+                selector: "#comment-body",
+                title: "Comment box",
+                body: "Write a tip or question about this fix. Requires login."
+            },
+            {
+                selector: "#comment-form button[type='submit']",
+                title: "Post comment",
+                body: "Publishes your comment under the article."
+            },
+            {
+                selector: ".col-lg-4 .btn-primary",
+                title: "Solve this challenge",
+                body: "Opens the practice challenge built from this fix (if one exists)."
             }
         ],
         "challenges.html": [
             {
-                selector: ".page-title",
-                title: "Practice arena",
-                body: "Challenges are mini versions of real bugs so the fix sticks — and you earn points."
-            },
-            {
-                selector: "#challenges-grid",
-                title: "Available challenges",
-                body: "Pick a challenge to open requirements, write a solution, and get AI-graded feedback."
+                selector: "#challenges-grid a, #challenges-grid .challenge-card, #challenges-grid button",
+                title: "Challenge item",
+                body: "Opens that challenge so you can read requirements and submit a solution."
             },
             {
                 selector: "#leaderboard",
                 title: "Leaderboard",
-                body: "See top scorers and your rank as you solve more challenges."
+                body: "Shows top scorers. Points come from AI-graded challenge submissions."
             }
         ],
         "challenge-details.html": [
             {
-                selector: "#challenge-root, .page-title, .page-shell .container",
-                title: "Challenge workspace",
-                body: "Read the requirements, submit your code, and review AI feedback with points awarded."
+                selector: "#solution-code",
+                title: "Solution editor",
+                body: "Write (or paste) your fix here before submitting."
+            },
+            {
+                selector: "#btn-submit",
+                title: "Submit solution",
+                body: "Sends your code for AI grading and awards points if you pass."
+            },
+            {
+                selector: "#result-card",
+                title: "AI Feedback",
+                body: "After submit, shows pass/fail, advice, and points awarded."
             }
         ],
         "github.html": [
             {
-                selector: ".page-title",
-                title: "GitHub workspace",
-                body: "Review or debug files from your repos without copy/paste."
-            },
-            {
-                selector: "#connection-card",
+                selector: "#btn-connect",
                 title: "Connect GitHub",
-                body: "Authorize once. You can disconnect anytime; saved reviews stay available."
+                body: "Authorizes DevPilot to list your repos and open files for Review/Debug."
             },
             {
-                selector: "#reviews-history-card",
+                selector: "#btn-disconnect",
+                title: "Disconnect",
+                body: "Removes the GitHub link. Saved code reviews stay available."
+            },
+            {
+                selector: "#btn-refresh-reviews",
+                title: "Refresh reviews",
+                body: "Reloads your saved Code Review history."
+            },
+            {
+                selector: "#reviews-history-list",
                 title: "Saved code reviews",
-                body: "Reopen past reviews even after disconnecting GitHub."
+                body: "Click a past review to reopen it anytime."
             },
             {
-                selector: "#workspace, #repos-list",
-                title: "Repos & files",
-                body: "After connecting, pick a repository and file, then run Code Review or Debug."
+                selector: "#repos-list",
+                title: "Repositories",
+                body: "Pick a repo after connecting. Then choose a file on the right."
+            },
+            {
+                selector: "#files-list",
+                title: "Files",
+                body: "Select a file to load into Debug or Code Review."
+            },
+            {
+                selector: "#tab-debug",
+                title: "Debug tab",
+                body: "Debug this file with an error message — same flow as Submit Problem."
+            },
+            {
+                selector: "#tab-review",
+                title: "Code Review tab",
+                body: "Runs an AI code review on the selected file (Pro plan)."
+            },
+            {
+                selector: "#error-message",
+                title: "Error message (Debug)",
+                body: "Paste the error related to the selected file, then run Debug."
+            },
+            {
+                selector: "#debug-notes",
+                title: "Notes (optional)",
+                body: "Optional context for the GitHub debug run."
+            },
+            {
+                selector: "#btn-debug",
+                title: "Run Debug",
+                body: "Analyzes the selected file + error with AI."
+            },
+            {
+                selector: "#btn-review",
+                title: "Run Code Review",
+                body: "Reviews the selected file and saves the result in your history."
             }
         ],
         "plans.html": [
             {
-                selector: ".page-title, .page-shell .container > .page-title",
-                title: "Plans",
-                body: "Compare plans and credits for AI debug, articles, and GitHub code review."
+                selector: "#my-usage-card",
+                title: "Your usage",
+                body: "Shows your current plan and how many credits you have left this month."
             },
             {
-                selector: ".plan-card, .plans-grid, #plans-root, .row.g-3, .surface-card",
-                title: "Plan options",
-                body: "Choose the plan that matches how often you debug. Pro unlocks GitHub Code Review."
+                selector: "#plans-grid .btn, #plans-grid button, #plans-grid a.btn",
+                title: "Choose / upgrade plan",
+                body: "Select a plan. Pro includes GitHub Code Review; credits power AI debug actions."
+            },
+            {
+                selector: "#credit-costs",
+                title: "Credit costs",
+                body: "Exact credit deduction for each AI action (debug, follow-up, review, etc.)."
             }
         ],
         "settings.html": [
             {
-                selector: ".page-title, .page-shell h1",
-                title: "Account settings",
-                body: "Update your display name and manage account status from this page."
+                selector: "#profile-name",
+                title: "Display name",
+                body: "Shown on the dashboard greeting and challenge leaderboard."
             },
             {
-                selector: "form, #settings-form, .surface-card",
-                title: "Profile form",
-                body: "Save changes here. Sensitive actions like deactivation ask for confirmation."
+                selector: "#profile-email-display",
+                title: "Email",
+                body: "Read-only login email for this account."
+            },
+            {
+                selector: "#btn-save-profile",
+                title: "Save name",
+                body: "Saves your new display name."
+            },
+            {
+                selector: "#current-password",
+                title: "Current password",
+                body: "Required to prove it is you before changing the password."
+            },
+            {
+                selector: "#new-password",
+                title: "New password",
+                body: "At least 8 characters, with upper, lower, and a number."
+            },
+            {
+                selector: "#confirm-password",
+                title: "Confirm new password",
+                body: "Must match the new password exactly."
+            },
+            {
+                selector: "#btn-change-password",
+                title: "Update password",
+                body: "Applies the new password to your account."
+            },
+            {
+                selector: "#btn-delete-account",
+                title: "Deactivate account",
+                body: "Soft-deletes the account and signs you out. Use carefully."
             }
         ],
         "admin.html": [
             {
-                selector: ".page-title, .page-shell h1, .admin-shell h1",
-                title: "Admin console",
-                body: "Manage users, plans, credit costs, AI usage, audit logs, and system errors."
+                selector: "#admin-tabs button[data-tab='overview']",
+                title: "Overview tab",
+                body: "Platform stats snapshot for admins."
             },
             {
-                selector: ".nav-tabs, #admin-tabs, [role='tablist']",
-                title: "Admin tabs",
-                body: "Switch sections to inspect usage, errors, and configuration without leaving Admin."
+                selector: "#admin-tabs button[data-tab='users']",
+                title: "Users tab",
+                body: "Search users, add users, assign roles/plans, and manage accounts."
+            },
+            {
+                selector: "#admin-tabs button[data-tab='plans']",
+                title: "Plans tab",
+                body: "Create and edit subscription plans and credit allocations."
+            },
+            {
+                selector: "#admin-tabs button[data-tab='credits']",
+                title: "Credit costs tab",
+                body: "Set how many credits each AI action deducts."
+            },
+            {
+                selector: "#admin-tabs button[data-tab='articles']",
+                title: "Articles tab",
+                body: "Review and manage published knowledge articles."
+            },
+            {
+                selector: "#admin-tabs button[data-tab='ai']",
+                title: "AI usage tab",
+                body: "Inspect provider/model calls, tokens, and failures. Use View for full JSON."
+            },
+            {
+                selector: "#admin-tabs button[data-tab='audit']",
+                title: "Audit log tab",
+                body: "Security and admin action history with detail JSON."
+            },
+            {
+                selector: "#admin-tabs button[data-tab='errors']",
+                title: "System errors tab",
+                body: "Non-AI failures with path, status, and context JSON."
+            },
+            {
+                selector: "#users-search",
+                title: "Users search",
+                body: "Filter the users table by name, email, or id (on the Users tab)."
+            },
+            {
+                selector: "#users-add",
+                title: "Add user",
+                body: "Creates a user from Admin without going through public register."
             }
         ],
         "login.html": [
             {
-                selector: "#email, input[type='email']",
-                title: "Email",
-                body: "Use the email you registered with."
+                selector: "#email",
+                title: "Email Address",
+                body: "The email you registered with."
             },
             {
-                selector: "#password, input[type='password']",
+                selector: "#password",
                 title: "Password",
-                body: "Enter your password. Use Forgot password if you need a reset link."
+                body: "Your account password."
             },
             {
-                selector: "button[type='submit'], #login-btn",
-                title: "Sign in",
-                body: "After login you land on the dashboard (or the page you were sent from)."
+                selector: "#toggle-password",
+                title: "Show / hide password",
+                body: "Toggles password visibility in this field."
+            },
+            {
+                selector: "#remember",
+                title: "Keep me signed in",
+                body: "Keeps the session so you stay logged in on this device."
+            },
+            {
+                selector: "a[href='forgot-password.html']",
+                title: "Forgot password",
+                body: "Opens the reset flow to email a recovery link."
+            },
+            {
+                selector: "#turnstile-group",
+                title: "Security check",
+                body: "Complete the bot check before logging in."
+            },
+            {
+                selector: "#login-btn",
+                title: "Log In",
+                body: "Signs you in and sends you to the dashboard (or the page you came from)."
+            },
+            {
+                selector: "a[href='register.html']",
+                title: "Create account",
+                body: "Opens registration if you do not have an account yet."
             }
         ],
         "register.html": [
             {
-                selector: "form, #register-form",
-                title: "Create account",
-                body: "Fill name, email, and password. You will verify email before full access."
+                selector: "#name",
+                title: "Full name",
+                body: "Your display name on the dashboard and leaderboard."
             },
             {
-                selector: "button[type='submit']",
-                title: "Register",
-                body: "Creates your account and starts email verification."
-            }
-        ],
-        "about.html": [
+                selector: "#email",
+                title: "Email Address",
+                body: "Used to log in and verify the account."
+            },
             {
-                selector: ".page-title, .hero-title, h1",
-                title: "About DevPilot",
-                body: "Learn the product story: debug smarter, publish knowledge, practice with challenges."
-            }
-        ],
-        "community.html": [
+                selector: "#password",
+                title: "Password",
+                body: "Must meet the rules listed under the field (length + character mix)."
+            },
             {
-                selector: ".page-title, h1",
-                title: "Community",
-                body: "See how developers share fixes through articles, challenges, and discussion."
+                selector: "#confirm",
+                title: "Confirm password",
+                body: "Re-enter the same password to avoid typos."
+            },
+            {
+                selector: "#turnstile-group",
+                title: "Security check",
+                body: "Complete the bot check before creating the account."
+            },
+            {
+                selector: "#register-btn",
+                title: "Create account",
+                body: "Registers you and starts email verification."
             }
         ],
         "problem-details.html": [
             {
-                selector: "#problem-root, .page-shell .container",
-                title: "Problem ticket",
-                body: "Review the history of a submitted problem, continue debugging, or open the published article."
+                selector: "a.btn-primary[href*='submit-problem']",
+                title: "Continue debugging",
+                body: "Reopens this ticket in the debugger with prior context."
+            },
+            {
+                selector: "a.btn-primary[href*='article-details']",
+                title: "Open article",
+                body: "Opens the published knowledge article for a solved ticket."
+            },
+            {
+                selector: "a.btn[href='challenges.html']",
+                title: "Practice challenges",
+                body: "Go practice related fixes in the challenge arena."
+            }
+        ],
+        "forgot-password.html": [
+            {
+                selector: "#email, input[type='email']",
+                title: "Email",
+                body: "Enter the account email to receive a reset link."
+            },
+            {
+                selector: "button[type='submit']",
+                title: "Send reset link",
+                body: "Emails a password reset link if the account exists."
+            }
+        ],
+        "reset-password.html": [
+            {
+                selector: "#password, input[type='password']",
+                title: "New password",
+                body: "Choose a strong new password for the account."
+            },
+            {
+                selector: "button[type='submit']",
+                title: "Update password",
+                body: "Saves the new password using the reset token from your email."
+            }
+        ],
+        "verify-email.html": [
+            {
+                selector: "#code, input[type='text'], input[name='code']",
+                title: "Verification code",
+                body: "Enter the code from your email to activate the account."
+            },
+            {
+                selector: "button[type='submit']",
+                title: "Verify",
+                body: "Confirms the email and unlocks full access."
             }
         ]
     };
@@ -310,33 +523,48 @@
         btnClose: null
     };
 
+    function isTourVisible(el) {
+        if (!el || !el.getClientRects || !el.getClientRects().length) return false;
+        if (el.closest && el.closest(".d-none, [hidden], .tour-root, .tour-launch-btn")) return false;
+        const style = window.getComputedStyle(el);
+        if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") return false;
+        return true;
+    }
+
     function resolveSteps(defs) {
         const resolved = [];
         (defs || []).forEach(function (def) {
             const selectors = String(def.selector || "").split(",").map(function (s) { return s.trim(); }).filter(Boolean);
             let el = null;
             for (let i = 0; i < selectors.length; i++) {
-                el = document.querySelector(selectors[i]);
-                if (el && el.getClientRects().length) break;
-                el = null;
+                const found = document.querySelector(selectors[i]);
+                if (found && (def.includeHidden || isTourVisible(found))) {
+                    el = found;
+                    break;
+                }
             }
             if (!el) return;
+            // Prefer a visible ancestor if the target itself is hidden but includeHidden was set
+            if (!isTourVisible(el) && def.includeHidden) {
+                const host = el.closest(".surface-card, .mb-3, .form-group, .d-flex") || el.parentElement;
+                if (host && isTourVisible(host)) el = host;
+                else return;
+            }
             resolved.push({
                 el: el,
-                title: def.title || "Tip",
+                title: def.title || "Control",
                 body: def.body || ""
             });
         });
 
-        // Merge any explicit data-tour nodes not already covered
         document.querySelectorAll("[data-tour]").forEach(function (el) {
-            if (!el.getClientRects().length) return;
+            if (!isTourVisible(el)) return;
             const already = resolved.some(function (s) { return s.el === el; });
             if (already) return;
             const order = Number(el.getAttribute("data-tour-order") || resolved.length + 1);
             resolved.push({
                 el: el,
-                title: el.getAttribute("data-tour-title") || "Tip",
+                title: el.getAttribute("data-tour-title") || "Control",
                 body: el.getAttribute("data-tour-text") || el.getAttribute("data-tour") || "",
                 order: order
             });
@@ -511,25 +739,10 @@
         showStep(state.index + 1);
     }
 
-    function fallbackDefs() {
-        return [
-            {
-                selector: ".navbar-nav, .nav-brand",
-                title: "Navigation",
-                body: "Use the top menu to move between Debug, Articles, Challenges, and Plans."
-            },
-            {
-                selector: ".page-title, .title-style, h1",
-                title: "This page",
-                body: "This is the main content for the current screen. Explore the controls below to get work done."
-            }
-        ];
-    }
-
     function beginWithSteps(steps) {
         if (!steps.length) {
             ui.btn.classList.add("is-empty");
-            ui.btn.title = "No tour steps on this page yet";
+            ui.btn.title = "No interactive controls to tour on this page";
             return;
         }
 
@@ -545,16 +758,13 @@
         const name = pageName();
         const defs = PAGE_TOURS[name] || [];
         let steps = resolveSteps(defs);
-        if (!steps.length) steps = resolveSteps(fallbackDefs());
 
-        // Dynamic pages (article details, etc.) may still be rendering — retry once.
-        if (steps.length < 2 && defs.length > 2) {
+        // Dynamic pages (article / challenge details) may still be rendering — retry once.
+        if (defs.length && steps.length < Math.min(2, defs.length)) {
             setTimeout(function () {
                 if (state.active) return;
-                let retry = resolveSteps(defs);
-                if (!retry.length) retry = resolveSteps(fallbackDefs());
-                beginWithSteps(retry);
-            }, 450);
+                beginWithSteps(resolveSteps(defs));
+            }, 500);
             return;
         }
 
@@ -563,8 +773,9 @@
 
     function init() {
         buildUi();
-        // Hide launch button on legal-only pages if desired — keep available everywhere
-        ui.btn.classList.remove("d-none");
+        const name = pageName();
+        const hasTour = Array.isArray(PAGE_TOURS[name]) && PAGE_TOURS[name].length > 0;
+        ui.btn.classList.toggle("d-none", !hasTour);
     }
 
     if (document.readyState === "loading") {
