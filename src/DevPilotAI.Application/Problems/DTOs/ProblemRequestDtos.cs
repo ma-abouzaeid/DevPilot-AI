@@ -49,7 +49,31 @@ public record AddProblemRequestDto(
     string? StackTrace = null,
 
     [property: StringLength(100, ErrorMessage = "TechnologyHint cannot exceed 100 characters.")]
-    string? TechnologyHint = null
+    string? TechnologyHint = null,
+
+    [property: StringLength(50000, ErrorMessage = "SourceCode cannot exceed 50000 characters.")]
+    string? SourceCode = null,
+
+    [property: StringLength(20000, ErrorMessage = "Logs cannot exceed 20000 characters.")]
+    string? Logs = null
+);
+
+/// <summary>
+/// Continue debugging the same problem with updated code/error context.
+/// </summary>
+public record FollowUpProblemDto(
+    [property: Required(ErrorMessage = "Error message is required.")]
+    [property: MinLength(2, ErrorMessage = "Error message must be at least 2 characters.")]
+    [property: StringLength(4000, ErrorMessage = "ErrorMessage cannot exceed 4000 characters.")]
+    string ErrorMessage = "",
+
+    [property: Required(ErrorMessage = "Source code is required.")]
+    [property: MinLength(3, ErrorMessage = "Source code must be at least 3 characters.")]
+    [property: StringLength(50000, ErrorMessage = "SourceCode cannot exceed 50000 characters.")]
+    string SourceCode = "",
+
+    [property: StringLength(10000, ErrorMessage = "Description cannot exceed 10000 characters.")]
+    string? Description = null
 );
 
 public record FeedbackRequestDto(

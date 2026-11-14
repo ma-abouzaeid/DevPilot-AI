@@ -62,6 +62,17 @@ public class ProblemsController : ControllerBase
         return Ok(response);
     }
 
+    [HttpPost("{problemId:int}/follow-up")]
+    [Authorize]
+    [EnableRateLimiting(RateLimitPolicies.AiAnalysis)]
+    public async Task<IActionResult> FollowUpProblem(int problemId, [FromBody] FollowUpProblemDto dto, CancellationToken cancellationToken)
+    {
+        var authenticatedUserId = GetRequiredAuthenticatedUserId();
+        var result = await _problemService.FollowUpProblemAsync(problemId, dto, authenticatedUserId, cancellationToken);
+        var response = ApiResponse<DebuggingResultDto>.SuccessResult(result, "Follow-up analysis completed successfully.", GetTraceId());
+        return Ok(response);
+    }
+
     [HttpPost("{problemId:int}/debug")]
     [Authorize]
     [EnableRateLimiting(RateLimitPolicies.AiAnalysis)]
@@ -116,8 +127,19 @@ public class ProblemsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetProblemHistory(int problemId, CancellationToken cancellationToken)
     {
-        var history = await _problemService.GetProblemHistoryAsync(problemId, cancellationToken);
+        // Public history omits source code / logs to avoid leaking private snippets.
+        var history = await _problemService.GetProblemHistoryAsync(problemId, includeSourceCode: false, cancellationToken);
         var response = ApiResponse<ProblemHistoryDto>.SuccessResult(history, "Problem history retrieved successfully.", GetTraceId());
+        return Ok(response);
+    }
+
+    [HttpGet("mine")]
+    [Authorize]
+    public async Task<IActionResult> GetMyProblems([FromQuery] int recentCount = 8, CancellationToken cancellationToken = default)
+    {
+        var authenticatedUserId = GetRequiredAuthenticatedUserId();
+        var result = await _problemService.GetMyProblemsDashboardAsync(authenticatedUserId, recentCount, cancellationToken);
+        var response = ApiResponse<MyProblemsDashboardDto>.SuccessResult(result, "Your problems were retrieved successfully.", GetTraceId());
         return Ok(response);
     }
 
@@ -132,6 +154,44 @@ public class ProblemsController : ControllerBase
     {
         var result = await _problemService.SearchProblemsAsync(q, technology, page, pageSize, cancellationToken);
         var response = ApiResponse<PagedResultDto<ProblemSearchResultDto>>.SuccessResult(result, "Results retrieved successfully.", GetTraceId());
+        return Ok(response);
+    }
+
+    [HttpGet("articles")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SearchPublishedArticles(
+        [FromQuery] string? q,
+        [FromQuery] string? technology,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 12,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _problemService.SearchPublishedArticlesAsync(q, technology, page, pageSize, cancellationToken);
+        var response = ApiResponse<PagedResultDto<KnowledgeArticleListItemDto>>.SuccessResult(result, "Published articles retrieved successfully.", GetTraceId());
+        return Ok(response);
+    }
+
+    [HttpGet("articles/{idOrCode}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetPublishedArticle(string idOrCode, CancellationToken cancellationToken)
+    {
+        KnowledgeArticleDetailsDto? article = null;
+        if (int.TryParse(idOrCode, out var numericId))
+        {
+            article = await _problemService.GetPublishedArticleAsync(knowledgeArticleId: numericId, cancellationToken: cancellationToken)
+                ?? await _problemService.GetPublishedArticleAsync(problemId: numericId, cancellationToken: cancellationToken);
+        }
+        else
+        {
+            article = await _problemService.GetPublishedArticleAsync(articleOrProblemCode: idOrCode, cancellationToken: cancellationToken);
+        }
+
+        if (article == null)
+        {
+            throw AppError.NotFound($"Published article '{idOrCode}' was not found.");
+        }
+
+        var response = ApiResponse<KnowledgeArticleDetailsDto>.SuccessResult(article, "Article retrieved successfully.", GetTraceId());
         return Ok(response);
     }
 }

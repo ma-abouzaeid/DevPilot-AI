@@ -76,3 +76,38 @@ public record ProblemSearchResultDto(
     DateTime CreatedAt,
     DateTime? ResolvedAt
 );
+
+public record MyProblemsDashboardDto(
+    int OpenCount,
+    int SolvedCount,
+    int TotalCount,
+    IReadOnlyList<ProblemSearchResultDto> Recent
+);
+
+public record KnowledgeArticleListItemDto(
+    int KnowledgeArticleId,
+    int ProblemId,
+    string ArticleCode,
+    string ProblemCode,
+    string Title,
+    string Summary,
+    string? Framework,
+    DateTime CreatedAt,
+    DateTime? ResolvedAt
+);
+
+public record KnowledgeArticleDetailsDto(
+    int KnowledgeArticleId,
+    int ProblemId,
+    string ArticleCode,
+    string ProblemCode,
+    string Title,
+    string Summary,
+    string ContentMarkdown,
+    string? Framework,
+    string Status,
+    DateTime CreatedAt,
+    DateTime? ResolvedAt,
+    string? RootCause,
+    string? SolutionSummary
+);

@@ -6,13 +6,6 @@
         return;
     }
 
-    const leaders = [
-        { name: "Sara K.", score: 1840, rankClass: "" },
-        { name: "Omar H.", score: 1620, rankClass: "silver" },
-        { name: "Nour A.", score: 1495, rankClass: "bronze" },
-        { name: "You", score: 980, rankClass: "silver" }
-    ];
-
     function escapeHtml(value) {
         return String(value || "")
             .replace(/&/g, "&amp;")
@@ -28,21 +21,13 @@
         return '<span class="badge-soft open">Open</span>';
     }
 
-    function renderLeaderboard() {
-        const box = document.getElementById("leaderboard");
-        box.innerHTML = leaders.map(function (item, index) {
-            return (
-                '<div class="leaderboard-item">' +
-                '<div class="rank-pill ' + item.rankClass + '">' + (index + 1) + "</div>" +
-                "<div class=\"flex-grow-1\">" +
-                "<strong>" + escapeHtml(item.name) + "</strong>" +
-                '<div class="text-gray small">Challenge points</div>' +
-                "</div>" +
-                '<strong class="text-accent-brand">' + item.score + "</strong>" +
-                "</div>"
-            );
-        }).join("");
-        document.getElementById("stat-rank").textContent = "#4";
+    function continueHref(p) {
+        const status = (p.status || p.Status || "").toLowerCase();
+        const id = p.problemId || p.ProblemId;
+        if (status === "solved") {
+            return "article-details.html?problemId=" + encodeURIComponent(id);
+        }
+        return "submit-problem.html?problemId=" + encodeURIComponent(id);
     }
 
     async function loadProfile() {
@@ -57,23 +42,33 @@
         }
     }
 
-    async function loadProblems() {
+    async function loadMyProblems() {
         const box = document.getElementById("recent-problems");
+        const activity = document.getElementById("leaderboard");
         try {
-            const url = new URL("/api/Problems/search?page=1&pageSize=8", API_BASE).href;
+            const url = new URL("/api/Problems/mine?recentCount=8", API_BASE).href;
             const res = await window.DevPilotApi.request(url);
-            const items = (res.data && (res.data.items || res.data.Items)) || [];
+            if (!res.ok || !res.data) {
+                throw new Error(res.message || "Failed to load dashboard");
+            }
 
-            let solved = 0;
-            let open = 0;
-            items.forEach(function (p) {
-                const status = (p.status || p.Status || "").toLowerCase();
-                if (status === "solved") solved += 1;
-                else open += 1;
-            });
+            const data = res.data;
+            const openCount = data.openCount ?? data.OpenCount ?? 0;
+            const solvedCount = data.solvedCount ?? data.SolvedCount ?? 0;
+            const totalCount = data.totalCount ?? data.TotalCount ?? 0;
+            const items = data.recent || data.Recent || [];
 
-            document.getElementById("stat-solved").textContent = String(solved);
-            document.getElementById("stat-open").textContent = String(open);
+            document.getElementById("stat-open").textContent = String(openCount);
+            document.getElementById("stat-solved").textContent = String(solvedCount);
+            document.getElementById("stat-rank").textContent = String(totalCount);
+            document.getElementById("stat-credits").textContent = "—";
+
+            if (activity) {
+                activity.innerHTML =
+                    '<div class="list-row"><div><strong>Total tickets</strong><div class="text-gray small">Your debugging history</div></div><strong>' + totalCount + "</strong></div>" +
+                    '<div class="list-row"><div><strong>Still open</strong><div class="text-gray small">Need follow-up</div></div><strong>' + openCount + "</strong></div>" +
+                    '<div class="list-row"><div><strong>Solved</strong><div class="text-gray small">Published as knowledge</div></div><strong>' + solvedCount + "</strong></div>";
+            }
 
             if (!items.length) {
                 box.innerHTML =
@@ -85,14 +80,13 @@
             }
 
             box.innerHTML = items.map(function (p) {
-                const id = p.problemId || p.ProblemId;
                 const code = p.problemCode || p.ProblemCode || "";
                 const title = p.title || p.Title || "Untitled problem";
                 const status = p.status || p.Status || "";
                 return (
                     '<div class="list-row">' +
                     "<div>" +
-                    '<a class="link-blue" href="article-details.html?id=' + encodeURIComponent(id) + '">' +
+                    '<a class="link-blue" href="' + continueHref(p) + '">' +
                     escapeHtml(title) +
                     "</a>" +
                     '<div class="text-gray small">' + escapeHtml(code) + "</div>" +
@@ -102,11 +96,13 @@
                 );
             }).join("");
         } catch (e) {
-            box.innerHTML = '<div class="empty-state">Could not load recent problems right now.</div>';
+            box.innerHTML = '<div class="empty-state">Could not load your recent problems right now.</div>';
+            if (activity) {
+                activity.innerHTML = '<div class="empty-state">Activity unavailable.</div>';
+            }
         }
     }
 
-    renderLeaderboard();
     loadProfile();
-    loadProblems();
+    loadMyProblems();
 })();

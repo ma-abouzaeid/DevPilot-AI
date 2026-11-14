@@ -156,9 +156,14 @@ public class ProblemService : IProblemService
             Description = dto.Content.Trim(),
             ErrorMessage = dto.ErrorMessage?.Trim(),
             StackTrace = dto.StackTrace?.Trim(),
+            SourceCode = dto.SourceCode?.Trim(),
+            Logs = dto.Logs?.Trim(),
             Framework = dto.TechnologyHint?.Trim(),
             CreatedAt = DateTime.UtcNow
         };
+
+        problem.Status = ProblemStatus.InProgress;
+        problem.ResolvedAt = null;
 
         _dbContext.ProblemRequests.Add(request);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -173,6 +178,51 @@ public class ProblemService : IProblemService
             Framework: request.Framework,
             CreatedAt: request.CreatedAt
         );
+    }
+
+    public async Task<DebuggingResultDto> FollowUpProblemAsync(int problemId, FollowUpProblemDto dto, int userId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(dto.SourceCode))
+        {
+            throw AppError.InvalidRequest("Source code is required.", "INVALID_REQUEST", nameof(dto.SourceCode));
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.ErrorMessage))
+        {
+            throw AppError.InvalidRequest("Error message is required.", "INVALID_REQUEST", nameof(dto.ErrorMessage));
+        }
+
+        var problem = await _dbContext.Problems
+            .FirstOrDefaultAsync(p => p.ProblemId == problemId, cancellationToken)
+            ?? throw AppError.NotFound($"Problem with ID {problemId} was not found.");
+
+        if (problem.UserId != userId)
+        {
+            throw AppError.Forbidden("You do not have permission to follow up on this problem.");
+        }
+
+        var errorMessage = dto.ErrorMessage.Trim();
+        var sourceCode = dto.SourceCode.Trim();
+        var description = string.IsNullOrWhiteSpace(dto.Description)
+            ? $"Follow-up: still reproducing the issue.\n{errorMessage}"
+            : dto.Description.Trim();
+
+        var request = new ProblemRequest
+        {
+            ProblemId = problem.ProblemId,
+            Description = description,
+            ErrorMessage = errorMessage,
+            SourceCode = sourceCode,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        problem.Status = ProblemStatus.InProgress;
+        problem.ResolvedAt = null;
+
+        _dbContext.ProblemRequests.Add(request);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return await DebugProblemInternalAsync(problem, request, cancellationToken);
     }
 
     public async Task<DebuggingResultDto> DebugProblemAsync(int problemId, int requestId, int? userId = null, CancellationToken cancellationToken = default)
@@ -218,7 +268,12 @@ public class ProblemService : IProblemService
 
         _dbContext.DeveloperFeedbacks.Add(feedback);
 
-        if (isSolved)
+        if (!isSolved)
+        {
+            problem.Status = ProblemStatus.InProgress;
+            problem.ResolvedAt = null;
+        }
+        else
         {
             problem.Status = ProblemStatus.Solved;
             problem.ResolvedAt = DateTime.UtcNow;
@@ -319,7 +374,7 @@ public class ProblemService : IProblemService
             .FirstOrDefaultAsync(p => p.ProblemCode == problemCode.Trim(), cancellationToken);
     }
 
-    public async Task<ProblemHistoryDto> GetProblemHistoryAsync(int problemId, CancellationToken cancellationToken = default)
+    public async Task<ProblemHistoryDto> GetProblemHistoryAsync(int problemId, bool includeSourceCode = false, CancellationToken cancellationToken = default)
     {
         var problem = await _dbContext.Problems
             .Include(p => p.ProblemRequests)
@@ -335,8 +390,8 @@ public class ProblemService : IProblemService
                 r.Description,
                 r.ErrorMessage,
                 r.StackTrace,
-                r.SourceCode,
-                r.Logs,
+                includeSourceCode ? r.SourceCode : null,
+                includeSourceCode ? r.Logs : null,
                 r.Framework,
                 r.CreatedAt
             )).ToList();
@@ -425,6 +480,171 @@ public class ProblemService : IProblemService
             TotalCount: totalCount,
             Page: page,
             PageSize: pageSize
+        );
+    }
+
+    public async Task<MyProblemsDashboardDto> GetMyProblemsDashboardAsync(int userId, int recentCount = 8, CancellationToken cancellationToken = default)
+    {
+        if (recentCount < 1 || recentCount > 50) recentCount = 8;
+
+        var mine = _dbContext.Problems.AsNoTracking().Where(p => p.UserId == userId);
+        var totalCount = await mine.CountAsync(cancellationToken);
+        var solvedCount = await mine.CountAsync(p => p.Status == ProblemStatus.Solved, cancellationToken);
+        var openCount = totalCount - solvedCount;
+
+        var recent = await mine
+            .OrderByDescending(p => p.CreatedAt)
+            .Take(recentCount)
+            .Select(p => new ProblemSearchResultDto(
+                p.ProblemId,
+                p.ProblemCode,
+                p.Title,
+                p.Summary,
+                p.Status.ToString(),
+                p.CreatedAt,
+                p.ResolvedAt
+            ))
+            .ToListAsync(cancellationToken);
+
+        return new MyProblemsDashboardDto(
+            OpenCount: openCount,
+            SolvedCount: solvedCount,
+            TotalCount: totalCount,
+            Recent: recent
+        );
+    }
+
+    public async Task<PagedResultDto<KnowledgeArticleListItemDto>> SearchPublishedArticlesAsync(
+        string? query,
+        string? technology,
+        int page = 1,
+        int pageSize = 10,
+        CancellationToken cancellationToken = default)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1 || pageSize > 100) pageSize = 10;
+
+        var dbQuery = _dbContext.KnowledgeArticles
+            .AsNoTracking()
+            .Where(a => a.IsPublished && a.Problem.Status == ProblemStatus.Solved);
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var q = query.Trim().ToLower();
+            dbQuery = dbQuery.Where(a =>
+                a.Title.ToLower().Contains(q) ||
+                a.Summary.ToLower().Contains(q) ||
+                a.ArticleCode.ToLower().Contains(q) ||
+                a.Problem.ProblemCode.ToLower().Contains(q) ||
+                a.Problem.Title.ToLower().Contains(q));
+        }
+
+        if (!string.IsNullOrWhiteSpace(technology))
+        {
+            var tech = technology.Trim().ToLower();
+            dbQuery = dbQuery.Where(a =>
+                a.Problem.ProblemRequests.Any(r => r.Framework != null && r.Framework.ToLower().Contains(tech)));
+        }
+
+        var totalCount = await dbQuery.CountAsync(cancellationToken);
+
+        var items = await dbQuery
+            .OrderByDescending(a => a.Problem.ResolvedAt ?? a.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(a => new KnowledgeArticleListItemDto(
+                a.KnowledgeArticleId,
+                a.ProblemId,
+                a.ArticleCode,
+                a.Problem.ProblemCode,
+                a.Title,
+                a.Summary,
+                a.Problem.ProblemRequests
+                    .OrderByDescending(r => r.CreatedAt)
+                    .Select(r => r.Framework)
+                    .FirstOrDefault(),
+                a.CreatedAt,
+                a.Problem.ResolvedAt
+            ))
+            .ToListAsync(cancellationToken);
+
+        return new PagedResultDto<KnowledgeArticleListItemDto>(
+            Items: items,
+            TotalCount: totalCount,
+            Page: page,
+            PageSize: pageSize
+        );
+    }
+
+    public async Task<KnowledgeArticleDetailsDto?> GetPublishedArticleAsync(
+        int? knowledgeArticleId = null,
+        int? problemId = null,
+        string? articleOrProblemCode = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.KnowledgeArticles
+            .AsNoTracking()
+            .Include(a => a.Problem)
+                .ThenInclude(p => p.ProblemRequests)
+            .Include(a => a.Problem)
+                .ThenInclude(p => p.ProblemSolutions)
+            .Include(a => a.Versions)
+            .Where(a => a.IsPublished);
+
+        if (knowledgeArticleId.HasValue)
+        {
+            query = query.Where(a => a.KnowledgeArticleId == knowledgeArticleId.Value);
+        }
+        else if (problemId.HasValue)
+        {
+            query = query.Where(a => a.ProblemId == problemId.Value);
+        }
+        else if (!string.IsNullOrWhiteSpace(articleOrProblemCode))
+        {
+            var code = articleOrProblemCode.Trim();
+            query = query.Where(a =>
+                a.ArticleCode == code ||
+                a.Problem.ProblemCode == code ||
+                a.ArticleCode == $"ART-{code}");
+        }
+        else
+        {
+            return null;
+        }
+
+        var article = await query.FirstOrDefaultAsync(cancellationToken);
+        if (article == null)
+        {
+            return null;
+        }
+
+        var version = article.Versions
+            .OrderByDescending(v => v.VersionNumber)
+            .FirstOrDefault();
+
+        var solution = article.Problem.ProblemSolutions
+            .OrderByDescending(s => s.SolvedAt)
+            .FirstOrDefault();
+
+        var framework = article.Problem.ProblemRequests
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => r.Framework)
+            .FirstOrDefault();
+
+        return new KnowledgeArticleDetailsDto(
+            KnowledgeArticleId: article.KnowledgeArticleId,
+            ProblemId: article.ProblemId,
+            ArticleCode: article.ArticleCode,
+            ProblemCode: article.Problem.ProblemCode,
+            Title: version?.Title ?? article.Title,
+            Summary: article.Summary,
+            ContentMarkdown: version?.ContentMarkdown ?? article.Summary,
+            Framework: framework,
+            Status: article.Problem.Status.ToString(),
+            CreatedAt: article.CreatedAt,
+            ResolvedAt: article.Problem.ResolvedAt,
+            RootCause: solution?.RootCause,
+            SolutionSummary: solution?.Summary
         );
     }
 

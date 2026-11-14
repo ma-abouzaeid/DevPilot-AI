@@ -203,4 +203,79 @@ public class ProblemServiceTests
         Assert.Single(history.Attempts);
         Assert.Equal("DEV-000001", history.ProblemCode);
     }
+
+    [Fact]
+    public async Task FollowUpProblemAsync_ShouldAddSecondAttemptOnSameProblem()
+    {
+        var dbContext = GetInMemoryDbContext();
+        var mockAiGateway = new Mock<IAIGateway>();
+        mockAiGateway
+            .Setup(g => g.ExecuteAsync(It.IsAny<AIGatewayRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AIGatewayResponse(
+                true,
+                """{"title":"Follow-up","framework":"C#","problem":"Still failing","location":"line 2","rootCause":"Bad null check","solutionSummary":"Fix again","steps":[{"order":1,"title":"Retry","detail":"Apply guard"}],"correctedCode":"if(x is null) return;","notes":""}""",
+                "Groq", "llama", 10, 10, 40));
+
+        var service = new ProblemService(dbContext, mockAiGateway.Object);
+        var submitted = await service.SubmitProblemAsync(new CreateProblemDto(
+            1, null, null, "NullRef", null, "var x = a.B;", null, null));
+
+        var followUp = await service.FollowUpProblemAsync(
+            submitted.ProblemId,
+            new FollowUpProblemDto("Still NullRef", "var x = a?.B;", "Tried null-conditional"),
+            userId: 1);
+
+        Assert.Equal(submitted.ProblemId, followUp.ProblemId);
+        Assert.Equal(submitted.ProblemCode, followUp.ProblemCode);
+        Assert.Equal(2, await dbContext.DebuggingAttempts.CountAsync(a => a.ProblemId == submitted.ProblemId));
+        Assert.Equal(2, await dbContext.ProblemRequests.CountAsync(r => r.ProblemId == submitted.ProblemId));
+    }
+
+    [Fact]
+    public async Task GetMyProblemsDashboardAsync_ShouldCountOnlyCurrentUser()
+    {
+        var dbContext = GetInMemoryDbContext();
+        var mockAiGateway = new Mock<IAIGateway>();
+        mockAiGateway
+            .Setup(g => g.ExecuteAsync(It.IsAny<AIGatewayRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AIGatewayResponse(true, """{"problem":"p","location":"l","rootCause":"r","solutionSummary":"s","steps":[{"order":1,"title":"t","detail":"d"}],"correctedCode":"","notes":""}""", "Groq", "m", 1, 1, 1));
+
+        var service = new ProblemService(dbContext, mockAiGateway.Object);
+        var mine = await service.SubmitProblemAsync(new CreateProblemDto(7, null, null, "err-a", null, "code-a", null, null));
+        await service.SubmitProblemAsync(new CreateProblemDto(99, null, null, "err-b", null, "code-b", null, null));
+        await service.SubmitFeedbackAsync(mine.ProblemId, mine.DebuggingAttemptId, true, "ok", userId: 7);
+
+        var dashboard = await service.GetMyProblemsDashboardAsync(7);
+
+        Assert.Equal(1, dashboard.TotalCount);
+        Assert.Equal(1, dashboard.SolvedCount);
+        Assert.Equal(0, dashboard.OpenCount);
+        Assert.Single(dashboard.Recent);
+    }
+
+    [Fact]
+    public async Task SearchPublishedArticlesAsync_ShouldReturnOnlyPublishedSolvedArticles()
+    {
+        var dbContext = GetInMemoryDbContext();
+        var mockAiGateway = new Mock<IAIGateway>();
+        mockAiGateway
+            .Setup(g => g.ExecuteAsync(It.IsAny<AIGatewayRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AIGatewayResponse(true, """{"title":"Auth fix","framework":"ASP.NET","problem":"401","location":"Auth","rootCause":"order","solutionSummary":"reorder","steps":[{"order":1,"title":"Fix","detail":"UseAuthentication first"}],"correctedCode":"app.UseAuthentication();","notes":""}""", "Groq", "m", 1, 1, 1));
+
+        var service = new ProblemService(dbContext, mockAiGateway.Object);
+        var open = await service.SubmitProblemAsync(new CreateProblemDto(1, null, null, "open-err", null, "open-code", null, null));
+        var solved = await service.SubmitProblemAsync(new CreateProblemDto(1, null, null, "solved-err", null, "solved-code", null, null));
+        await service.SubmitFeedbackAsync(solved.ProblemId, solved.DebuggingAttemptId, true, "works", userId: 1);
+
+        var articles = await service.SearchPublishedArticlesAsync(null, null);
+        Assert.Equal(1, articles.TotalCount);
+        Assert.Contains("How to fix", articles.Items[0].Title);
+
+        var details = await service.GetPublishedArticleAsync(problemId: solved.ProblemId);
+        Assert.NotNull(details);
+        Assert.False(string.IsNullOrWhiteSpace(details.ContentMarkdown));
+
+        var missing = await service.GetPublishedArticleAsync(problemId: open.ProblemId);
+        Assert.Null(missing);
+    }
 }

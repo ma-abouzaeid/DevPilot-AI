@@ -103,6 +103,7 @@
         document.getElementById("result-notes").textContent = notes;
 
         feedbackMessage.classList.add("d-none");
+        document.getElementById("feedback-actions").classList.remove("d-none");
         resultPanel.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
@@ -114,40 +115,48 @@
             .replace(/"/g, "&quot;");
     }
 
+    function readFormPayload() {
+        return {
+            sourceCode: sourceCode.value.trim(),
+            errorMessage: document.getElementById("errorMessage").value.trim(),
+            description: document.getElementById("description").value.trim()
+        };
+    }
+
+    function validatePayload(payload) {
+        if (!payload.sourceCode) {
+            showAlert("Paste the code involved in the issue.", "danger");
+            sourceCode.focus();
+            return false;
+        }
+        if (!payload.errorMessage) {
+            showAlert("Paste the error message.", "danger");
+            document.getElementById("errorMessage").focus();
+            return false;
+        }
+        return true;
+    }
+
     form.addEventListener("submit", async function (e) {
         e.preventDefault();
         hideAlert();
         if (!requireAuth()) return;
 
-        const code = sourceCode.value.trim();
-        const errorMessage = document.getElementById("errorMessage").value.trim();
-        const description = document.getElementById("description").value.trim();
-
-        if (!code) {
-            showAlert("Paste the code involved in the issue.", "danger");
-            sourceCode.focus();
-            return;
-        }
-        if (!errorMessage) {
-            showAlert("Paste the error message.", "danger");
-            document.getElementById("errorMessage").focus();
-            return;
-        }
+        const payload = readFormPayload();
+        if (!validatePayload(payload)) return;
 
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Analyzing...';
 
-        const payload = {
-            userId: 0,
-            sourceCode: code,
-            errorMessage: errorMessage,
-            description: description || null
-        };
-
         try {
             const response = await window.DevPilotApi.request(SUBMIT_URL, {
                 method: "POST",
-                body: JSON.stringify(payload)
+                body: JSON.stringify({
+                    userId: 0,
+                    sourceCode: payload.sourceCode,
+                    errorMessage: payload.errorMessage,
+                    description: payload.description || null
+                })
             });
 
             if (!response.ok || !response.success || !response.data) {
@@ -166,12 +175,8 @@
         }
     });
 
-    async function sendFeedback(isSolved) {
+    async function markSolved() {
         if (!lastResult || !requireAuth()) return;
-
-        const comments = isSolved
-            ? "Marked as solved from submit-problem page"
-            : "Still have a problem after first attempt";
 
         try {
             const feedbackUrl = new URL(
@@ -183,32 +188,94 @@
                 method: "POST",
                 body: JSON.stringify({
                     attemptId: lastResult.debuggingAttemptId,
-                    isSolved: isSolved,
-                    comments: comments
+                    isSolved: true,
+                    comments: "Marked as solved from submit-problem page"
                 })
             });
 
             feedbackMessage.classList.remove("d-none");
-            if (isSolved) {
-                feedbackMessage.textContent = "Great — solution saved and a knowledge article draft was created.";
-            } else {
-                feedbackMessage.textContent = "Got it. Refine the code or error above and submit again.";
-            }
+            feedbackMessage.textContent = "Great — solution saved and a published knowledge article was created.";
+            document.getElementById("feedback-actions").classList.add("d-none");
 
             if (response && response.data && response.data.problemCode) {
                 renderResult(response.data);
+                document.getElementById("feedback-actions").classList.add("d-none");
+                feedbackMessage.classList.remove("d-none");
             }
         } catch (err) {
             showAlert(err.message || "Failed to submit feedback.", "danger");
         }
     }
 
-    document.getElementById("btn-solved").addEventListener("click", function () {
-        sendFeedback(true);
-    });
-    document.getElementById("btn-unsolved").addEventListener("click", function () {
-        sendFeedback(false);
-    });
+    async function followUpSameProblem() {
+        if (!lastResult || !requireAuth()) return;
+        hideAlert();
+
+        const payload = readFormPayload();
+        if (!validatePayload(payload)) {
+            feedbackMessage.classList.remove("d-none");
+            feedbackMessage.textContent = "Update the code and/or error above, then click Still have a problem again.";
+            return;
+        }
+
+        // Record unsolved feedback on the previous attempt (best-effort), then re-debug same ticket.
+        try {
+            const feedbackUrl = new URL(
+                "/api/Problems/" + lastResult.problemId + "/attempts/" + lastResult.debuggingAttemptId + "/feedback",
+                API_BASE
+            ).href;
+            await window.DevPilotApi.request(feedbackUrl, {
+                method: "POST",
+                body: JSON.stringify({
+                    attemptId: lastResult.debuggingAttemptId,
+                    isSolved: false,
+                    comments: "Still have a problem — requesting follow-up analysis"
+                })
+            });
+        } catch (e) {
+            console.warn("Unsolved feedback failed", e);
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Follow-up analysis...';
+        document.getElementById("btn-unsolved").disabled = true;
+
+        try {
+            const followUpUrl = new URL(
+                "/api/Problems/" + lastResult.problemId + "/follow-up",
+                API_BASE
+            ).href;
+
+            const response = await window.DevPilotApi.request(followUpUrl, {
+                method: "POST",
+                body: JSON.stringify({
+                    sourceCode: payload.sourceCode,
+                    errorMessage: payload.errorMessage,
+                    description: payload.description || null
+                })
+            });
+
+            if (!response.ok || !response.success || !response.data) {
+                const detail = (response.errors && response.errors[0] && response.errors[0].message)
+                    || response.message
+                    || "Follow-up analysis failed.";
+                throw new Error(detail);
+            }
+
+            renderResult(response.data);
+            feedbackMessage.classList.remove("d-none");
+            feedbackMessage.textContent = "Follow-up complete on the same ticket (" + (response.data.problemCode || "") + "). Review the new analysis.";
+        } catch (err) {
+            showAlert(err.message || "Failed to run follow-up analysis.", "danger");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-bug"></i> Analyze with AI';
+            document.getElementById("btn-unsolved").disabled = false;
+        }
+    }
+
+    document.getElementById("btn-solved").addEventListener("click", markSolved);
+    document.getElementById("btn-unsolved").addEventListener("click", followUpSameProblem);
 
     requireAuth();
 })();
