@@ -16,12 +16,18 @@ public class ChallengeService : IChallengeService
     private readonly IApplicationDbContext _db;
     private readonly IAIGateway _aiGateway;
     private readonly IPlanUsageService? _planUsageService;
+    private readonly IAuditService? _auditService;
 
-    public ChallengeService(IApplicationDbContext db, IAIGateway aiGateway, IPlanUsageService? planUsageService = null)
+    public ChallengeService(
+        IApplicationDbContext db,
+        IAIGateway aiGateway,
+        IPlanUsageService? planUsageService = null,
+        IAuditService? auditService = null)
     {
         _db = db;
         _aiGateway = aiGateway;
         _planUsageService = planUsageService;
+        _auditService = auditService;
     }
 
     public async Task<Challenge?> GenerateFromSolvedProblemAsync(
@@ -76,12 +82,7 @@ public class ChallengeService : IChallengeService
         {
             try
             {
-                await _planUsageService.ChargeCreditsAsync(
-                    problem.UserId,
-                    CreditCosts.ChallengeGeneration,
-                    $"Challenge generation for problem {problem.ProblemCode}",
-                    referenceId: $"challenge-gen:{problem.ProblemId}",
-                    cancellationToken);
+                await _planUsageService.EnsureCreditsAsync(problem.UserId, CreditCosts.ChallengeGeneration, cancellationToken);
             }
             catch
             {
@@ -95,6 +96,8 @@ public class ChallengeService : IChallengeService
             UserPrompt: userPrompt,
             TaskType: "ChallengeGeneration",
             UserId: problem.UserId,
+            ProblemId: problem.ProblemId,
+            Purpose: $"Generate practice challenge from {problem.ProblemCode}",
             MaxTokens: 2048,
             Temperature: 0.35
         ), cancellationToken);
@@ -103,6 +106,32 @@ public class ChallengeService : IChallengeService
         {
             // Soft-fail: solving a problem should not break because challenge generation failed.
             return null;
+        }
+
+        if (_planUsageService != null)
+        {
+            try
+            {
+                await _planUsageService.ChargeCreditsAsync(
+                    problem.UserId,
+                    CreditCosts.ChallengeGeneration,
+                    $"Challenge generation for problem {problem.ProblemCode}",
+                    referenceId: $"challenge-gen:{problem.ProblemId}",
+                    aiUsageEventId: ai.AIUsageEventId,
+                    metadataJson: JsonSerializer.Serialize(new
+                    {
+                        taskType = "ChallengeGeneration",
+                        problem.ProblemId,
+                        aiRequestId = ai.AIRequestId,
+                        provider = ai.ProviderName
+                    }),
+                    tokensUsed: ai.TotalTokens,
+                    cancellationToken: cancellationToken);
+            }
+            catch
+            {
+                // Soft-fail if charge races to empty; challenge still useful.
+            }
         }
 
         var generated = ParseGeneratedChallenge(ai.Content);
@@ -131,6 +160,27 @@ public class ChallengeService : IChallengeService
 
         _db.Challenges.Add(challenge);
         await _db.SaveChangesAsync(cancellationToken);
+
+        if (_auditService != null)
+        {
+            await _auditService.LogAsync(
+                SystemAuditEventTypes.ChallengeGenerated,
+                nameof(Challenge),
+                challenge.ChallengeId.ToString(),
+                oldValues: null,
+                newValues: new
+                {
+                    challenge.ChallengeId,
+                    challenge.Title,
+                    problem.ProblemId,
+                    ai.AIRequestId,
+                    ai.AIUsageEventId,
+                    ai.ProviderName
+                },
+                userId: problem.UserId,
+                cancellationToken: cancellationToken);
+        }
+
         return challenge;
     }
 
@@ -306,12 +356,7 @@ public class ChallengeService : IChallengeService
 
         if (_planUsageService != null)
         {
-            await _planUsageService.ChargeCreditsAsync(
-                userId,
-                CreditCosts.ChallengeEvaluation,
-                $"Challenge evaluation #{challengeId}",
-                referenceId: $"challenge-eval:{challengeId}:{attempt.ChallengeAttemptId}",
-                cancellationToken);
+            await _planUsageService.EnsureCreditsAsync(userId, CreditCosts.ChallengeEvaluation, cancellationToken);
         }
 
         var ai = await _aiGateway.ExecuteAsync(new AIGatewayRequest(
@@ -319,6 +364,8 @@ public class ChallengeService : IChallengeService
             UserPrompt: userPrompt,
             TaskType: "ChallengeEvaluation",
             UserId: userId,
+            ProblemId: challenge.ProblemId,
+            Purpose: $"Evaluate challenge #{challengeId} attempt",
             MaxTokens: 2048,
             Temperature: 0.2
         ), cancellationToken);
@@ -328,6 +375,26 @@ public class ChallengeService : IChallengeService
             attempt.Status = "Failed";
             await _db.SaveChangesAsync(cancellationToken);
             throw AppError.ServiceUnavailable(ai.ErrorMessage ?? "Challenge evaluation failed.", "AI_GATEWAY_UNAVAILABLE");
+        }
+
+        if (_planUsageService != null)
+        {
+            await _planUsageService.ChargeCreditsAsync(
+                userId,
+                CreditCosts.ChallengeEvaluation,
+                $"Challenge evaluation #{challengeId}",
+                referenceId: $"challenge-eval:{challengeId}:{attempt.ChallengeAttemptId}",
+                aiUsageEventId: ai.AIUsageEventId,
+                metadataJson: JsonSerializer.Serialize(new
+                {
+                    taskType = "ChallengeEvaluation",
+                    challengeId,
+                    attempt.ChallengeAttemptId,
+                    aiRequestId = ai.AIRequestId,
+                    provider = ai.ProviderName
+                }),
+                tokensUsed: ai.TotalTokens,
+                cancellationToken: cancellationToken);
         }
 
         var graded = ParseEvaluation(ai.Content, challenge.MaxPoints);
@@ -348,6 +415,27 @@ public class ChallengeService : IChallengeService
         attempt.Status = graded.IsPassed ? "Passed" : "Reviewed";
         _db.ChallengeEvaluations.Add(evaluation);
         await _db.SaveChangesAsync(cancellationToken);
+
+        if (_auditService != null)
+        {
+            await _auditService.LogAsync(
+                SystemAuditEventTypes.ChallengeEvaluated,
+                nameof(ChallengeAttempt),
+                attempt.ChallengeAttemptId.ToString(),
+                oldValues: null,
+                newValues: new
+                {
+                    challengeId,
+                    attempt.ChallengeAttemptId,
+                    evaluation.IsPassed,
+                    evaluation.PointsAwarded,
+                    ai.AIRequestId,
+                    ai.AIUsageEventId,
+                    ai.ProviderName
+                },
+                userId: userId,
+                cancellationToken: cancellationToken);
+        }
 
         return new ChallengeEvaluationResultDto(
             attempt.ChallengeAttemptId,

@@ -9,9 +9,6 @@ public interface IUserService
     Task<UserDto> GetCurrentProfileAsync(int userId, CancellationToken cancellationToken = default);
     Task<UserDto> UpdateCurrentProfileAsync(int userId, UpdateUserProfileRequestDto request, CancellationToken cancellationToken = default);
     Task ChangePasswordAsync(int userId, ChangePasswordRequestDto request, CancellationToken cancellationToken = default);
-    Task<EmailChangeResponseDto> RequestEmailChangeAsync(int userId, RequestEmailChangeDto request, CancellationToken cancellationToken = default);
-    Task<UserDto> ConfirmEmailChangeAsync(int userId, ConfirmEmailChangeDto request, CancellationToken cancellationToken = default);
-    Task<EmailChangeResponseDto> ResendEmailChangeAsync(int userId, CancellationToken cancellationToken = default);
 }
 
 public record UpdateUserProfileRequestDto(
@@ -35,26 +32,3 @@ public class ChangePasswordRequestDto
     [Compare(nameof(NewPassword), ErrorMessage = "New password and confirmation do not match.")]
     public string ConfirmNewPassword { get; set; } = string.Empty;
 }
-
-public record RequestEmailChangeDto(
-    [Required]
-    [StringLength(100, MinimumLength = 1)]
-    string CurrentPassword,
-
-    [Required]
-    [EmailAddress]
-    [StringLength(255)]
-    string NewEmail
-);
-
-public record ConfirmEmailChangeDto(
-    [Required]
-    [StringLength(10, MinimumLength = 6)]
-    string Code
-);
-
-public record EmailChangeResponseDto(
-    bool Success,
-    string Message,
-    string PendingEmail
-);

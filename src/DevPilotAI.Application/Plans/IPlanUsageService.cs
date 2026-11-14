@@ -10,6 +10,15 @@ public interface IPlanUsageService
     Task<UsagePeriod> EnsureCurrentPeriodAsync(int userId, CancellationToken cancellationToken = default);
     Task EnsureFeatureAsync(int userId, string featureKey, CancellationToken cancellationToken = default);
     Task<bool> HasFeatureAsync(int userId, string featureKey, CancellationToken cancellationToken = default);
-    Task ChargeCreditsAsync(int userId, int amount, string reason, string? referenceId = null, CancellationToken cancellationToken = default);
+    Task EnsureCreditsAsync(int userId, int amount, CancellationToken cancellationToken = default);
+    Task ChargeCreditsAsync(
+        int userId,
+        int amount,
+        string reason,
+        string? referenceId = null,
+        long? aiUsageEventId = null,
+        string? metadataJson = null,
+        int tokensUsed = 0,
+        CancellationToken cancellationToken = default);
     Task<MyPlanUsageDto> ActivatePlanAsync(int userId, string planCode, CancellationToken cancellationToken = default);
 }

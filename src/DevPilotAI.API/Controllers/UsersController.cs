@@ -62,25 +62,4 @@ public class UsersController : ControllerBase
         await _userService.ChangePasswordAsync(GetRequiredUserId(), request, cancellationToken);
         return Ok(ApiResponse<object?>.SuccessResult(null, "Password changed successfully. Please sign in again on other devices.", GetTraceId()));
     }
-
-    [HttpPost("me/change-email")]
-    public async Task<IActionResult> RequestEmailChange([FromBody] RequestEmailChangeDto request, CancellationToken cancellationToken)
-    {
-        var result = await _userService.RequestEmailChangeAsync(GetRequiredUserId(), request, cancellationToken);
-        return Ok(ApiResponse<EmailChangeResponseDto>.SuccessResult(result, result.Message, GetTraceId()));
-    }
-
-    [HttpPost("me/confirm-email-change")]
-    public async Task<IActionResult> ConfirmEmailChange([FromBody] ConfirmEmailChangeDto request, CancellationToken cancellationToken)
-    {
-        var profile = await _userService.ConfirmEmailChangeAsync(GetRequiredUserId(), request, cancellationToken);
-        return Ok(ApiResponse<UserDto>.SuccessResult(profile, "Email updated successfully.", GetTraceId()));
-    }
-
-    [HttpPost("me/resend-email-change")]
-    public async Task<IActionResult> ResendEmailChange(CancellationToken cancellationToken)
-    {
-        var result = await _userService.ResendEmailChangeAsync(GetRequiredUserId(), cancellationToken);
-        return Ok(ApiResponse<EmailChangeResponseDto>.SuccessResult(result, result.Message, GetTraceId()));
-    }
 }

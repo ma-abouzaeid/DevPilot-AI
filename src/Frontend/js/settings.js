@@ -12,10 +12,6 @@
     const verifiedHint = document.getElementById("email-verified-hint");
     const profileForm = document.getElementById("profile-form");
     const passwordForm = document.getElementById("password-form");
-    const emailChangeForm = document.getElementById("email-change-form");
-    const emailConfirmForm = document.getElementById("email-confirm-form");
-    const emailConfirmPanel = document.getElementById("email-confirm-panel");
-    const pendingEmailLabel = document.getElementById("pending-email-label");
     const deleteBtn = document.getElementById("btn-delete-account");
 
     function showAlert(message, type) {
@@ -30,17 +26,6 @@
         alertBox.textContent = "";
     }
 
-    function showPendingEmail(pending) {
-        if (pending) {
-            emailConfirmPanel.classList.remove("d-none");
-            pendingEmailLabel.textContent = pending;
-            document.getElementById("new-email").value = pending;
-        } else {
-            emailConfirmPanel.classList.add("d-none");
-            pendingEmailLabel.textContent = "";
-        }
-    }
-
     async function loadProfile() {
         const url = new URL("/api/Users/me", API_BASE).href;
         const res = await window.DevPilotApi.request(url);
@@ -51,9 +36,8 @@
         emailDisplay.value = data.email || data.Email || "";
         const verifiedAt = data.emailVerifiedAt || data.EmailVerifiedAt;
         verifiedHint.textContent = verifiedAt
-            ? "Verified · change email in the section below."
-            : "Not verified yet · you can still change email below.";
-        showPendingEmail(data.pendingEmailChange || data.PendingEmailChange || null);
+            ? "Verified on this account."
+            : "Not verified yet.";
     }
 
     profileForm.addEventListener("submit", async function (e) {
@@ -112,75 +96,6 @@
             showAlert("Password updated successfully.", "success");
         } catch (err) {
             showAlert(err.message || "Password update failed", "danger");
-        } finally {
-            btn.disabled = false;
-        }
-    });
-
-    emailChangeForm.addEventListener("submit", async function (e) {
-        e.preventDefault();
-        clearAlert();
-        const btn = document.getElementById("btn-request-email");
-        btn.disabled = true;
-        try {
-            const url = new URL("/api/Users/me/change-email", API_BASE).href;
-            const res = await window.DevPilotApi.request(url, {
-                method: "POST",
-                body: JSON.stringify({
-                    currentPassword: document.getElementById("email-current-password").value,
-                    newEmail: document.getElementById("new-email").value.trim()
-                })
-            });
-            if (!res.ok || !res.data) throw new Error(res.message || "Could not start email change");
-            const pending = res.data.pendingEmail || res.data.PendingEmail;
-            showPendingEmail(pending);
-            document.getElementById("email-current-password").value = "";
-            showAlert(res.message || res.data.message || "Verification code sent.", "success");
-        } catch (err) {
-            showAlert(err.message || "Could not start email change", "danger");
-        } finally {
-            btn.disabled = false;
-        }
-    });
-
-    emailConfirmForm.addEventListener("submit", async function (e) {
-        e.preventDefault();
-        clearAlert();
-        const btn = document.getElementById("btn-confirm-email");
-        btn.disabled = true;
-        try {
-            const url = new URL("/api/Users/me/confirm-email-change", API_BASE).href;
-            const res = await window.DevPilotApi.request(url, {
-                method: "POST",
-                body: JSON.stringify({ code: document.getElementById("email-otp").value.trim() })
-            });
-            if (!res.ok || !res.data) throw new Error(res.message || "Email confirmation failed");
-            emailDisplay.value = res.data.email || res.data.Email || emailDisplay.value;
-            document.getElementById("email-otp").value = "";
-            document.getElementById("new-email").value = "";
-            showPendingEmail(null);
-            verifiedHint.textContent = "Verified · change email in the section below.";
-            showAlert("Email updated. Your account data stayed the same.", "success");
-        } catch (err) {
-            showAlert(err.message || "Email confirmation failed", "danger");
-        } finally {
-            btn.disabled = false;
-        }
-    });
-
-    document.getElementById("btn-resend-email").addEventListener("click", async function () {
-        clearAlert();
-        const btn = document.getElementById("btn-resend-email");
-        btn.disabled = true;
-        try {
-            const url = new URL("/api/Users/me/resend-email-change", API_BASE).href;
-            const res = await window.DevPilotApi.request(url, { method: "POST" });
-            if (!res.ok) throw new Error(res.message || "Resend failed");
-            const pending = res.data && (res.data.pendingEmail || res.data.PendingEmail);
-            if (pending) showPendingEmail(pending);
-            showAlert(res.message || "Code resent.", "success");
-        } catch (err) {
-            showAlert(err.message || "Resend failed", "danger");
         } finally {
             btn.disabled = false;
         }

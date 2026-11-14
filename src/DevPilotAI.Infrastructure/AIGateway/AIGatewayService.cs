@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using DevPilotAI.Application.Common.Interfaces;
@@ -18,21 +17,28 @@ public class AIGatewayService : IAIGateway
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AIGatewayService> _logger;
+    private readonly IAuditService? _auditService;
 
     public AIGatewayService(
         DevPilotDbContext dbContext,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
-        ILogger<AIGatewayService> logger)
+        ILogger<AIGatewayService> logger,
+        IAuditService? auditService = null)
     {
         _dbContext = dbContext;
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
         _logger = logger;
+        _auditService = auditService;
     }
 
     public async Task<AIGatewayResponse> ExecuteAsync(AIGatewayRequest request, CancellationToken cancellationToken = default)
     {
+        var correlationId = string.IsNullOrWhiteSpace(request.CorrelationId)
+            ? Guid.NewGuid().ToString("N")
+            : request.CorrelationId.Trim();
+
         var providers = await _dbContext.AIProviders
             .Include(p => p.Models)
             .Where(p => p.Status != ProviderStatus.Disabled)
@@ -50,11 +56,13 @@ public class AIGatewayService : IAIGateway
                 PromptTokens: 0,
                 CompletionTokens: 0,
                 DurationMs: 0,
-                ErrorMessage: "No AI providers are configured. Seed providers and add API keys."
+                ErrorMessage: "No AI providers are configured. Seed providers and add API keys.",
+                CorrelationId: correlationId
             );
         }
 
         var errors = new List<string>();
+        var retrySequence = 0;
 
         foreach (var provider in providers)
         {
@@ -74,9 +82,14 @@ public class AIGatewayService : IAIGateway
             }
 
             var model = provider.Models.FirstOrDefault(m => m.IsActive)
-                        ?? provider.Models.FirstOrDefault()
-                        ?? new AIModel { ModelName = "default", AIProviderId = provider.AIProviderId };
+                        ?? provider.Models.FirstOrDefault();
+            if (model == null || model.AIModelId <= 0)
+            {
+                errors.Add($"{provider.Name}: no active model configured");
+                continue;
+            }
 
+            var startedAt = DateTime.UtcNow;
             var sw = Stopwatch.StartNew();
             try
             {
@@ -92,26 +105,36 @@ public class AIGatewayService : IAIGateway
 
                 var promptTokens = EstimateTokens(request.SystemPrompt) + EstimateTokens(request.UserPrompt);
                 var completionTokens = EstimateTokens(responseContent);
+                var totalTokens = promptTokens + completionTokens;
 
-                var aiReq = new AIRequest
-                {
-                    UserId = request.UserId,
-                    AIProviderId = provider.AIProviderId,
-                    AIModelId = model.AIModelId > 0 ? model.AIModelId : 0,
-                    DebuggingAttemptId = request.DebuggingAttemptId,
-                    TaskType = request.TaskType,
-                    PromptTokensUsed = promptTokens,
-                    CompletionTokensUsed = completionTokens,
-                    TotalTokensUsed = promptTokens + completionTokens,
-                    DurationMs = sw.ElapsedMilliseconds,
-                    Success = true
-                };
+                var (aiRequestId, usageEventId) = await PersistAiTelemetryAsync(
+                    request,
+                    provider,
+                    model,
+                    success: true,
+                    promptTokens,
+                    completionTokens,
+                    sw.ElapsedMilliseconds,
+                    errorMessage: null,
+                    correlationId,
+                    retrySequence,
+                    startedAt,
+                    cancellationToken);
 
-                if (aiReq.AIModelId > 0)
-                {
-                    _dbContext.AIRequests.Add(aiReq);
-                    await _dbContext.SaveChangesAsync(cancellationToken);
-                }
+                await TryAuditAiAsync(
+                    SystemAuditEventTypes.AiRequestCompleted,
+                    request,
+                    provider.Name,
+                    model.ModelName,
+                    success: true,
+                    promptTokens,
+                    completionTokens,
+                    sw.ElapsedMilliseconds,
+                    aiRequestId,
+                    usageEventId,
+                    correlationId,
+                    error: null,
+                    cancellationToken);
 
                 return new AIGatewayResponse(
                     IsSuccess: true,
@@ -120,12 +143,17 @@ public class AIGatewayService : IAIGateway
                     ModelName: model.ModelName,
                     PromptTokens: promptTokens,
                     CompletionTokens: completionTokens,
-                    DurationMs: sw.ElapsedMilliseconds
+                    DurationMs: sw.ElapsedMilliseconds,
+                    AIRequestId: aiRequestId,
+                    AIUsageEventId: usageEventId,
+                    TotalTokens: totalTokens,
+                    CorrelationId: correlationId
                 );
             }
             catch (Exception ex)
             {
                 sw.Stop();
+                retrySequence++;
                 _logger.LogError(ex, "AI Provider {ProviderName} failed for task {TaskType}", provider.Name, request.TaskType);
 
                 var isRateLimited = ex.Message.Contains("429", StringComparison.Ordinal)
@@ -136,6 +164,36 @@ public class AIGatewayService : IAIGateway
                 provider.RateLimitedUntil = isRateLimited ? DateTime.UtcNow.AddMinutes(5) : null;
                 provider.LastError = Truncate(ex.Message, 1000);
                 errors.Add($"{provider.Name}: {Truncate(ex.Message, 300)}");
+
+                var promptTokens = EstimateTokens(request.SystemPrompt) + EstimateTokens(request.UserPrompt);
+                var (aiRequestId, usageEventId) = await PersistAiTelemetryAsync(
+                    request,
+                    provider,
+                    model,
+                    success: false,
+                    promptTokens,
+                    completionTokens: 0,
+                    sw.ElapsedMilliseconds,
+                    errorMessage: Truncate(ex.Message, 1000),
+                    correlationId,
+                    retrySequence - 1,
+                    startedAt,
+                    cancellationToken);
+
+                await TryAuditAiAsync(
+                    SystemAuditEventTypes.AiRequestFailed,
+                    request,
+                    provider.Name,
+                    model.ModelName,
+                    success: false,
+                    promptTokens,
+                    0,
+                    sw.ElapsedMilliseconds,
+                    aiRequestId,
+                    usageEventId,
+                    correlationId,
+                    Truncate(ex.Message, 300),
+                    cancellationToken);
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }
@@ -149,13 +207,130 @@ public class AIGatewayService : IAIGateway
             PromptTokens: 0,
             CompletionTokens: 0,
             DurationMs: 0,
-            ErrorMessage: $"All AI Providers failed: {string.Join(" | ", errors)}"
+            ErrorMessage: $"All AI Providers failed: {string.Join(" | ", errors)}",
+            CorrelationId: correlationId
         );
+    }
+
+    private async Task<(int? AIRequestId, long? AIUsageEventId)> PersistAiTelemetryAsync(
+        AIGatewayRequest request,
+        AIProvider provider,
+        AIModel model,
+        bool success,
+        int promptTokens,
+        int completionTokens,
+        long durationMs,
+        string? errorMessage,
+        string correlationId,
+        int retrySequence,
+        DateTime startedAt,
+        CancellationToken cancellationToken)
+    {
+        var aiReq = new AIRequest
+        {
+            UserId = request.UserId,
+            AIProviderId = provider.AIProviderId,
+            AIModelId = model.AIModelId,
+            DebuggingAttemptId = request.DebuggingAttemptId,
+            TaskType = request.TaskType,
+            PromptTokensUsed = promptTokens,
+            CompletionTokensUsed = completionTokens,
+            TotalTokensUsed = promptTokens + completionTokens,
+            DurationMs = durationMs,
+            Success = success,
+            ErrorMessage = errorMessage,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _dbContext.AIRequests.Add(aiReq);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        long? usageEventId = null;
+        if (request.UserId is int userId && userId > 0)
+        {
+            var usageEvent = new AIUsageEvent
+            {
+                AIRequestId = aiReq.AIRequestId,
+                UserId = userId,
+                ProblemId = request.ProblemId,
+                ProviderId = provider.AIProviderId,
+                ModelId = model.AIModelId,
+                OperationType = request.TaskType,
+                InputTokens = promptTokens,
+                OutputTokens = completionTokens,
+                TotalTokens = promptTokens + completionTokens,
+                CostType = "Credits",
+                Status = success ? "Success" : "Failed",
+                CorrelationId = correlationId,
+                IdempotencyKey = Truncate(request.Purpose, 150),
+                StartedAt = startedAt,
+                CompletedAt = DateTime.UtcNow,
+                DurationMs = durationMs,
+                RetrySequence = retrySequence,
+                ErrorCode = success ? null : Truncate(errorMessage, 100),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _dbContext.AIUsageEvents.Add(usageEvent);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            usageEventId = usageEvent.AIUsageEventId;
+        }
+
+        return (aiReq.AIRequestId, usageEventId);
+    }
+
+    private async Task TryAuditAiAsync(
+        string action,
+        AIGatewayRequest request,
+        string providerName,
+        string modelName,
+        bool success,
+        int promptTokens,
+        int completionTokens,
+        long durationMs,
+        int? aiRequestId,
+        long? usageEventId,
+        string correlationId,
+        string? error,
+        CancellationToken cancellationToken)
+    {
+        if (_auditService == null) return;
+
+        try
+        {
+            await _auditService.LogAsync(
+                action,
+                nameof(AIRequest),
+                (aiRequestId ?? 0).ToString(),
+                oldValues: null,
+                newValues: new
+                {
+                    request.TaskType,
+                    Purpose = request.Purpose,
+                    request.UserId,
+                    request.ProblemId,
+                    Provider = providerName,
+                    Model = modelName,
+                    Success = success,
+                    PromptTokens = promptTokens,
+                    CompletionTokens = completionTokens,
+                    DurationMs = durationMs,
+                    AIRequestId = aiRequestId,
+                    AIUsageEventId = usageEventId,
+                    CorrelationId = correlationId,
+                    Error = error
+                },
+                userId: request.UserId,
+                cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to write AI audit event for {TaskType}", request.TaskType);
+        }
     }
 
     private static List<AIProvider> OrderProvidersForTask(List<AIProvider> providers, string taskType)
     {
-        // KnowledgeAdaptation prefers Groq (fast). Debugging prefers Gemini (structured quality).
         int Rank(AIProvider p)
         {
             var name = p.Name.Trim();
@@ -192,7 +367,6 @@ public class AIGatewayService : IAIGateway
             return key.Trim();
         }
 
-        // Backward-compatible short names
         return provider.Name.Trim().ToLowerInvariant() switch
         {
             "gemini" => _configuration["AIGateway:GeminiApiKey"],
@@ -303,7 +477,6 @@ public class AIGatewayService : IAIGateway
             ["max_tokens"] = request.MaxTokens
         };
 
-        // Ask OpenAI-compatible providers for JSON when supported.
         if (!string.Equals(provider.Name, "NVIDIA", StringComparison.OrdinalIgnoreCase))
         {
             payload["response_format"] = new { type = "json_object" };
@@ -325,7 +498,6 @@ public class AIGatewayService : IAIGateway
         var body = await res.Content.ReadAsStringAsync(cancellationToken);
         if (!res.IsSuccessStatusCode)
         {
-            // Retry once without response_format if provider rejects it.
             if ((int)res.StatusCode == 400 && payload.ContainsKey("response_format"))
             {
                 payload.Remove("response_format");
@@ -379,6 +551,9 @@ public class AIGatewayService : IAIGateway
     private static int EstimateTokens(string? text) =>
         string.IsNullOrEmpty(text) ? 0 : Math.Max(1, text.Length / 4);
 
-    private static string Truncate(string value, int max) =>
-        value.Length <= max ? value : value[..max];
+    private static string? Truncate(string? value, int max)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return value;
+        return value.Length <= max ? value : value[..max];
+    }
 }

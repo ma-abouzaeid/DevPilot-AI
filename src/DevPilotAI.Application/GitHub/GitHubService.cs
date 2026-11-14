@@ -33,6 +33,7 @@ public class GitHubService : IGitHubService
     private readonly IProblemService _problemService;
     private readonly IConfiguration _configuration;
     private readonly IPlanUsageService? _planUsageService;
+    private readonly IAuditService? _auditService;
 
     public GitHubService(
         IApplicationDbContext db,
@@ -41,7 +42,8 @@ public class GitHubService : IGitHubService
         IAIGateway aiGateway,
         IProblemService problemService,
         IConfiguration configuration,
-        IPlanUsageService? planUsageService = null)
+        IPlanUsageService? planUsageService = null,
+        IAuditService? auditService = null)
     {
         _db = db;
         _gitHub = gitHub;
@@ -50,6 +52,7 @@ public class GitHubService : IGitHubService
         _problemService = problemService;
         _configuration = configuration;
         _planUsageService = planUsageService;
+        _auditService = auditService;
     }
 
     public async Task<GitHubConnectionStatusDto> GetConnectionStatusAsync(int userId, CancellationToken cancellationToken = default)
@@ -349,12 +352,7 @@ public class GitHubService : IGitHubService
 
         if (_planUsageService != null)
         {
-            await _planUsageService.ChargeCreditsAsync(
-                userId,
-                CreditCosts.CodeReview,
-                $"GitHub code review for {dto.FullName}",
-                referenceId: $"github-review:{dto.FullName}",
-                cancellationToken);
+            await _planUsageService.EnsureCreditsAsync(userId, CreditCosts.CodeReview, cancellationToken);
         }
 
         var ai = await _aiGateway.ExecuteAsync(new AIGatewayRequest(
@@ -362,6 +360,7 @@ public class GitHubService : IGitHubService
             UserPrompt: userPrompt.ToString(),
             TaskType: "CodeReview",
             UserId: userId,
+            Purpose: $"GitHub code review for {dto.FullName} ({branch})",
             MaxTokens: 4096,
             Temperature: 0.2
         ), cancellationToken);
@@ -369,6 +368,27 @@ public class GitHubService : IGitHubService
         if (!ai.IsSuccess)
         {
             throw AppError.ServiceUnavailable(ai.ErrorMessage ?? "AI code review failed.", "AI_GATEWAY_UNAVAILABLE");
+        }
+
+        if (_planUsageService != null)
+        {
+            await _planUsageService.ChargeCreditsAsync(
+                userId,
+                CreditCosts.CodeReview,
+                $"GitHub code review for {dto.FullName}",
+                referenceId: $"github-review:{dto.FullName}",
+                aiUsageEventId: ai.AIUsageEventId,
+                metadataJson: JsonSerializer.Serialize(new
+                {
+                    taskType = "CodeReview",
+                    repo = dto.FullName,
+                    branch,
+                    files = bundles.Count,
+                    aiRequestId = ai.AIRequestId,
+                    provider = ai.ProviderName
+                }),
+                tokensUsed: ai.TotalTokens,
+                cancellationToken: cancellationToken);
         }
 
         var parsed = ParseReviewPayload(ai.Content);
@@ -400,6 +420,28 @@ public class GitHubService : IGitHubService
         _db.CodeReviews.Add(review);
         await _db.SaveChangesAsync(cancellationToken);
 
+        if (_auditService != null)
+        {
+            await _auditService.LogAsync(
+                SystemAuditEventTypes.GithubReviewCompleted,
+                nameof(CodeReview),
+                review.CodeReviewId.ToString(),
+                oldValues: null,
+                newValues: new
+                {
+                    review.CodeReviewId,
+                    dto.FullName,
+                    branch,
+                    Findings = review.Findings.Count,
+                    ai.AIRequestId,
+                    ai.AIUsageEventId,
+                    ai.ProviderName,
+                    Credits = CreditCosts.CodeReview
+                },
+                userId: userId,
+                cancellationToken: cancellationToken);
+        }
+
         return new GitHubCodeReviewResultDto(
             review.CodeReviewId,
             dto.FullName,
@@ -427,6 +469,18 @@ public class GitHubService : IGitHubService
         var description = string.IsNullOrWhiteSpace(dto.Description)
             ? $"Debugging GitHub file {dto.FullName}:{dto.Path}"
             : dto.Description.Trim();
+
+        if (_auditService != null)
+        {
+            await _auditService.LogAsync(
+                SystemAuditEventTypes.GithubDebugStarted,
+                "GitHubFile",
+                $"{dto.FullName}:{dto.Path}",
+                oldValues: null,
+                newValues: new { dto.FullName, dto.Path, dto.Branch },
+                userId: userId,
+                cancellationToken: cancellationToken);
+        }
 
         return await _problemService.SubmitProblemAsync(new CreateProblemDto(
             UserId: userId,

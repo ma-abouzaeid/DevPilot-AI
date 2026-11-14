@@ -1,3 +1,4 @@
+using System.Text.Json;
 using DevPilotAI.Application.Challenges;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
@@ -17,19 +18,22 @@ public class ProblemService : IProblemService
     private readonly ISimilarityEngine? _similarityEngine;
     private readonly IChallengeService? _challengeService;
     private readonly IPlanUsageService? _planUsageService;
+    private readonly IAuditService? _auditService;
 
     public ProblemService(
         IApplicationDbContext dbContext,
         IAIGateway aiGateway,
         ISimilarityEngine? similarityEngine = null,
         IChallengeService? challengeService = null,
-        IPlanUsageService? planUsageService = null)
+        IPlanUsageService? planUsageService = null,
+        IAuditService? auditService = null)
     {
         _dbContext = dbContext;
         _aiGateway = aiGateway;
         _similarityEngine = similarityEngine;
         _challengeService = challengeService;
         _planUsageService = planUsageService;
+        _auditService = auditService;
     }
 
     public async Task<DebuggingResultDto> SubmitProblemAsync(CreateProblemDto dto, CancellationToken cancellationToken = default)
@@ -343,6 +347,24 @@ public class ProblemService : IProblemService
                 {
                     // Challenge generation must not block marking a problem as solved.
                 }
+            }
+
+            if (_auditService != null)
+            {
+                await _auditService.LogAsync(
+                    SystemAuditEventTypes.ProblemSolved,
+                    nameof(Problem),
+                    problem.ProblemId.ToString(),
+                    oldValues: null,
+                    newValues: new
+                    {
+                        problem.ProblemId,
+                        problem.ProblemCode,
+                        AttemptId = attempt.DebuggingAttemptId,
+                        ArticleId = article.KnowledgeArticleId
+                    },
+                    userId: problem.UserId,
+                    cancellationToken: cancellationToken);
             }
         }
 
@@ -778,15 +800,11 @@ public class ProblemService : IProblemService
             request.Logs,
             existingSolution);
 
+        var creditCost = CreditCosts.ForTaskType(taskType);
         if (_planUsageService != null)
         {
             await _planUsageService.EnsureFeatureAsync(problem.UserId, PlanFeatureKeys.AiDebugging, cancellationToken);
-            await _planUsageService.ChargeCreditsAsync(
-                problem.UserId,
-                CreditCosts.ForTaskType(taskType),
-                $"AI {taskType} for problem {problem.ProblemCode}",
-                referenceId: $"problem:{problem.ProblemId}:{taskType}",
-                cancellationToken);
+            await _planUsageService.EnsureCreditsAsync(problem.UserId, creditCost, cancellationToken);
         }
 
         var aiResponse = await _aiGateway.ExecuteAsync(new AIGatewayRequest(
@@ -794,6 +812,8 @@ public class ProblemService : IProblemService
             UserPrompt: userPrompt,
             TaskType: taskType,
             UserId: problem.UserId,
+            ProblemId: problem.ProblemId,
+            Purpose: $"{taskType} for {problem.ProblemCode}: {TruncateForAudit(problem.Title, 120)}",
             MaxTokens: 4096,
             Temperature: 0.2
         ), cancellationToken);
@@ -803,6 +823,51 @@ public class ProblemService : IProblemService
             throw AppError.ServiceUnavailable(
                 aiResponse.ErrorMessage ?? "All AI providers failed to analyze this problem.",
                 "AI_GATEWAY_UNAVAILABLE");
+        }
+
+        if (_planUsageService != null)
+        {
+            await _planUsageService.ChargeCreditsAsync(
+                problem.UserId,
+                creditCost,
+                $"AI {taskType} for problem {problem.ProblemCode}",
+                referenceId: $"problem:{problem.ProblemId}:{taskType}",
+                aiUsageEventId: aiResponse.AIUsageEventId,
+                metadataJson: JsonSerializer.Serialize(new
+                {
+                    taskType,
+                    problem.ProblemId,
+                    problem.ProblemCode,
+                    provider = aiResponse.ProviderName,
+                    model = aiResponse.ModelName,
+                    aiRequestId = aiResponse.AIRequestId,
+                    correlationId = aiResponse.CorrelationId
+                }),
+                tokensUsed: aiResponse.TotalTokens,
+                cancellationToken: cancellationToken);
+        }
+
+        if (_auditService != null)
+        {
+            await _auditService.LogAsync(
+                SystemAuditEventTypes.ProblemSubmitted,
+                nameof(Problem),
+                problem.ProblemId.ToString(),
+                oldValues: null,
+                newValues: new
+                {
+                    problem.ProblemId,
+                    problem.ProblemCode,
+                    TaskType = taskType,
+                    aiResponse.ProviderName,
+                    aiResponse.ModelName,
+                    aiResponse.AIRequestId,
+                    aiResponse.AIUsageEventId,
+                    Credits = creditCost,
+                    Tokens = aiResponse.TotalTokens
+                },
+                userId: problem.UserId,
+                cancellationToken: cancellationToken);
         }
 
         var payload = DebuggingResultParser.ParseOrFallback(aiResponse.Content, problem.Title);
@@ -866,6 +931,13 @@ public class ProblemService : IProblemService
             DebuggingAttemptId = attempt.DebuggingAttemptId,
             ProviderUsed = aiResponse.ProviderName
         };
+    }
+
+    private static string TruncateForAudit(string? value, int max)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+        var trimmed = value.Trim();
+        return trimmed.Length <= max ? trimmed : trimmed[..max];
     }
 
     private static bool IsUniqueConstraintViolation(DbUpdateException ex)

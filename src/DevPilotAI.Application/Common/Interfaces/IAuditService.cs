@@ -13,6 +13,22 @@ public static class SecurityAuditEventTypes
     public const string SecurityFailure = "SECURITY_FAILURE";
 }
 
+/// <summary>Product/system activity events for admin observability (credits, AI, workflows).</summary>
+public static class SystemAuditEventTypes
+{
+    public const string AiRequestCompleted = "AI_REQUEST_COMPLETED";
+    public const string AiRequestFailed = "AI_REQUEST_FAILED";
+    public const string CreditsCharged = "CREDITS_CHARGED";
+    public const string PlanActivated = "PLAN_ACTIVATED";
+    public const string ProblemSubmitted = "PROBLEM_SUBMITTED";
+    public const string ProblemFollowUp = "PROBLEM_FOLLOW_UP";
+    public const string ProblemSolved = "PROBLEM_SOLVED";
+    public const string ChallengeGenerated = "CHALLENGE_GENERATED";
+    public const string ChallengeEvaluated = "CHALLENGE_EVALUATED";
+    public const string GithubReviewCompleted = "GITHUB_REVIEW_COMPLETED";
+    public const string GithubDebugStarted = "GITHUB_DEBUG_STARTED";
+}
+
 public class AuditEvent
 {
     public string Action { get; set; } = string.Empty;

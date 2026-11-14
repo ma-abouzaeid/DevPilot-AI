@@ -9,10 +9,12 @@ namespace DevPilotAI.Application.Plans;
 public class PlanUsageService : IPlanUsageService
 {
     private readonly IApplicationDbContext _db;
+    private readonly IAuditService? _auditService;
 
-    public PlanUsageService(IApplicationDbContext db)
+    public PlanUsageService(IApplicationDbContext db, IAuditService? auditService = null)
     {
         _db = db;
+        _auditService = auditService;
     }
 
     public async Task<IReadOnlyList<PlanListItemDto>> ListPublicPlansAsync(CancellationToken cancellationToken = default)
@@ -148,12 +150,7 @@ public class PlanUsageService : IPlanUsageService
                 cancellationToken);
     }
 
-    public async Task ChargeCreditsAsync(
-        int userId,
-        int amount,
-        string reason,
-        string? referenceId = null,
-        CancellationToken cancellationToken = default)
+    public async Task EnsureCreditsAsync(int userId, int amount, CancellationToken cancellationToken = default)
     {
         if (amount <= 0) return;
 
@@ -165,23 +162,82 @@ public class PlanUsageService : IPlanUsageService
                 $"Not enough credits. This action needs {amount} credits; you have {Math.Max(0, remaining)} left this period.",
                 "INSUFFICIENT_CREDITS");
         }
+    }
+
+    public async Task ChargeCreditsAsync(
+        int userId,
+        int amount,
+        string reason,
+        string? referenceId = null,
+        long? aiUsageEventId = null,
+        string? metadataJson = null,
+        int tokensUsed = 0,
+        CancellationToken cancellationToken = default)
+    {
+        if (amount <= 0) return;
+
+        await EnsureCreditsAsync(userId, amount, cancellationToken);
+        var period = await EnsureCurrentPeriodAsync(userId, cancellationToken);
 
         period.CreditsUsed += amount;
         period.RequestCount += 1;
+        if (tokensUsed > 0)
+        {
+            period.TokenCount += tokensUsed;
+        }
         period.UpdatedAt = DateTime.UtcNow;
+
+        if (aiUsageEventId.HasValue)
+        {
+            var usageEvent = await _db.AIUsageEvents
+                .FirstOrDefaultAsync(e => e.AIUsageEventId == aiUsageEventId.Value, cancellationToken);
+            if (usageEvent != null)
+            {
+                usageEvent.CreditsCharged = (usageEvent.CreditsCharged ?? 0) + amount;
+                usageEvent.CostType = "Credits";
+                if (string.Equals(usageEvent.Status, "Success", StringComparison.OrdinalIgnoreCase)
+                    || string.IsNullOrWhiteSpace(usageEvent.Status))
+                {
+                    usageEvent.Status = "Charged";
+                }
+            }
+        }
 
         _db.UsageLedgers.Add(new UsageLedger
         {
             UserId = userId,
             UsagePeriodId = period.UsagePeriodId,
+            AIUsageEventId = aiUsageEventId,
             EntryType = "CHARGE",
             Amount = amount,
             Reason = Truncate(reason, 255),
-            ReferenceId = Truncate(referenceId, 150),
+            ReferenceId = string.IsNullOrWhiteSpace(referenceId) ? null : Truncate(referenceId, 150),
+            MetadataJson = metadataJson,
             CreatedAt = DateTime.UtcNow
         });
 
         await _db.SaveChangesAsync(cancellationToken);
+
+        if (_auditService != null)
+        {
+            await _auditService.LogAsync(
+                SystemAuditEventTypes.CreditsCharged,
+                nameof(UsageLedger),
+                userId.ToString(),
+                oldValues: null,
+                newValues: new
+                {
+                    UserId = userId,
+                    Amount = amount,
+                    Reason = reason,
+                    ReferenceId = referenceId,
+                    AIUsageEventId = aiUsageEventId,
+                    TokensUsed = tokensUsed,
+                    RemainingAfter = Math.Max(0, period.CreditsAllocated - period.CreditsUsed + period.CreditsRefunded)
+                },
+                userId: userId,
+                cancellationToken: cancellationToken);
+        }
     }
 
     public async Task<MyPlanUsageDto> ActivatePlanAsync(int userId, string planCode, CancellationToken cancellationToken = default)
@@ -230,6 +286,19 @@ public class PlanUsageService : IPlanUsageService
 
         // Refresh current period allocation for the new plan.
         await EnsureCurrentPeriodAsync(userId, cancellationToken);
+
+        if (_auditService != null)
+        {
+            await _auditService.LogAsync(
+                SystemAuditEventTypes.PlanActivated,
+                nameof(UserSubscription),
+                userId.ToString(),
+                oldValues: null,
+                newValues: new { UserId = userId, PlanCode = plan.Code, PlanId = plan.PlanId, Source = "SelfServe" },
+                userId: userId,
+                cancellationToken: cancellationToken);
+        }
+
         return await GetMyUsageAsync(userId, cancellationToken);
     }
 
