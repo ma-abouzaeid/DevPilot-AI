@@ -82,7 +82,7 @@ public class ProblemServiceTests
     }
 
     [Fact]
-    public async Task SubmitProblemAsync_EmptyTitle_ShouldThrowArgumentException()
+    public async Task SubmitProblemAsync_MissingSourceCode_ShouldThrowArgumentException()
     {
         var dbContext = GetInMemoryDbContext();
         var mockAiGateway = new Mock<IAIGateway>();
@@ -90,16 +90,67 @@ public class ProblemServiceTests
 
         var dto = new CreateProblemDto(
             UserId: 1,
-            Title: "",
-            Description: "Valid description",
-            ErrorMessage: null,
+            Title: null,
+            Description: null,
+            ErrorMessage: "NullReferenceException",
             StackTrace: null,
-            SourceCode: null,
+            SourceCode: "",
             Logs: null,
             Framework: null
         );
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.SubmitProblemAsync(dto));
+    }
+
+    [Fact]
+    public async Task SubmitProblemAsync_MinimalCodeAndError_ShouldInferTitleFromAi()
+    {
+        var dbContext = GetInMemoryDbContext();
+        var mockAiGateway = new Mock<IAIGateway>();
+
+        mockAiGateway
+            .Setup(g => g.ExecuteAsync(It.IsAny<AIGatewayRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AIGatewayResponse(
+                IsSuccess: true,
+                Content: """
+                {
+                  "title": "Null reference on user profile",
+                  "framework": "ASP.NET Core",
+                  "problem": "User profile is null when accessed",
+                  "location": "ProfileService.cs",
+                  "rootCause": "Missing null check",
+                  "solutionSummary": "Guard against null profile.",
+                  "steps": [
+                    { "order": 1, "title": "Add null guard", "detail": "Return NotFound when profile is null." }
+                  ],
+                  "correctedCode": "if (user?.Profile is null) return NotFound();",
+                  "notes": ""
+                }
+                """,
+                ProviderName: "Groq",
+                ModelName: "llama-3",
+                PromptTokens: 10,
+                CompletionTokens: 20,
+                DurationMs: 80
+            ));
+
+        var service = new ProblemService(dbContext, mockAiGateway.Object);
+
+        var dto = new CreateProblemDto(
+            UserId: 1,
+            Title: null,
+            Description: null,
+            ErrorMessage: "NullReferenceException: Object reference not set",
+            SourceCode: "var name = user.Profile.Name;"
+        );
+
+        var result = await service.SubmitProblemAsync(dto);
+
+        Assert.Equal("User profile is null when accessed", result.Problem);
+        var dbProblem = await dbContext.Problems.FirstAsync(p => p.ProblemId == result.ProblemId);
+        Assert.Equal("Null reference on user profile", dbProblem.Title);
+        var request = await dbContext.ProblemRequests.FirstAsync(r => r.ProblemId == result.ProblemId);
+        Assert.Equal("ASP.NET Core", request.Framework);
     }
 
     [Fact]
@@ -114,7 +165,7 @@ public class ProblemServiceTests
 
         var service = new ProblemService(dbContext, mockAiGateway.Object);
 
-        var createDto = new CreateProblemDto(1, "NullRef Exception", "Object null", "NullReferenceException", null, null, null, "C#");
+        var createDto = new CreateProblemDto(1, "NullRef Exception", "Object null", "NullReferenceException", null, "var x = obj.Value;", null, "C#");
         var submitted = await service.SubmitProblemAsync(createDto);
 
         var feedbackResult = await service.SubmitFeedbackAsync(submitted.ProblemId, submitted.DebuggingAttemptId, isSolved: true, comments: "Works great");
@@ -142,7 +193,7 @@ public class ProblemServiceTests
 
         var service = new ProblemService(dbContext, mockAiGateway.Object);
 
-        var createDto = new CreateProblemDto(1, "CORS Error", "Blocked by CORS", "CORS Error", null, null, null, "ASP.NET");
+        var createDto = new CreateProblemDto(1, "CORS Error", "Blocked by CORS", "CORS Error", null, "fetch('/api')", null, "ASP.NET");
         var submitted = await service.SubmitProblemAsync(createDto);
 
         var history = await service.GetProblemHistoryAsync(submitted.ProblemId);

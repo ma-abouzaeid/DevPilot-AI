@@ -2,24 +2,33 @@ using System.ComponentModel.DataAnnotations;
 
 namespace DevPilotAI.Application.Problems.DTOs;
 
+/// <summary>
+/// Minimal user input: code + error are required. Title/framework/etc. are optional —
+/// the AI infers and persists them during analysis.
+/// </summary>
 public record CreateProblemDto(
     int UserId,
-    [property: Required(ErrorMessage = "Problem title is required.")]
-    [property: StringLength(200, MinimumLength = 3, ErrorMessage = "Problem title must be between 3 and 200 characters.")]
-    string Title,
 
-    [property: Required(ErrorMessage = "Problem description is required.")]
-    [property: StringLength(10000, MinimumLength = 10, ErrorMessage = "Problem description must be between 10 and 10000 characters.")]
-    string Description,
+    /// <summary>Optional. When omitted, AI generates a searchable title from the error/code.</summary>
+    [property: StringLength(200, ErrorMessage = "Problem title cannot exceed 200 characters.")]
+    string? Title = null,
 
+    /// <summary>Optional context from the developer.</summary>
+    [property: StringLength(10000, ErrorMessage = "Problem description cannot exceed 10000 characters.")]
+    string? Description = null,
+
+    [property: Required(ErrorMessage = "Error message is required.")]
+    [property: MinLength(2, ErrorMessage = "Error message must be at least 2 characters.")]
     [property: StringLength(4000, ErrorMessage = "ErrorMessage cannot exceed 4000 characters.")]
-    string? ErrorMessage = null,
+    string ErrorMessage = "",
 
     [property: StringLength(20000, ErrorMessage = "StackTrace cannot exceed 20000 characters.")]
     string? StackTrace = null,
 
+    [property: Required(ErrorMessage = "Source code is required.")]
+    [property: MinLength(3, ErrorMessage = "Source code must be at least 3 characters.")]
     [property: StringLength(50000, ErrorMessage = "SourceCode cannot exceed 50000 characters.")]
-    string? SourceCode = null,
+    string SourceCode = "",
 
     [property: StringLength(20000, ErrorMessage = "Logs cannot exceed 20000 characters.")]
     string? Logs = null,

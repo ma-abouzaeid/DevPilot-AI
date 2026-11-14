@@ -84,8 +84,12 @@ public static partial class DebuggingResultParser
         You are DevPilot AI, an expert software debugging assistant.
         Analyze the developer's problem and respond with ONE JSON object only.
         Do not wrap the JSON in markdown fences. Do not add any text before or after the JSON.
+        The developer usually only provides code + error message (+ optional notes).
+        You must infer a clear title and framework/stack yourself and fill every field.
         Use this exact schema and key order:
         {
+          "title": "short searchable problem title (max ~80 chars)",
+          "framework": "detected language/framework/stack or empty string",
           "problem": "short clear description of the problem",
           "location": "where the issue is (file/function/line/area if known, otherwise best guess)",
           "rootCause": "the root cause in plain language",
@@ -101,6 +105,7 @@ public static partial class DebuggingResultParser
         - steps must be an ordered array with at least one item.
         - Keep explanations practical and developer-friendly.
         - Prefer concrete fixes over generic advice.
+        - Infer title and framework even when the user did not provide them.
         """;
 
     public static string BuildUserPrompt(
@@ -122,9 +127,10 @@ public static partial class DebuggingResultParser
             sb.AppendLine("[CURRENT DEVELOPER CONTEXT]");
         }
 
-        sb.AppendLine($"Title: {title}");
-        sb.AppendLine($"Framework: {framework ?? "unknown"}");
-        sb.AppendLine($"Description: {description}");
+        sb.AppendLine("The user submitted a minimal bug report. Infer title, framework, and missing context.");
+        if (!string.IsNullOrWhiteSpace(title)) sb.AppendLine($"Working title: {title}");
+        if (!string.IsNullOrWhiteSpace(framework)) sb.AppendLine($"Framework hint: {framework}");
+        if (!string.IsNullOrWhiteSpace(description)) sb.AppendLine($"Notes: {description}");
         if (!string.IsNullOrWhiteSpace(errorMessage)) sb.AppendLine($"Error: {errorMessage}");
         if (!string.IsNullOrWhiteSpace(stackTrace)) sb.AppendLine($"StackTrace: {stackTrace}");
         if (!string.IsNullOrWhiteSpace(sourceCode)) sb.AppendLine($"Code:\n{sourceCode}");
@@ -223,6 +229,8 @@ public static partial class DebuggingResultParser
 
 public class StructuredDebugPayload
 {
+    public string? Title { get; set; }
+    public string? Framework { get; set; }
     public string? Problem { get; set; }
     public string? Location { get; set; }
     public string? RootCause { get; set; }

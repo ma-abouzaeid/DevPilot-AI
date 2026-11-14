@@ -12,7 +12,7 @@
         crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/media.css">
     <link rel="stylesheet" href="css/animations.css">
@@ -26,44 +26,47 @@
             <div class="row justify-content-center">
                 <div class="col-12 col-lg-10">
                     <span class="welcome-badge">AI Debugging</span>
-                    <h1 class="title-style mb-2">Describe Your <span class="text-blue">Problem</span></h1>
-                    <p class="text-gray mb-4">Submit the issue once. DevPilot returns a fixed, ordered analysis every time.</p>
+                    <h1 class="title-style mb-2">Paste the <span class="text-blue">code</span>. Drop the error.</h1>
+                    <p class="text-gray mb-4">Only code and the error message are required. DevPilot infers the title, stack, and framework for you.</p>
 
                     <div id="form-alert" class="alert d-none" role="alert"></div>
 
                     <form id="problem-form" class="debug-form">
-                        <div class="mb-3">
-                            <label for="title" class="form-label">Problem title</label>
-                            <input type="text" class="form-control" id="title" name="title" minlength="3" maxlength="200" required
-                                placeholder="e.g. JWT refresh returns 401">
-                        </div>
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Description</label>
-                            <textarea class="form-control" id="description" name="description" rows="4" minlength="10" maxlength="10000" required
-                                placeholder="What were you doing? What did you expect? What happened instead?"></textarea>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="framework" class="form-label">Framework / Stack</label>
-                                <input type="text" class="form-control" id="framework" maxlength="100" placeholder="ASP.NET Core, React, ...">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="errorMessage" class="form-label">Error message</label>
-                                <input type="text" class="form-control" id="errorMessage" maxlength="4000" placeholder="Exact error text">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="stackTrace" class="form-label">Stack trace</label>
-                            <textarea class="form-control font-monospace" id="stackTrace" rows="3" maxlength="20000" placeholder="Optional"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label for="sourceCode" class="form-label">Relevant code</label>
-                            <textarea class="form-control font-monospace" id="sourceCode" rows="8" maxlength="50000" placeholder="Paste the code involved"></textarea>
-                        </div>
                         <div class="mb-4">
-                            <label for="logs" class="form-label">Logs</label>
-                            <textarea class="form-control font-monospace" id="logs" rows="3" maxlength="20000" placeholder="Optional logs"></textarea>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label for="sourceCode" class="form-label mb-0">Your code <span class="text-danger">*</span></label>
+                                <span class="ide-meta" id="code-meta">Ln 1 · Col 1</span>
+                            </div>
+                            <div class="ide-editor" id="ide-editor">
+                                <div class="ide-toolbar">
+                                    <div class="ide-dots" aria-hidden="true">
+                                        <span></span><span></span><span></span>
+                                    </div>
+                                    <span class="ide-filename">snippet.cs</span>
+                                    <span class="ide-lang">Editor</span>
+                                </div>
+                                <div class="ide-body">
+                                    <pre class="ide-gutter" id="code-gutter" aria-hidden="true">1</pre>
+                                    <textarea class="ide-textarea" id="sourceCode" name="sourceCode" required
+                                        maxlength="50000" spellcheck="false" wrap="off"
+                                        placeholder="// Paste the code involved in the error"></textarea>
+                                </div>
+                            </div>
                         </div>
+
+                        <div class="mb-3">
+                            <label for="errorMessage" class="form-label">Error message <span class="text-danger">*</span></label>
+                            <textarea class="form-control font-monospace" id="errorMessage" name="errorMessage" rows="3"
+                                required minlength="2" maxlength="4000"
+                                placeholder="Paste the exact error text (NullReferenceException, 401 Unauthorized, ...)"></textarea>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="description" class="form-label">Description <span class="text-muted fw-normal">(optional)</span></label>
+                            <textarea class="form-control" id="description" name="description" rows="3" maxlength="10000"
+                                placeholder="Anything else that helps — expected behavior, when it started, etc."></textarea>
+                        </div>
+
                         <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
                             <i class="fa-solid fa-bug"></i> Analyze with AI
                         </button>
@@ -109,7 +112,7 @@
                             <button type="button" class="btn btn-success" id="btn-solved">
                                 <i class="fa-solid fa-check"></i> Problem solved
                             </button>
-                            <button type="button" class="btn btn-outline-light" id="btn-unsolved">
+                            <button type="button" class="btn btn-outline-card" id="btn-unsolved" style="width:auto;">
                                 <i class="fa-solid fa-rotate"></i> Still have a problem
                             </button>
                         </div>

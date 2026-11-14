@@ -114,17 +114,19 @@ public class StandardizedValidationAndErrorHandlingTests
     }
 
     [Fact]
-    public void CreateProblemDto_EmptyTitleAndShortDescription_ShouldFailValidation()
+    public void CreateProblemDto_MissingCodeAndError_ShouldFailValidation()
     {
         var dto = new CreateProblemDto(
             UserId: 1,
-            Title: "",
-            Description: "Short" // < 10
+            Title: null,
+            Description: null,
+            ErrorMessage: "",
+            SourceCode: ""
         );
 
         var errors = ValidateDto(dto);
-        Assert.Contains(errors, e => e.MemberNames.Contains("Title"));
-        Assert.Contains(errors, e => e.MemberNames.Contains("Description"));
+        Assert.Contains(errors, e => e.MemberNames.Contains("ErrorMessage"));
+        Assert.Contains(errors, e => e.MemberNames.Contains("SourceCode"));
     }
 
     [Fact]
@@ -159,7 +161,9 @@ public class StandardizedValidationAndErrorHandlingTests
             service.SubmitProblemAsync(new CreateProblemDto(
                 UserId: 1,
                 Title: $"Concurrent Problem {i}",
-                Description: "Valid problem description for testing concurrency."
+                Description: "Valid problem description for testing concurrency.",
+                ErrorMessage: $"Error {i}",
+                SourceCode: $"console.log({i});"
             ))
         ).ToList();
 
@@ -307,7 +311,12 @@ public class StandardizedValidationAndErrorHandlingTests
             HttpContext = new DefaultHttpContext { User = claims }
         };
 
-        var incomingDto = new CreateProblemDto(UserId: 0, Title: "Valid Title", Description: "Valid Description longer than ten");
+        var incomingDto = new CreateProblemDto(
+            UserId: 0,
+            Title: "Valid Title",
+            Description: "Valid Description longer than ten",
+            ErrorMessage: "Something failed",
+            SourceCode: "var x = 1;");
 
         var result = await controller.SubmitProblem(incomingDto, CancellationToken.None);
 
@@ -454,7 +463,7 @@ public class StandardizedValidationAndErrorHandlingTests
             HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) } // No claims
         };
 
-        var dto = new CreateProblemDto(0, "Title", "Valid description that is longer than ten");
+        var dto = new CreateProblemDto(0, "Title", "Valid description that is longer than ten", "boom", null, "code();");
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.SubmitProblem(dto, CancellationToken.None));
     }

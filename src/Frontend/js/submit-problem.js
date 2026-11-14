@@ -6,6 +6,10 @@
     const resultPanel = document.getElementById("result-panel");
     const submitBtn = document.getElementById("submit-btn");
     const feedbackMessage = document.getElementById("feedback-message");
+    const sourceCode = document.getElementById("sourceCode");
+    const gutter = document.getElementById("code-gutter");
+    const codeMeta = document.getElementById("code-meta");
+    const ideBody = document.querySelector(".ide-body");
     const SUBMIT_URL = new URL("/api/Problems", API_BASE).href;
 
     let lastResult = null;
@@ -27,6 +31,52 @@
         }
         return true;
     }
+
+    function updateIdeChrome() {
+        const value = sourceCode.value;
+        const lines = value.length ? value.split("\n").length : 1;
+        let gutterHtml = "";
+        for (let i = 1; i <= lines; i++) {
+            gutterHtml += i + (i < lines ? "\n" : "");
+        }
+        gutter.textContent = gutterHtml || "1";
+
+        const pos = sourceCode.selectionStart || 0;
+        const before = value.slice(0, pos);
+        const row = before.split("\n").length;
+        const col = before.length - before.lastIndexOf("\n");
+        codeMeta.textContent = "Ln " + row + " · Col " + col;
+    }
+
+    function syncGutterScroll() {
+        gutter.scrollTop = sourceCode.scrollTop;
+    }
+
+    sourceCode.addEventListener("input", updateIdeChrome);
+    sourceCode.addEventListener("click", updateIdeChrome);
+    sourceCode.addEventListener("keyup", updateIdeChrome);
+    sourceCode.addEventListener("scroll", syncGutterScroll);
+    sourceCode.addEventListener("keydown", function (e) {
+        if (e.key === "Tab") {
+            e.preventDefault();
+            const start = sourceCode.selectionStart;
+            const end = sourceCode.selectionEnd;
+            const val = sourceCode.value;
+            sourceCode.value = val.slice(0, start) + "    " + val.slice(end);
+            sourceCode.selectionStart = sourceCode.selectionEnd = start + 4;
+            updateIdeChrome();
+        }
+    });
+
+    if (ideBody) {
+        ideBody.addEventListener("click", function (e) {
+            if (e.target !== sourceCode) {
+                sourceCode.focus();
+            }
+        });
+    }
+
+    updateIdeChrome();
 
     function renderResult(data) {
         lastResult = data;
@@ -69,18 +119,29 @@
         hideAlert();
         if (!requireAuth()) return;
 
+        const code = sourceCode.value.trim();
+        const errorMessage = document.getElementById("errorMessage").value.trim();
+        const description = document.getElementById("description").value.trim();
+
+        if (!code) {
+            showAlert("Paste the code involved in the issue.", "danger");
+            sourceCode.focus();
+            return;
+        }
+        if (!errorMessage) {
+            showAlert("Paste the error message.", "danger");
+            document.getElementById("errorMessage").focus();
+            return;
+        }
+
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Analyzing...';
 
         const payload = {
             userId: 0,
-            title: document.getElementById("title").value.trim(),
-            description: document.getElementById("description").value.trim(),
-            framework: document.getElementById("framework").value.trim() || null,
-            errorMessage: document.getElementById("errorMessage").value.trim() || null,
-            stackTrace: document.getElementById("stackTrace").value.trim() || null,
-            sourceCode: document.getElementById("sourceCode").value.trim() || null,
-            logs: document.getElementById("logs").value.trim() || null
+            sourceCode: code,
+            errorMessage: errorMessage,
+            description: description || null
         };
 
         try {
@@ -131,14 +192,11 @@
             if (isSolved) {
                 feedbackMessage.textContent = "Great — solution saved and a knowledge article draft was created.";
             } else {
-                feedbackMessage.textContent = "Got it. Add more details above and submit again, or use follow-up from history.";
+                feedbackMessage.textContent = "Got it. Refine the code or error above and submit again.";
             }
 
-            if (response && response.data) {
-                // keep panel in sync if API returns structured result
-                if (response.data.problemCode) {
-                    renderResult(response.data);
-                }
+            if (response && response.data && response.data.problemCode) {
+                renderResult(response.data);
             }
         } catch (err) {
             showAlert(err.message || "Failed to submit feedback.", "danger");

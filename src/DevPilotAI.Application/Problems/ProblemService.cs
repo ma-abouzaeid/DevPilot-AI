@@ -27,14 +27,14 @@ public class ProblemService : IProblemService
 
     public async Task<DebuggingResultDto> SubmitProblemAsync(CreateProblemDto dto, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(dto.Title))
+        if (string.IsNullOrWhiteSpace(dto.SourceCode))
         {
-            throw AppError.InvalidRequest("Problem title is required.", "INVALID_REQUEST", nameof(dto.Title));
+            throw AppError.InvalidRequest("Source code is required.", "INVALID_REQUEST", nameof(dto.SourceCode));
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Description))
+        if (string.IsNullOrWhiteSpace(dto.ErrorMessage))
         {
-            throw AppError.InvalidRequest("Problem description is required.", "INVALID_REQUEST", nameof(dto.Description));
+            throw AppError.InvalidRequest("Error message is required.", "INVALID_REQUEST", nameof(dto.ErrorMessage));
         }
 
         if (dto.UserId > 0 && await _dbContext.Users.AnyAsync(cancellationToken))
@@ -45,6 +45,15 @@ public class ProblemService : IProblemService
                 throw AppError.NotFound($"User with ID {dto.UserId} was not found.");
             }
         }
+
+        var errorMessage = dto.ErrorMessage.Trim();
+        var sourceCode = dto.SourceCode.Trim();
+        var description = string.IsNullOrWhiteSpace(dto.Description)
+            ? $"Error reported while running the submitted code:\n{errorMessage}"
+            : dto.Description.Trim();
+        var provisionalTitle = string.IsNullOrWhiteSpace(dto.Title)
+            ? BuildProvisionalTitle(errorMessage)
+            : dto.Title.Trim();
 
         Problem? problem = null;
         const int maxRetries = 5;
@@ -64,8 +73,8 @@ public class ProblemService : IProblemService
             {
                 ProblemCode = problemCode,
                 UserId = dto.UserId,
-                Title = dto.Title.Trim(),
-                Summary = dto.Description.Length > 200 ? dto.Description.Substring(0, 200).Trim() : dto.Description.Trim(),
+                Title = provisionalTitle,
+                Summary = description.Length > 200 ? description[..200].Trim() : description,
                 Status = ProblemStatus.InProgress,
                 CreatedAt = DateTime.UtcNow
             };
@@ -99,10 +108,10 @@ public class ProblemService : IProblemService
         var request = new ProblemRequest
         {
             ProblemId = problem.ProblemId,
-            Description = dto.Description.Trim(),
-            ErrorMessage = dto.ErrorMessage?.Trim(),
+            Description = description,
+            ErrorMessage = errorMessage,
             StackTrace = dto.StackTrace?.Trim(),
-            SourceCode = dto.SourceCode?.Trim(),
+            SourceCode = sourceCode,
             Logs = dto.Logs?.Trim(),
             Framework = dto.Framework?.Trim(),
             CreatedAt = DateTime.UtcNow
@@ -112,6 +121,17 @@ public class ProblemService : IProblemService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return await DebugProblemInternalAsync(problem, request, cancellationToken);
+    }
+
+    private static string BuildProvisionalTitle(string errorMessage)
+    {
+        var compact = string.Join(' ', errorMessage.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        if (string.IsNullOrWhiteSpace(compact))
+        {
+            return "Debug request";
+        }
+
+        return compact.Length <= 120 ? compact : compact[..117].TrimEnd() + "...";
     }
 
     public async Task<ProblemRequestDto> AddProblemRequestAsync(int problemId, AddProblemRequestDto dto, int? userId = null, CancellationToken cancellationToken = default)
@@ -514,6 +534,29 @@ public class ProblemService : IProblemService
             if (!payload.RootCause!.Contains(bestMatch!.MatchedProblemCode, StringComparison.OrdinalIgnoreCase))
             {
                 payload.RootCause = $"{similarityNote} {payload.RootCause}".Trim();
+            }
+        }
+
+        // Persist AI-inferred metadata so the user only needed code + error.
+        var inferredTitle = !string.IsNullOrWhiteSpace(payload.Title)
+            ? payload.Title.Trim()
+            : payload.Problem?.Trim();
+        if (!string.IsNullOrWhiteSpace(inferredTitle))
+        {
+            problem.Title = inferredTitle.Length <= 200 ? inferredTitle : inferredTitle[..197].TrimEnd() + "...";
+            problem.Summary = string.IsNullOrWhiteSpace(payload.SolutionSummary)
+                ? problem.Summary
+                : (payload.SolutionSummary.Length > 200
+                    ? payload.SolutionSummary[..200].Trim()
+                    : payload.SolutionSummary.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(payload.Framework))
+        {
+            request.Framework = payload.Framework.Trim();
+            if (request.Framework.Length > 100)
+            {
+                request.Framework = request.Framework[..100];
             }
         }
 
