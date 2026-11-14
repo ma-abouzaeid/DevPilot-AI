@@ -38,6 +38,7 @@ public interface IApplicationDbContext
     DbSet<AIRequest> AIRequests { get; }
 
     DbSet<AuditLog> AuditLogs { get; }
+    DbSet<SystemErrorLog> SystemErrorLogs { get; }
 
     DbSet<Plan> Plans { get; }
     DbSet<Feature> Features { get; }

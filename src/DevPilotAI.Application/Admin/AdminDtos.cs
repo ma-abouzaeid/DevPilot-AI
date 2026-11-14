@@ -234,8 +234,10 @@ public record AdminAuditLogDto(
     string? OldValues,
     string? NewValues,
     string? IpAddress,
+    string? UserAgent,
     string? RequestId,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string DetailsJson
 );
 
 public record AdminAiUsageDto(
@@ -253,5 +255,33 @@ public record AdminAiUsageDto(
     decimal? EstimatedCost,
     string? CorrelationId,
     DateTime CreatedAt,
-    string? ErrorCode
+    string? ErrorCode,
+    string? ProviderName,
+    string? ModelName,
+    string? ErrorMessage,
+    long? DurationMs,
+    int RetrySequence,
+    string DetailsJson
+);
+
+public record AdminSystemErrorDto(
+    long SystemErrorLogId,
+    string TraceId,
+    string HttpMethod,
+    string Path,
+    string? QueryString,
+    string Action,
+    int StatusCode,
+    string ErrorCode,
+    string Message,
+    string? ExceptionType,
+    string? ExceptionMessage,
+    string? StackTrace,
+    string? ResponseJson,
+    int? UserId,
+    string? UserEmail,
+    string? IpAddress,
+    string? UserAgent,
+    DateTime CreatedAt,
+    string DetailsJson
 );

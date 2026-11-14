@@ -36,7 +36,9 @@ public class GitHubClient : IGitHubClient
             ["redirect_uri"] = _options.RedirectUri,
             ["scope"] = _options.Scopes,
             ["state"] = state,
-            ["allow_signup"] = "true"
+            ["allow_signup"] = "true",
+            // Force the consent screen so reconnecting re-grants the repo scope.
+            ["prompt"] = "consent"
         };
 
         return "https://github.com/login/oauth/authorize?" + string.Join("&",
@@ -98,14 +100,43 @@ public class GitHubClient : IGitHubClient
 
     public async Task<IReadOnlyList<GitHubRepoInfo>> ListRepositoriesAsync(string accessToken, CancellationToken cancellationToken = default)
     {
+        // Keep the query simple — affiliation filters have returned empty lists for some OAuth tokens.
         using var doc = await SendGitHubJsonAsync(
             HttpMethod.Get,
-            "user/repos?per_page=100&sort=updated&affiliation=owner,collaborator,organization_member",
+            "user/repos?per_page=100&sort=updated&direction=desc&visibility=all",
             accessToken,
             cancellationToken);
 
+        return ParseRepoArray(doc.RootElement);
+    }
+
+    public async Task<IReadOnlyList<GitHubRepoInfo>> ListPublicRepositoriesAsync(
+        string username,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return [];
+        }
+
+        using var doc = await SendGitHubJsonAsync(
+            HttpMethod.Get,
+            $"users/{Uri.EscapeDataString(username.Trim())}/repos?per_page=100&sort=updated&direction=desc&type=owner",
+            accessToken: null,
+            cancellationToken);
+
+        return ParseRepoArray(doc.RootElement);
+    }
+
+    private static List<GitHubRepoInfo> ParseRepoArray(JsonElement root)
+    {
         var list = new List<GitHubRepoInfo>();
-        foreach (var item in doc.RootElement.EnumerateArray())
+        if (root.ValueKind != JsonValueKind.Array)
+        {
+            return list;
+        }
+
+        foreach (var item in root.EnumerateArray())
         {
             list.Add(new GitHubRepoInfo(
                 Id: item.GetProperty("id").GetInt64(),
@@ -205,20 +236,34 @@ public class GitHubClient : IGitHubClient
     private async Task<JsonDocument> SendGitHubJsonAsync(
         HttpMethod method,
         string relativeUrl,
-        string accessToken,
+        string? accessToken,
         CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(method, relativeUrl);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        if (!string.IsNullOrWhiteSpace(accessToken))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        }
+
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         request.Headers.TryAddWithoutValidation("X-GitHub-Api-Version", "2022-11-28");
-        request.Headers.UserAgent.ParseAdd("DevPilot-AI");
+        if (request.Headers.UserAgent.Count == 0)
+        {
+            request.Headers.UserAgent.ParseAdd("DevPilot-AI");
+        }
 
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
             throw AppError.Unauthorized("GitHub access token is invalid or expired. Reconnect GitHub.");
+        }
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        {
+            throw AppError.Forbidden(
+                "GitHub denied repository access. Disconnect and reconnect GitHub, then grant the repo permission.",
+                "GITHUB_FORBIDDEN");
         }
 
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)

@@ -1596,6 +1596,21 @@ html {
 .admin-table {
     font-size: 0.92rem;
 }
+.admin-json-view {
+    margin: 0;
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    background: #0A1929;
+    color: #E2E8F0;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 60vh;
+    overflow: auto;
+}
 .admin-table thead th {
     color: var(--gray);
     font-weight: 600;

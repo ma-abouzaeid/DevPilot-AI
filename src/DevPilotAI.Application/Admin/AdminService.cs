@@ -1,3 +1,4 @@
+using System.Text.Json;
 using DevPilotAI.Application.Common;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
@@ -796,19 +797,42 @@ public class AdminService : IAdminService
             .Where(u => ids.Contains(u.UserId))
             .ToDictionaryAsync(u => u.UserId, u => u.Email, cancellationToken);
 
-        var items = rows.Select(r => new AdminAuditLogDto(
-            r.AuditLogId,
-            r.UserId,
-            r.UserId.HasValue && emails.TryGetValue(r.UserId.Value, out var email) ? email : null,
-            r.Action,
-            r.EntityName,
-            r.EntityId,
-            r.OldValues,
-            r.NewValues,
-            r.IpAddress,
-            r.RequestId,
-            r.CreatedAt
-        )).ToList();
+        var items = rows.Select(r =>
+        {
+            var details = BuildJson(new
+            {
+                r.AuditLogId,
+                r.Action,
+                r.EntityName,
+                r.EntityId,
+                r.UserId,
+                UserEmail = r.UserId.HasValue && emails.TryGetValue(r.UserId.Value, out var email) ? email : null,
+                r.OldValues,
+                r.NewValues,
+                ParsedOldValues = TryParseJson(r.OldValues),
+                ParsedNewValues = TryParseJson(r.NewValues),
+                r.IpAddress,
+                r.UserAgent,
+                r.RequestId,
+                r.CreatedAt
+            });
+
+            return new AdminAuditLogDto(
+                r.AuditLogId,
+                r.UserId,
+                r.UserId.HasValue && emails.TryGetValue(r.UserId.Value, out var mail) ? mail : null,
+                r.Action,
+                r.EntityName,
+                r.EntityId,
+                r.OldValues,
+                r.NewValues,
+                r.IpAddress,
+                r.UserAgent,
+                r.RequestId,
+                r.CreatedAt,
+                details
+            );
+        }).ToList();
 
         return new PagedResultDto<AdminAuditLogDto>(items, total, page, pageSize);
     }
@@ -823,7 +847,11 @@ public class AdminService : IAdminService
         CancellationToken cancellationToken = default)
     {
         (page, pageSize) = NormalizePaging(page, pageSize);
-        var query = _db.AIUsageEvents.AsNoTracking().AsQueryable();
+        var query = _db.AIUsageEvents.AsNoTracking()
+            .Include(e => e.Provider)
+            .Include(e => e.Model)
+            .Include(e => e.AIRequest)
+            .AsQueryable();
 
         if (userId.HasValue) query = query.Where(e => e.UserId == userId.Value);
         if (!string.IsNullOrWhiteSpace(status))
@@ -846,25 +874,194 @@ public class AdminService : IAdminService
             .Where(u => ids.Contains(u.UserId))
             .ToDictionaryAsync(u => u.UserId, u => u.Email, cancellationToken);
 
-        var items = rows.Select(e => new AdminAiUsageDto(
-            e.AIUsageEventId,
-            e.AIRequestId,
-            e.UserId,
-            emails.TryGetValue(e.UserId, out var email) ? email : null,
-            e.ProblemId,
-            e.OperationType,
-            e.Status,
-            e.InputTokens,
-            e.OutputTokens,
-            e.TotalTokens,
-            e.CreditsCharged,
-            e.EstimatedCost,
-            e.CorrelationId,
-            e.CreatedAt,
-            e.ErrorCode
-        )).ToList();
+        var items = rows.Select(e =>
+        {
+            var providerName = e.Provider?.Name;
+            var modelName = e.Model?.ModelName;
+            var errorMessage = e.AIRequest?.ErrorMessage;
+            var details = BuildJson(new
+            {
+                e.AIUsageEventId,
+                e.AIRequestId,
+                e.UserId,
+                UserEmail = emails.TryGetValue(e.UserId, out var email) ? email : null,
+                e.ProblemId,
+                e.OperationType,
+                e.Status,
+                Provider = providerName,
+                Model = modelName,
+                e.ProviderId,
+                e.ModelId,
+                e.InputTokens,
+                e.OutputTokens,
+                e.TotalTokens,
+                e.CreditsCharged,
+                e.CreditsReserved,
+                e.CreditsRefunded,
+                e.EstimatedCost,
+                e.ActualCost,
+                e.CostType,
+                e.CorrelationId,
+                e.IdempotencyKey,
+                e.ProviderRequestId,
+                e.RetrySequence,
+                e.ErrorCode,
+                ErrorMessage = errorMessage,
+                e.DurationMs,
+                e.StartedAt,
+                e.CompletedAt,
+                e.CreatedAt,
+                AIRequest = e.AIRequest == null ? null : new
+                {
+                    e.AIRequest.AIRequestId,
+                    e.AIRequest.TaskType,
+                    e.AIRequest.Success,
+                    e.AIRequest.ErrorMessage,
+                    e.AIRequest.PromptTokensUsed,
+                    e.AIRequest.CompletionTokensUsed,
+                    e.AIRequest.TotalTokensUsed,
+                    e.AIRequest.DurationMs,
+                    e.AIRequest.CreatedAt
+                }
+            });
+
+            return new AdminAiUsageDto(
+                e.AIUsageEventId,
+                e.AIRequestId,
+                e.UserId,
+                emails.TryGetValue(e.UserId, out var mail) ? mail : null,
+                e.ProblemId,
+                e.OperationType,
+                e.Status,
+                e.InputTokens,
+                e.OutputTokens,
+                e.TotalTokens,
+                e.CreditsCharged,
+                e.EstimatedCost,
+                e.CorrelationId,
+                e.CreatedAt,
+                e.ErrorCode,
+                providerName,
+                modelName,
+                errorMessage,
+                e.DurationMs,
+                e.RetrySequence,
+                details
+            );
+        }).ToList();
 
         return new PagedResultDto<AdminAiUsageDto>(items, total, page, pageSize);
+    }
+
+    public async Task<PagedResultDto<AdminSystemErrorDto>> ListSystemErrorsAsync(
+        int? userId,
+        string? pathContains,
+        string? errorCode,
+        int? minStatusCode,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        (page, pageSize) = NormalizePaging(page, pageSize);
+        var query = _db.SystemErrorLogs.AsNoTracking().AsQueryable();
+
+        if (userId.HasValue) query = query.Where(e => e.UserId == userId.Value);
+        if (!string.IsNullOrWhiteSpace(pathContains))
+        {
+            var path = pathContains.Trim();
+            query = query.Where(e => e.Path.Contains(path));
+        }
+        if (!string.IsNullOrWhiteSpace(errorCode))
+        {
+            var code = errorCode.Trim().ToUpperInvariant();
+            query = query.Where(e => e.ErrorCode.ToUpper().Contains(code));
+        }
+        if (minStatusCode.HasValue) query = query.Where(e => e.StatusCode >= minStatusCode.Value);
+
+        var total = await query.CountAsync(cancellationToken);
+        var rows = await query
+            .OrderByDescending(e => e.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        var ids = rows.Where(r => r.UserId.HasValue).Select(r => r.UserId!.Value).Distinct().ToList();
+        var emails = await _db.Users.IgnoreQueryFilters().AsNoTracking()
+            .Where(u => ids.Contains(u.UserId))
+            .ToDictionaryAsync(u => u.UserId, u => u.Email, cancellationToken);
+
+        var items = rows.Select(e =>
+        {
+            var userEmail = e.UserId.HasValue && emails.TryGetValue(e.UserId.Value, out var mail) ? mail : null;
+            var details = BuildJson(new
+            {
+                e.SystemErrorLogId,
+                e.TraceId,
+                e.HttpMethod,
+                e.Path,
+                e.QueryString,
+                e.Action,
+                e.StatusCode,
+                e.ErrorCode,
+                e.Message,
+                e.ExceptionType,
+                e.ExceptionMessage,
+                e.StackTrace,
+                Response = TryParseJson(e.ResponseJson),
+                ResponseJsonRaw = e.ResponseJson,
+                e.UserId,
+                UserEmail = userEmail,
+                e.IpAddress,
+                e.UserAgent,
+                e.CreatedAt
+            });
+
+            return new AdminSystemErrorDto(
+                e.SystemErrorLogId,
+                e.TraceId,
+                e.HttpMethod,
+                e.Path,
+                e.QueryString,
+                e.Action,
+                e.StatusCode,
+                e.ErrorCode,
+                e.Message,
+                e.ExceptionType,
+                e.ExceptionMessage,
+                e.StackTrace,
+                e.ResponseJson,
+                e.UserId,
+                userEmail,
+                e.IpAddress,
+                e.UserAgent,
+                e.CreatedAt,
+                details
+            );
+        }).ToList();
+
+        return new PagedResultDto<AdminSystemErrorDto>(items, total, page, pageSize);
+    }
+
+    private static string BuildJson(object value) =>
+        JsonSerializer.Serialize(value, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+        });
+
+    private static object? TryParseJson(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(raw);
+            return doc.RootElement.Clone();
+        }
+        catch
+        {
+            return raw;
+        }
     }
 
     private async Task EnsurePeriodForPlanAsync(int userId, Plan plan, CancellationToken cancellationToken)

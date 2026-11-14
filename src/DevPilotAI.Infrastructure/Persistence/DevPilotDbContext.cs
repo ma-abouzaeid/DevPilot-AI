@@ -43,6 +43,7 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
     public DbSet<AIModel> AIModels => Set<AIModel>();
     public DbSet<AIRequest> AIRequests => Set<AIRequest>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<SystemErrorLog> SystemErrorLogs => Set<SystemErrorLog>();
 
     public DbSet<Plan> Plans => Set<Plan>();
     public DbSet<Feature> Features => Set<Feature>();
@@ -159,6 +160,35 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
             b.HasIndex(a => a.UserId);
             b.HasIndex(a => a.Action);
             b.HasIndex(a => a.RequestId);
+        });
+
+        modelBuilder.Entity<SystemErrorLog>(b =>
+        {
+            b.HasKey(e => e.SystemErrorLogId);
+            b.Property(e => e.TraceId).HasMaxLength(100).IsRequired();
+            b.Property(e => e.HttpMethod).HasMaxLength(20).IsRequired();
+            b.Property(e => e.Path).HasMaxLength(500).IsRequired();
+            b.Property(e => e.QueryString).HasMaxLength(1000);
+            b.Property(e => e.Action).HasMaxLength(150).IsRequired();
+            b.Property(e => e.ErrorCode).HasMaxLength(100).IsRequired();
+            b.Property(e => e.Message).HasMaxLength(2000).IsRequired();
+            b.Property(e => e.ExceptionType).HasMaxLength(300);
+            b.Property(e => e.ExceptionMessage).HasMaxLength(4000);
+            b.Property(e => e.StackTrace).HasMaxLength(8000);
+            b.Property(e => e.ResponseJson).HasMaxLength(8000);
+            b.Property(e => e.IpAddress).HasMaxLength(100);
+            b.Property(e => e.UserAgent).HasMaxLength(500);
+
+            b.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasIndex(e => e.CreatedAt);
+            b.HasIndex(e => e.StatusCode);
+            b.HasIndex(e => e.ErrorCode);
+            b.HasIndex(e => e.TraceId);
+            b.HasIndex(e => e.UserId);
         });
 
         modelBuilder.Entity<Plan>(b =>

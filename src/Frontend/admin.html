@@ -49,6 +49,9 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" data-tab="audit" type="button">Audit log</button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-tab="errors" type="button">System errors</button>
+                </li>
             </ul>
 
             <div id="tab-overview" class="admin-panel">
@@ -264,6 +267,7 @@
                             <select class="form-select" id="ai-status">
                                 <option value="">All</option>
                                 <option value="Success">Success</option>
+                                <option value="Charged">Charged</option>
                                 <option value="Failed">Failed</option>
                             </select>
                         </div>
@@ -280,13 +284,15 @@
                                     <th>When</th>
                                     <th>User</th>
                                     <th>Operation</th>
+                                    <th>Provider / Model</th>
                                     <th>Tokens</th>
                                     <th>Credits</th>
                                     <th>Status</th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody id="ai-tbody">
-                                <tr><td colspan="6" class="text-gray">Loading…</td></tr>
+                                <tr><td colspan="8" class="text-gray">Loading…</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -319,19 +325,89 @@
                                     <th>Action</th>
                                     <th>User</th>
                                     <th>Entity</th>
-                                    <th>Details</th>
+                                    <th>Summary</th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody id="audit-tbody">
-                                <tr><td colspan="5" class="text-gray">Loading…</td></tr>
+                                <tr><td colspan="6" class="text-gray">Loading…</td></tr>
                             </tbody>
                         </table>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mt-3" id="audit-pager"></div>
                 </div>
             </div>
+
+            <div id="tab-errors" class="admin-panel d-none">
+                <div class="surface-card mb-3">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-2">
+                            <label class="form-label" for="errors-user-id">User id</label>
+                            <input type="number" class="form-control" id="errors-user-id" min="1" placeholder="Optional">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="errors-path">Path contains</label>
+                            <input type="text" class="form-control" id="errors-path" placeholder="/api/GitHub">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label" for="errors-code">Error code</label>
+                            <input type="text" class="form-control" id="errors-code" placeholder="GITHUB_">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label" for="errors-min-status">Min status</label>
+                            <select class="form-select" id="errors-min-status">
+                                <option value="">All</option>
+                                <option value="400">400+</option>
+                                <option value="500" selected>500+</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-primary w-100" id="errors-refresh">Refresh</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="surface-card">
+                    <div class="table-responsive">
+                        <table class="table admin-table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>When</th>
+                                    <th>Status</th>
+                                    <th>Where</th>
+                                    <th>Action</th>
+                                    <th>Error</th>
+                                    <th>User</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="errors-tbody">
+                                <tr><td colspan="7" class="text-gray">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3" id="errors-pager"></div>
+                </div>
+            </div>
         </div>
     </section>
+
+    <div class="modal fade" id="admin-details-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="admin-details-title">Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <pre class="admin-json-view mb-0" id="admin-details-json"></pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-card" id="admin-details-copy" style="width:auto;">Copy JSON</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" style="width:auto;">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="modal fade" id="user-plan-modal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">

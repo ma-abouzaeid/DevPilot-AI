@@ -215,9 +215,38 @@
         reposList.innerHTML = '<div class="empty-state">Loading repositories…</div>';
         const url = new URL("/api/GitHub/repos", API_BASE).href;
         const res = await window.DevPilotApi.request(url);
-        const items = res.data || [];
+        if (!res.ok) {
+            reposList.innerHTML =
+                '<div class="empty-state">' +
+                escapeHtml(res.message || "Failed to load repositories.") +
+                '<div class="mt-2"><button type="button" class="btn btn-outline-card btn-sm" style="width:auto;" id="btn-reconnect-repos">Disconnect & reconnect</button></div>' +
+                "</div>";
+            const reconnect = document.getElementById("btn-reconnect-repos");
+            if (reconnect) {
+                reconnect.addEventListener("click", function () {
+                    disconnect().then(function () { return connect(); }).catch(function (err) {
+                        showAlert(err.message || "Reconnect failed", "danger");
+                    });
+                });
+            }
+            throw new Error(res.message || "Failed to load repositories");
+        }
+
+        const items = Array.isArray(res.data) ? res.data : [];
         if (!items.length) {
-            reposList.innerHTML = '<div class="empty-state">No repositories found for this account.</div>';
+            reposList.innerHTML =
+                '<div class="empty-state">' +
+                "No repositories returned for this GitHub connection. Disconnect and reconnect, then approve the <strong>repo</strong> permission." +
+                '<div class="mt-2"><button type="button" class="btn btn-outline-card btn-sm" style="width:auto;" id="btn-reconnect-repos-empty">Reconnect GitHub</button></div>' +
+                "</div>";
+            const reconnectEmpty = document.getElementById("btn-reconnect-repos-empty");
+            if (reconnectEmpty) {
+                reconnectEmpty.addEventListener("click", function () {
+                    disconnect().then(function () { return connect(); }).catch(function (err) {
+                        showAlert(err.message || "Reconnect failed", "danger");
+                    });
+                });
+            }
             return;
         }
 

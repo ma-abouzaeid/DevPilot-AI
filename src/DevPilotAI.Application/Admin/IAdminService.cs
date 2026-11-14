@@ -56,4 +56,13 @@ public interface IAdminService
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+
+    Task<PagedResultDto<AdminSystemErrorDto>> ListSystemErrorsAsync(
+        int? userId,
+        string? pathContains,
+        string? errorCode,
+        int? minStatusCode,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
 }

@@ -227,4 +227,19 @@ public class AdminController : ControllerBase
         var data = await _adminService.ListAiUsageAsync(userId, status, fromUtc, toUtc, page, pageSize, cancellationToken);
         return Ok(ApiResponse<PagedResultDto<AdminAiUsageDto>>.SuccessResult(data, "AI usage loaded.", GetTraceId()));
     }
+
+    [HttpGet("system-errors")]
+    public async Task<IActionResult> ListSystemErrors(
+        [FromQuery] int? userId,
+        [FromQuery] string? pathContains,
+        [FromQuery] string? errorCode,
+        [FromQuery] int? minStatusCode,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var data = await _adminService.ListSystemErrorsAsync(
+            userId, pathContains, errorCode, minStatusCode, page, pageSize, cancellationToken);
+        return Ok(ApiResponse<PagedResultDto<AdminSystemErrorDto>>.SuccessResult(data, "System errors loaded.", GetTraceId()));
+    }
 }

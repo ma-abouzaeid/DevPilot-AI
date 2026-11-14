@@ -49,6 +49,7 @@ public interface IGitHubClient
     Task<GitHubOAuthToken> ExchangeCodeAsync(string code, CancellationToken cancellationToken = default);
     Task<GitHubUserInfo> GetAuthenticatedUserAsync(string accessToken, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<GitHubRepoInfo>> ListRepositoriesAsync(string accessToken, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<GitHubRepoInfo>> ListPublicRepositoriesAsync(string username, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<GitHubTreeItem>> GetRepositoryTreeAsync(string accessToken, string owner, string repo, string branch, CancellationToken cancellationToken = default);
     Task<GitHubFileContent> GetFileContentAsync(string accessToken, string owner, string repo, string path, string? refName = null, CancellationToken cancellationToken = default);
 }

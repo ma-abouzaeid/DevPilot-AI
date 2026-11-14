@@ -178,14 +178,40 @@ public class GitHubService : IGitHubService
     public async Task<IReadOnlyList<GitHubRepoDto>> ListRepositoriesAsync(int userId, CancellationToken cancellationToken = default)
     {
         var (account, accessToken) = await GetConnectedAccountAsync(userId, cancellationToken);
-        var repos = await _gitHub.ListRepositoriesAsync(accessToken, cancellationToken);
-
-        foreach (var repo in repos.Take(30))
+        IReadOnlyList<GitHubRepoInfo> repos;
+        try
         {
-            await UpsertRepositoryAsync(account, repo, cancellationToken);
+            repos = await _gitHub.ListRepositoriesAsync(accessToken, cancellationToken);
+        }
+        catch (Exception)
+        {
+            // Fall back to public repos for the connected username so the UI is not empty
+            // when the OAuth token is missing/invalid for private listing.
+            repos = await _gitHub.ListPublicRepositoriesAsync(account.GitHubUsername, cancellationToken);
+            if (repos.Count == 0)
+            {
+                throw;
+            }
         }
 
-        await _db.SaveChangesAsync(cancellationToken);
+        if (repos.Count == 0 && !string.IsNullOrWhiteSpace(account.GitHubUsername))
+        {
+            repos = await _gitHub.ListPublicRepositoriesAsync(account.GitHubUsername, cancellationToken);
+        }
+
+        try
+        {
+            foreach (var repo in repos.Take(50))
+            {
+                await UpsertRepositoryAsync(account, repo, cancellationToken);
+            }
+
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            // Listing must not fail just because local cache upsert failed.
+        }
 
         return repos.Select(r => new GitHubRepoDto(
             r.Name,
@@ -520,6 +546,7 @@ public class GitHubService : IGitHubService
     private async Task<GitHubRepository> UpsertRepositoryAsync(GitHubAccount account, GitHubRepoInfo repo, CancellationToken cancellationToken)
     {
         var existing = await _db.GitHubRepositories
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(r => r.GitHubAccountId == account.GitHubAccountId && r.FullName == repo.FullName, cancellationToken);
 
         if (existing == null)

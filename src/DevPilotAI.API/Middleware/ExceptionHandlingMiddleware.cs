@@ -1,7 +1,10 @@
 using System.Net;
+using System.Security.Claims;
 using System.Text.Json;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Models;
+using DevPilotAI.Domain.Entities;
+using DevPilotAI.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,7 +21,7 @@ public class ExceptionHandlingMiddleware
         _logger = logger;
     }
 
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, IServiceScopeFactory scopeFactory)
     {
         try
         {
@@ -32,11 +35,11 @@ public class ExceptionHandlingMiddleware
                 throw;
             }
 
-            await HandleExceptionAsync(context, ex);
+            await HandleExceptionAsync(context, ex, scopeFactory);
         }
     }
 
-    private async Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private async Task HandleExceptionAsync(HttpContext context, Exception exception, IServiceScopeFactory scopeFactory)
     {
         context.Response.ContentType = "application/json";
 
@@ -85,7 +88,76 @@ public class ExceptionHandlingMiddleware
             DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.Never
         });
 
+        await PersistSystemErrorAsync(context, exception, scopeFactory, statusCode, errorCode, message, traceId, json);
+
         await context.Response.WriteAsync(json);
+    }
+
+    private async Task PersistSystemErrorAsync(
+        HttpContext context,
+        Exception exception,
+        IServiceScopeFactory scopeFactory,
+        int statusCode,
+        string errorCode,
+        string message,
+        string traceId,
+        string responseJson)
+    {
+        try
+        {
+            using var scope = scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<DevPilotDbContext>();
+
+            int? userId = null;
+            var claim = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(claim, out var parsed) && parsed > 0)
+            {
+                userId = parsed;
+            }
+
+            var endpoint = context.GetEndpoint()?.DisplayName;
+            var action = !string.IsNullOrWhiteSpace(endpoint)
+                ? ClipRequired(endpoint, 150)
+                : ClipRequired($"{context.Request.Method} {context.Request.Path}", 150);
+
+            db.SystemErrorLogs.Add(new SystemErrorLog
+            {
+                TraceId = ClipRequired(traceId, 100),
+                HttpMethod = ClipRequired(context.Request.Method, 20),
+                Path = ClipRequired(context.Request.Path.Value ?? "/", 500),
+                QueryString = ClipOptional(context.Request.QueryString.HasValue ? context.Request.QueryString.Value : null, 1000),
+                Action = action ?? "HTTP_REQUEST",
+                StatusCode = statusCode,
+                ErrorCode = ClipRequired(errorCode, 100),
+                Message = ClipRequired(message, 2000),
+                ExceptionType = ClipOptional(exception.GetType().FullName, 300),
+                ExceptionMessage = ClipOptional(exception.ToString(), 4000),
+                StackTrace = ClipOptional(exception.StackTrace, 8000),
+                ResponseJson = ClipOptional(responseJson, 8000),
+                UserId = userId,
+                IpAddress = ClipOptional(context.Connection.RemoteIpAddress?.ToString(), 100),
+                UserAgent = ClipOptional(context.Request.Headers.UserAgent.ToString(), 500),
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await db.SaveChangesAsync(context.RequestAborted);
+        }
+        catch (Exception persistEx)
+        {
+            _logger.LogWarning(persistEx, "Failed to persist SystemErrorLog for {Path}", context.Request.Path);
+        }
+    }
+
+    private static string ClipRequired(string? value, int max)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+        return value.Length <= max ? value : value[..max];
+    }
+
+    private static string? ClipOptional(string? value, int max)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        return value.Length <= max ? value : value[..max];
     }
 
     private static (int StatusCode, string ErrorCode, string Message, List<ValidationErrorDetail> Errors) HandleUnauthorizedAccess(HttpContext context, UnauthorizedAccessException authEx)
@@ -138,7 +210,6 @@ public class ExceptionHandlingMiddleware
 
     private static (int StatusCode, string ErrorCode, string Message, List<ValidationErrorDetail> Errors) HandleSqlException(SqlException sqlEx)
     {
-        // 208 = Invalid object name (missing table/view) — often a pending migration.
         if (sqlEx.Number == 208)
         {
             return ((int)HttpStatusCode.InternalServerError, "DATABASE_SCHEMA_MISMATCH",
