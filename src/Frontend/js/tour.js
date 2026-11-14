@@ -9,26 +9,12 @@
         return (parts[parts.length - 1] || "index.html").toLowerCase() || "index.html";
     }
 
-    /** Control-focused tours only (fields, buttons, filters) — no navbar/titles. */
+    /**
+     * Tours only on complex product pages (inputs, workflows, admin).
+     * No Home / Login / Register / password-reset / marketing pages.
+     */
     /** @type {Record<string, Array<{selector:string,title:string,body:string}>>} */
     const PAGE_TOURS = {
-        "index.html": [
-            {
-                selector: ".hero-section a.btn-primary",
-                title: "Get Started",
-                body: "Creates your account so you can debug with AI, save articles, and keep credits."
-            },
-            {
-                selector: ".hero-section a[href='submit-problem.html']",
-                title: "Debug a Problem",
-                body: "Opens the debugger: paste code + error and run AI analysis."
-            },
-            {
-                selector: ".hero-section a[href='articles.html']",
-                title: "Explore Articles",
-                body: "Browse published fixes from real bugs — search, save, like, and comment."
-            }
-        ],
         "dashboard.html": [
             {
                 selector: "a.quick-action[href='submit-problem.html']",
@@ -374,80 +360,6 @@
                 body: "Creates a user from Admin without going through public register."
             }
         ],
-        "login.html": [
-            {
-                selector: "#email",
-                title: "Email Address",
-                body: "The email you registered with."
-            },
-            {
-                selector: "#password",
-                title: "Password",
-                body: "Your account password."
-            },
-            {
-                selector: "#toggle-password",
-                title: "Show / hide password",
-                body: "Toggles password visibility in this field."
-            },
-            {
-                selector: "#remember",
-                title: "Keep me signed in",
-                body: "Keeps the session so you stay logged in on this device."
-            },
-            {
-                selector: "a[href='forgot-password.html']",
-                title: "Forgot password",
-                body: "Opens the reset flow to email a recovery link."
-            },
-            {
-                selector: "#turnstile-group",
-                title: "Security check",
-                body: "Complete the bot check before logging in."
-            },
-            {
-                selector: "#login-btn",
-                title: "Log In",
-                body: "Signs you in and sends you to the dashboard (or the page you came from)."
-            },
-            {
-                selector: "a[href='register.html']",
-                title: "Create account",
-                body: "Opens registration if you do not have an account yet."
-            }
-        ],
-        "register.html": [
-            {
-                selector: "#name",
-                title: "Full name",
-                body: "Your display name on the dashboard and leaderboard."
-            },
-            {
-                selector: "#email",
-                title: "Email Address",
-                body: "Used to log in and verify the account."
-            },
-            {
-                selector: "#password",
-                title: "Password",
-                body: "Must meet the rules listed under the field (length + character mix)."
-            },
-            {
-                selector: "#confirm",
-                title: "Confirm password",
-                body: "Re-enter the same password to avoid typos."
-            },
-            {
-                selector: "#turnstile-group",
-                title: "Security check",
-                body: "Complete the bot check before creating the account."
-            },
-            {
-                selector: "#register-btn",
-                title: "Create account",
-                body: "Registers you and starts email verification."
-            }
-        ],
         "problem-details.html": [
             {
                 selector: "a.btn-primary[href*='submit-problem']",
@@ -463,42 +375,6 @@
                 selector: "a.btn[href='challenges.html']",
                 title: "Practice challenges",
                 body: "Go practice related fixes in the challenge arena."
-            }
-        ],
-        "forgot-password.html": [
-            {
-                selector: "#email, input[type='email']",
-                title: "Email",
-                body: "Enter the account email to receive a reset link."
-            },
-            {
-                selector: "button[type='submit']",
-                title: "Send reset link",
-                body: "Emails a password reset link if the account exists."
-            }
-        ],
-        "reset-password.html": [
-            {
-                selector: "#password, input[type='password']",
-                title: "New password",
-                body: "Choose a strong new password for the account."
-            },
-            {
-                selector: "button[type='submit']",
-                title: "Update password",
-                body: "Saves the new password using the reset token from your email."
-            }
-        ],
-        "verify-email.html": [
-            {
-                selector: "#code, input[type='text'], input[name='code']",
-                title: "Verification code",
-                body: "Enter the code from your email to activate the account."
-            },
-            {
-                selector: "button[type='submit']",
-                title: "Verify",
-                body: "Confirms the email and unlocks full access."
             }
         ]
     };
