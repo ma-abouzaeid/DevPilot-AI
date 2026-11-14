@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="images/logo-mark.svg">
+    <title>Dashboard - DevPilot AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.0/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/media.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+
+<body>
+    <div id="navbar" data-active="dashboard"></div>
+
+    <section class="page-shell">
+        <div class="container">
+            <span class="page-kicker"><i class="fa-solid fa-gauge-high"></i> Engineering Workspace</span>
+            <h1 class="page-title">Welcome back, <span class="text-primary-brand" id="user-name">Developer</span></h1>
+            <p class="page-lead">Monitor open issues, continue unresolved cases, and turn every fix into team knowledge.</p>
+
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-lg-3">
+                    <div class="surface-card stat-card h-100">
+                        <div class="stat-icon primary"><i class="fa-solid fa-bug"></i></div>
+                        <div class="stat-label">Open Problems</div>
+                        <p class="stat-value" id="stat-open">—</p>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="surface-card stat-card h-100">
+                        <div class="stat-icon success"><i class="fa-solid fa-circle-check"></i></div>
+                        <div class="stat-label">Solved</div>
+                        <p class="stat-value" id="stat-solved">—</p>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="surface-card stat-card h-100">
+                        <div class="stat-icon accent"><i class="fa-solid fa-trophy"></i></div>
+                        <div class="stat-label">Challenge Rank</div>
+                        <p class="stat-value" id="stat-rank">—</p>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="surface-card stat-card h-100">
+                        <div class="stat-icon error"><i class="fa-solid fa-bolt"></i></div>
+                        <div class="stat-label">AI Credits</div>
+                        <p class="stat-value" id="stat-credits">100</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="surface-card mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h2 class="h5 mb-0">Quick Actions</h2>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <a class="quick-action" href="submit-problem.html">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                    <div>
+                                        <strong>Debug with AI</strong>
+                                        <div class="text-gray small">Submit code, error, and stack trace</div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-md-6">
+                                <a class="quick-action" href="articles.html">
+                                    <i class="fa-solid fa-book-open"></i>
+                                    <div>
+                                        <strong>Browse Knowledge</strong>
+                                        <div class="text-gray small">Learn from solved real problems</div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-md-6">
+                                <a class="quick-action" href="challenges.html">
+                                    <i class="fa-solid fa-code"></i>
+                                    <div>
+                                        <strong>Take a Challenge</strong>
+                                        <div class="text-gray small">Practice the fix with your hands</div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-md-6">
+                                <a class="quick-action" href="community.html">
+                                    <i class="fa-brands fa-discord"></i>
+                                    <div>
+                                        <strong>Join Community</strong>
+                                        <div class="text-gray small">Ask, share, and grow with others</div>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="surface-card">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h2 class="h5 mb-0">Recent Problems</h2>
+                            <a href="submit-problem.html" class="link-blue small">New problem</a>
+                        </div>
+                        <div id="recent-problems">
+                            <div class="empty-state">Loading recent activity…</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="surface-card mb-4">
+                        <h2 class="h5 mb-3"><i class="fa-solid fa-medal text-accent-brand me-2"></i>Leaderboard</h2>
+                        <div id="leaderboard"></div>
+                        <a href="challenges.html" class="btn btn-outline-light btn-sm mt-3 w-100">View Challenges</a>
+                    </div>
+
+                    <div class="surface-card">
+                        <h2 class="h5 mb-3">Debug Preview</h2>
+                        <div class="code-panel mb-3">
+                            <div class="code-panel-header">
+                                <span>AuthController.cs</span>
+                                <span class="badge-soft open">Bug</span>
+                            </div>
+                            <pre><code>public IActionResult Login(...) {
+<span class="code-line-error">  // Missing refresh token rotation</span>
+  return Ok(token);
+}</code></pre>
+                        </div>
+                        <div class="alert alert-success-soft mb-3">
+                            <i class="fa-solid fa-circle-check text-success-brand me-2"></i>
+                            AI can explain root cause, steps, and corrected code in a fixed order.
+                        </div>
+                        <a href="submit-problem.html" class="btn btn-primary w-100">Debug with AI</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="footer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+    <script src="js/config.js"></script>
+    <script src="js/api-client.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/footer.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+
+</html>

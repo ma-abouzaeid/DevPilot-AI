@@ -199,20 +199,24 @@ button:focus-visible,
 }
 
 /* navbar links: animated underline area (no layout shift between items) */
+.nav-brand .nav-link,
 .nav-dark .nav-link {
     border-bottom: 2px solid transparent;
     transition: color 220ms ease, border-color 220ms ease;
 }
 
+.nav-brand .nav-link:not(.active):hover,
 .nav-dark .nav-link:not(.active):hover {
     color: #d7e2ff;
     border-bottom-color: rgba(0, 102, 255, 0.45);
 }
 
+.nav-brand .navbar-brand .logo-img,
 .nav-dark .navbar-brand .logo-img {
     transition: opacity var(--dur-base) ease;
 }
 
+.nav-brand .navbar-brand:hover .logo-img,
 .nav-dark .navbar-brand:hover .logo-img {
     opacity: 0.85;
 }

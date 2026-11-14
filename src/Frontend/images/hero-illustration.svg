@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 540" role="img" aria-label="DevPilot developer workspace">
+  <defs>
+    <linearGradient id="bgGlow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F766E" stop-opacity=".22"/>
+      <stop offset="100%" stop-color="#0B1F33" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="winGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#123049"/>
+      <stop offset="100%" stop-color="#0A1929"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F1F5F9"/>
+    </linearGradient>
+    <linearGradient id="accentBar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0F766E"/>
+      <stop offset="100%" stop-color="#14B8A6"/>
+    </linearGradient>
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#020617" flood-opacity=".40"/>
+    </filter>
+    <filter id="soft" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#020617" flood-opacity=".22"/>
+    </filter>
+  </defs>
+
+  <!-- Soft atmosphere (no neon) -->
+  <ellipse cx="520" cy="120" rx="160" ry="100" fill="url(#bgGlow)"/>
+  <ellipse cx="140" cy="460" rx="140" ry="90" fill="#155E75" opacity=".10"/>
+  <g stroke="#94A3B8" stroke-opacity=".16" stroke-width="1" fill="none">
+    <path d="M48 96h90M68 116h48"/>
+    <path d="M560 420h88M580 440h42"/>
+    <circle cx="48" cy="96" r="3.2" fill="#94A3B8" fill-opacity=".35" stroke="none"/>
+    <circle cx="138" cy="96" r="3.2" fill="#94A3B8" fill-opacity=".35" stroke="none"/>
+    <circle cx="560" cy="420" r="3.2" fill="#94A3B8" fill-opacity=".35" stroke="none"/>
+    <circle cx="648" cy="420" r="3.2" fill="#94A3B8" fill-opacity=".35" stroke="none"/>
+  </g>
+
+  <!-- Primary IDE window -->
+  <g filter="url(#shadow)">
+    <rect x="56" y="56" width="440" height="318" rx="18" fill="url(#winGrad)" stroke="#1E3A4F" stroke-width="1.5"/>
+    <rect x="56" y="56" width="440" height="44" rx="18" fill="#071521"/>
+    <rect x="56" y="78" width="440" height="22" fill="#071521"/>
+    <circle cx="82" cy="78" r="5.5" fill="#F87171"/>
+    <circle cx="102" cy="78" r="5.5" fill="#FBBF24"/>
+    <circle cx="122" cy="78" r="5.5" fill="#34D399"/>
+    <text x="152" y="83" font-family="'IBM Plex Sans', 'Segoe UI', sans-serif" font-size="13" fill="#94A3B8">solution-review.cs</text>
+    <rect x="420" y="68" width="58" height="20" rx="6" fill="#0F766E" opacity=".35"/>
+    <text x="430" y="82" font-family="'IBM Plex Sans', sans-serif" font-size="11" font-weight="600" fill="#5EEAD4">Debugging</text>
+
+    <!-- Sidebar rail -->
+    <rect x="56" y="100" width="42" height="274" fill="#061018"/>
+    <rect x="68" y="122" width="18" height="18" rx="4" fill="#0F766E"/>
+    <rect x="68" y="152" width="18" height="18" rx="4" fill="#1E3A4F"/>
+    <rect x="68" y="182" width="18" height="18" rx="4" fill="#1E3A4F"/>
+    <rect x="68" y="212" width="18" height="18" rx="4" fill="#1E3A4F"/>
+
+    <!-- Code area -->
+    <g font-family="'IBM Plex Mono', ui-monospace, Consolas, monospace" font-size="12.5">
+      <text x="118" y="136" fill="#475569">01</text>
+      <text x="150" y="136" fill="#94A3B8">public</text>
+      <text x="206" y="136" fill="#5EEAD4">async Task</text>
+      <text x="300" y="136" fill="#E2E8F0">&lt;IActionResult&gt;</text>
+
+      <text x="118" y="164" fill="#475569">02</text>
+      <text x="150" y="164" fill="#E2E8F0">FixNullRefAsync(User user)</text>
+
+      <text x="118" y="192" fill="#475569">03</text>
+      <text x="150" y="192" fill="#64748B">{</text>
+
+      <rect x="110" y="206" width="360" height="30" rx="7" fill="#7F1D1D" opacity=".32"/>
+      <text x="118" y="226" fill="#475569">04</text>
+      <text x="150" y="226" fill="#FCA5A5">// NullReferenceException @ user.Profile</text>
+
+      <text x="118" y="260" fill="#475569">05</text>
+      <text x="150" y="260" fill="#94A3B8">if (user?.Profile is null) return</text>
+      <text x="392" y="260" fill="#5EEAD4">NotFound()</text>
+      <text x="478" y="260" fill="#94A3B8">;</text>
+
+      <text x="118" y="288" fill="#475569">06</text>
+      <text x="150" y="288" fill="#E2E8F0">await</text>
+      <text x="198" y="288" fill="#5EEAD4">PublishKnowledgeAsync</text>
+      <text x="368" y="288" fill="#E2E8F0">(fix);</text>
+
+      <text x="118" y="316" fill="#475569">07</text>
+      <text x="150" y="316" fill="#64748B">}</text>
+    </g>
+
+    <!-- Status bar -->
+    <rect x="56" y="342" width="440" height="32" fill="#050E16"/>
+    <rect x="56" y="342" width="6" height="32" fill="url(#accentBar)"/>
+    <circle cx="86" cy="358" r="4.5" fill="#34D399"/>
+    <text x="98" y="362" font-family="'IBM Plex Sans', sans-serif" font-size="12" fill="#34D399">Root cause identified</text>
+    <text x="360" y="362" font-family="'IBM Plex Sans', sans-serif" font-size="12" fill="#94A3B8">4 steps ready</text>
+  </g>
+
+  <!-- Knowledge article card -->
+  <g filter="url(#soft)" transform="translate(380,268)">
+    <rect width="236" height="158" rx="16" fill="url(#cardGrad)" stroke="#D5DEE7"/>
+    <rect x="0" y="0" width="6" height="158" rx="3" fill="#0F766E"/>
+    <rect x="22" y="20" width="58" height="22" rx="6" fill="#E6F4F2"/>
+    <text x="32" y="35" font-family="'IBM Plex Sans', sans-serif" font-size="11" font-weight="700" fill="#0F766E">ARTICLE</text>
+    <text x="22" y="68" font-family="Sora, 'IBM Plex Sans', sans-serif" font-size="16" font-weight="700" fill="#0B1F33">How to fix null refs</text>
+    <text x="22" y="92" font-family="'IBM Plex Sans', sans-serif" font-size="12.5" fill="#5B6B7C">Reusable knowledge from a</text>
+    <text x="22" y="110" font-family="'IBM Plex Sans', sans-serif" font-size="12.5" fill="#5B6B7C">confirmed production fix.</text>
+    <rect x="22" y="124" width="88" height="20" rx="6" fill="#D1FAE5"/>
+    <text x="36" y="138" font-family="'IBM Plex Sans', sans-serif" font-size="11" font-weight="700" fill="#047857">Solved</text>
+    <text x="124" y="138" font-family="'IBM Plex Sans', sans-serif" font-size="11" fill="#94A3B8">2 min read</text>
+  </g>
+
+  <!-- Feature chips -->
+  <g font-family="'IBM Plex Sans', sans-serif" font-size="12.5" font-weight="600" filter="url(#soft)">
+    <g transform="translate(36,248)">
+      <rect width="122" height="40" rx="10" fill="#ECFEFF" stroke="#A5F3FC"/>
+      <circle cx="24" cy="20" r="10" fill="#0E7490"/>
+      <path d="M20.5 20h7M24 16.5v7" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+      <text x="42" y="25" fill="#164E63">Diagnose</text>
+    </g>
+    <g transform="translate(36,300)">
+      <rect width="122" height="40" rx="10" fill="#F0FDFA" stroke="#99F6E4"/>
+      <circle cx="24" cy="20" r="10" fill="#0F766E"/>
+      <path d="M19.5 20.5h9v6h-9zM21.5 18h5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      <text x="42" y="25" fill="#134E4A">Explain</text>
+    </g>
+    <g transform="translate(520,148)">
+      <rect width="122" height="40" rx="10" fill="#FFF7ED" stroke="#FED7AA"/>
+      <circle cx="24" cy="20" r="10" fill="#C2410C"/>
+      <path d="M20 23.5l4-10 4 10M21.5 20.5h5" stroke="#fff" stroke-width="1.7" stroke-linecap="round" fill="none"/>
+      <text x="42" y="25" fill="#7C2D12">Improve</text>
+    </g>
+    <g transform="translate(520,200)">
+      <rect width="122" height="40" rx="10" fill="#ECFDF5" stroke="#A7F3D0"/>
+      <circle cx="24" cy="20" r="10" fill="#047857"/>
+      <path d="M19.5 20.5l2.4 2.4 5.2-5.4" stroke="#fff" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="42" y="25" fill="#065F46">Publish</text>
+    </g>
+  </g>
+
+  <!-- Checklist card -->
+  <g filter="url(#soft)" transform="translate(500,292)">
+    <rect width="148" height="122" rx="14" fill="#FFFFFF" stroke="#D5DEE7"/>
+    <text x="16" y="30" font-family="Sora, 'IBM Plex Sans', sans-serif" font-size="13.5" font-weight="700" fill="#0B1F33">Fix checklist</text>
+    <g font-family="'IBM Plex Sans', sans-serif" font-size="12" fill="#5B6B7C">
+      <circle cx="24" cy="52" r="6" fill="#0F766E"/>
+      <path d="M21.4 52.1l1.6 1.6 3.4-3.5" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+      <text x="38" y="56">Null guard</text>
+      <circle cx="24" cy="76" r="6" fill="#0F766E"/>
+      <path d="M21.4 76.1l1.6 1.6 3.4-3.5" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+      <text x="38" y="80">Unit test</text>
+      <circle cx="24" cy="100" r="6" fill="#E2E8F0"/>
+      <text x="38" y="104">Publish article</text>
+    </g>
+  </g>
+
+  <!-- Mini brand mark badge -->
+  <g transform="translate(590,56)" opacity=".95">
+    <path fill="#0F766E" d="M24 2.4 41.4 12.45v20.1L24 42.6 6.6 32.55v-20.1L24 2.4z"/>
+    <path fill="#FFFFFF" d="M20.7 17.1v13.8L33.9 24 20.7 17.1z"/>
+  </g>
+</svg>

@@ -12,6 +12,7 @@ if (footerBox) {
         links = `
                 <li class="d-inline-block"><a href="index.html">Home</a></li>
                 <li class="d-inline-block"><a href="articles.html">Articles</a></li>
+                <li class="d-inline-block"><a href="challenges.html">Challenges</a></li>
                 <li class="d-inline-block"><a href="about.html">About</a></li>
                 <li class="d-inline-block"><a href="community.html">Community</a></li>` + links
     }
@@ -19,8 +20,8 @@ if (footerBox) {
     footerBox.innerHTML = `
     <footer class="footer-dark">
         <div class="container d-flex flex-wrap justify-content-between align-items-center gap-3">
-            <a href="index.html">
-                <img src="images/logo.png" alt="DevPilot AI" class="logo-img">
+            <a href="index.html" aria-label="DevPilot AI home">
+                <img src="images/logo-light.svg" alt="DevPilot AI" class="logo-img logo-svg">
             </a>
             <ul class="footer-links">${links}
             </ul>

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 64" role="img" aria-label="DevPilot AI">
+  <defs>
+    <linearGradient id="llA" x1="10" y1="4" x2="54" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5EEAD4"/>
+      <stop offset="50%" stop-color="#14B8A6"/>
+      <stop offset="100%" stop-color="#0F766E"/>
+    </linearGradient>
+    <linearGradient id="llB" x1="20" y1="12" x2="48" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#CCFBF1"/>
+      <stop offset="100%" stop-color="#5EEAD4"/>
+    </linearGradient>
+  </defs>
+
+  <g>
+    <path fill="url(#llA)" d="M32 3.2 55.2 16.6v30.8L32 60.8 8.8 47.4V16.6L32 3.2z"/>
+    <path fill="#042F2E" fill-opacity=".28" d="M32 32 55.2 16.6v30.8L32 60.8V32z"/>
+    <path fill="#99F6E4" fill-opacity=".22" d="M32 3.2 55.2 16.6 32 32 8.8 16.6 32 3.2z"/>
+    <path fill="#042F2E" fill-opacity=".18" d="M32 13.5 46.6 22v20L32 50.5 17.4 42V22L32 13.5z"/>
+    <path fill="#FFFFFF" d="M27.6 22.8v18.4L45.2 32 27.6 22.8z"/>
+    <path fill="url(#llB)" fill-opacity=".65" d="M27.6 22.8 45.2 32 27.6 41.2v-4.2L37.4 32 27.6 27V22.8z"/>
+  </g>
+
+  <text x="72" y="42"
+        font-family="Sora, 'IBM Plex Sans', 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="28" font-weight="700" letter-spacing="-0.6">
+    <tspan fill="#F8FAFC">DevPilot</tspan><tspan dx="5" fill="#5EEAD4">AI</tspan>
+  </text>
+</svg>

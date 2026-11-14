@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="images/logo-mark.svg">
+    <title>Challenges - DevPilot AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.0/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/media.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+
+<body>
+    <div id="navbar" data-active="challenges"></div>
+
+    <section class="page-shell">
+        <div class="container">
+            <span class="page-kicker"><i class="fa-solid fa-trophy"></i> Practice Arena</span>
+            <h1 class="page-title">Challenges that make the <span class="text-accent-brand">fix stick</span></h1>
+            <p class="page-lead">After AI explains a solution, apply it yourself. Get feedback, earn points, and climb the leaderboard.</p>
+
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-4">
+                    <div class="surface-card h-100">
+                        <span class="badge-soft progress mb-2">Beginner</span>
+                        <h3 class="h5">Fix the Null Check</h3>
+                        <p class="text-gray">Guard a service method against null user objects and return a clean 404.</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-accent-brand"><i class="fa-solid fa-star"></i> 50 pts</span>
+                            <button class="btn btn-primary btn-sm" disabled>Coming soon</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="surface-card h-100">
+                        <span class="badge-soft ai mb-2">Intermediate</span>
+                        <h3 class="h5">JWT Refresh Rotation</h3>
+                        <p class="text-gray">Implement refresh token rotation and detect reuse attacks safely.</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-accent-brand"><i class="fa-solid fa-star"></i> 120 pts</span>
+                            <button class="btn btn-primary btn-sm" disabled>Coming soon</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="surface-card h-100">
+                        <span class="badge-soft open mb-2">Advanced</span>
+                        <h3 class="h5">CORS Middleware Order</h3>
+                        <p class="text-gray">Place CORS correctly in the ASP.NET pipeline and unlock frontend calls.</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-accent-brand"><i class="fa-solid fa-star"></i> 90 pts</span>
+                            <button class="btn btn-primary btn-sm" disabled>Coming soon</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-success-soft mt-4">
+                <i class="fa-solid fa-circle-info text-primary-brand me-2"></i>
+                Challenge evaluation + GitHub submission will connect to the backend Challenge entities already in the database model.
+            </div>
+        </div>
+    </section>
+
+    <div id="footer"></div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="js/config.js"></script>
+    <script src="js/api-client.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/footer.js"></script>
+    <script src="js/animations.js"></script>
+</body>
+
+</html>

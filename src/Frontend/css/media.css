@@ -44,10 +44,7 @@
     .hero-section {
         min-height: auto;
         padding: 44px 0 48px;
-        background-image:
-            linear-gradient(180deg, rgba(3, 10, 26, 0.88) 0%, rgba(3, 10, 26, 0.75) 100%),
-            url("../images/hero.jpeg");
-        background-position: 75% center;
+        align-items: flex-start;
     }
 
     .hero-title {
@@ -56,6 +53,12 @@
 
     .hero-text {
         max-width: 100%;
+    }
+
+    .hero-illustration {
+        max-width: 420px;
+        margin-inline: auto;
+        animation: none;
     }
 
     /* Horizontal Scroll Mechanism for the 3 Key Sections */

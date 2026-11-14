@@ -17,10 +17,10 @@ if (navbarBox) {
            </div>`;
 
     navbarBox.innerHTML = `
-    <nav class="navbar navbar-expand-lg nav-dark" data-bs-theme="dark">
+    <nav class="navbar navbar-expand-lg nav-brand" data-bs-theme="light">
         <div class="container">
-            <a class="navbar-brand logo" href="index.html">
-                <img src="images/logo.png" alt="DevPilot AI" class="logo-img">
+            <a class="navbar-brand logo" href="index.html" aria-label="DevPilot AI home">
+                <img src="images/logo.svg" alt="DevPilot AI" class="logo-img logo-svg">
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
                 aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,7 @@ if (navbarBox) {
                     <li class="nav-item"><a class="nav-link" data-page="home" href="index.html">Home</a></li>
                     <li class="nav-item"><a class="nav-link" data-page="debug" href="submit-problem.html">Debug</a></li>
                     <li class="nav-item"><a class="nav-link" data-page="articles" href="articles.html">Articles</a></li>
+                    <li class="nav-item"><a class="nav-link" data-page="challenges" href="challenges.html">Challenges</a></li>
                     <li class="nav-item"><a class="nav-link" data-page="about" href="about.html">About</a></li>
                     <li class="nav-item"><a class="nav-link" data-page="community" href="community.html">Community</a></li>
                 </ul>
