@@ -24,7 +24,7 @@
         if (!raw) return "";
         let text = String(raw).replace(/\r\n/g, "\n").trim();
         const newlineCount = (text.match(/\n/g) || []).length;
-        if (newlineCount >= 3) return text;
+        if (newlineCount >= 2) return text;
 
         let out = "";
         let indent = 0;
@@ -94,7 +94,7 @@
             '<div class="ide-editor ide-readonly article-ide">' +
             '<div class="ide-toolbar">' +
             '<div class="ide-dots" aria-hidden="true"><span></span><span></span><span></span></div>' +
-            '<span class="ide-filename">' + escapeHtml(filename || "snippet.cs") + "</span>" +
+            '<span class="ide-filename">' + escapeHtml(filename || "fixed.cs") + "</span>" +
             '<button type="button" class="ide-copy-btn" data-copy="' + encodeURIComponent(formatted) + '">' +
             '<i class="fa-regular fa-copy"></i> Copy</button>' +
             "</div>" +
@@ -105,8 +105,32 @@
         );
     }
 
+    function looksLikeSourceCode(text) {
+        const t = String(text || "").trim();
+        if (t.length < 12) return false;
+        return /[{;}]/.test(t) ||
+            /\b(using|function|const|class|def|import|public|private|return|var)\b/.test(t);
+    }
+
+    function normalizeArticleMarkdown(markdown) {
+        let source = String(markdown || "").replace(/\r\n/g, "\n");
+
+        // Plain "Corrected code: ..." (with or without fences) → proper heading + fence.
+        source = source.replace(
+            /(^|\n)(?:##\s*)?Corrected code\s*:?\s*\n*(?:```[\w+-]*\n)?([\s\S]*?)(?:\n```[ \t]*)?(?=\n#{1,3}\s|\n*$)/gi,
+            function (match, pre, body) {
+                let code = String(body || "").trim();
+                code = code.replace(/^```[\w+-]*\n?/, "").replace(/\n```$/, "").trim();
+                if (!code || !looksLikeSourceCode(code)) return match;
+                return pre + "## Corrected code\n\n```\n" + code + "\n```\n";
+            }
+        );
+
+        return source.trim();
+    }
+
     function renderRichMarkdown(markdown) {
-        const source = String(markdown || "").replace(/\r\n/g, "\n").trim();
+        const source = normalizeArticleMarkdown(markdown);
         if (!source) return "<p class=\"text-gray\">No article content yet.</p>";
 
         const codeBlocks = [];
@@ -126,6 +150,14 @@
             const text = paragraph.join(" ").trim();
             paragraph = [];
             if (!text) return;
+
+            const correctedInline = text.match(/^Corrected code:\s*([\s\S]+)$/i);
+            if (correctedInline && looksLikeSourceCode(correctedInline[1])) {
+                html.push('<h2 class="article-code-heading">Corrected code</h2>');
+                html.push(buildIdeHtml(correctedInline[1], "fixed.cs"));
+                return;
+            }
+
             html.push("<p>" + inlineFormat(text) + "</p>");
         }
 
@@ -169,7 +201,13 @@
             if (/^##\s+/.test(trimmed)) {
                 flushParagraph();
                 flushList();
-                html.push("<h2>" + inlineFormat(trimmed.replace(/^##\s+/, "")) + "</h2>");
+                const heading = trimmed.replace(/^##\s+/, "");
+                // Heading is decorative when the next token is the IDE block.
+                if (/^corrected code$/i.test(heading)) {
+                    html.push('<h2 class="article-code-heading">' + inlineFormat(heading) + "</h2>");
+                } else {
+                    html.push("<h2>" + inlineFormat(heading) + "</h2>");
+                }
                 return;
             }
             if (/^#\s+/.test(trimmed)) {
@@ -201,6 +239,18 @@
         return html.join("\n");
     }
 
+    function fallbackCopy(text) {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "absolute";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand("copy"); } catch (e) { /* ignore */ }
+        document.body.removeChild(ta);
+    }
+
     function wireCopyButtons(scope) {
         scope.querySelectorAll(".ide-copy-btn").forEach(function (btn) {
             btn.addEventListener("click", function () {
@@ -214,16 +264,21 @@
                     }, 1500);
                 };
                 if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(text).then(done).catch(done);
+                    navigator.clipboard.writeText(text).then(done).catch(function () {
+                        fallbackCopy(text);
+                        done();
+                    });
                 } else {
+                    fallbackCopy(text);
                     done();
                 }
             });
         });
 
-        scope.querySelectorAll(".ide-code").forEach(function (codeEl) {
-            const gutter = codeEl.parentElement && codeEl.parentElement.querySelector(".ide-gutter");
-            if (!gutter) return;
+        scope.querySelectorAll(".ide-body-readonly").forEach(function (body) {
+            const gutter = body.querySelector(".ide-gutter");
+            const codeEl = body.querySelector(".ide-code");
+            if (!gutter || !codeEl) return;
             codeEl.addEventListener("scroll", function () {
                 gutter.scrollTop = codeEl.scrollTop;
             });

@@ -627,14 +627,36 @@ public class ProblemService : IProblemService
                 a.Summary.ToLower().Contains(q) ||
                 a.ArticleCode.ToLower().Contains(q) ||
                 a.Problem.ProblemCode.ToLower().Contains(q) ||
-                a.Problem.Title.ToLower().Contains(q));
+                a.Problem.Title.ToLower().Contains(q) ||
+                a.Versions.Any(v => v.Title.ToLower().Contains(q) || v.ContentMarkdown.ToLower().Contains(q)) ||
+                a.Problem.ProblemRequests.Any(r =>
+                    (r.Framework != null && r.Framework.ToLower().Contains(q)) ||
+                    (r.ErrorMessage != null && r.ErrorMessage.ToLower().Contains(q)) ||
+                    (r.Description != null && r.Description.ToLower().Contains(q)) ||
+                    (r.StackTrace != null && r.StackTrace.ToLower().Contains(q)) ||
+                    (r.SourceCode != null && r.SourceCode.ToLower().Contains(q))) ||
+                a.Problem.DebuggingAttempts.Any(d =>
+                    (d.Explanation != null && d.Explanation.ToLower().Contains(q)) ||
+                    (d.RootCauseAnalysis != null && d.RootCauseAnalysis.ToLower().Contains(q)) ||
+                    (d.ProposedSolution != null && d.ProposedSolution.ToLower().Contains(q))));
         }
 
-        if (!string.IsNullOrWhiteSpace(technology))
+        var techFilters = (technology ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Select(t => t.Trim().ToLowerInvariant())
+            .Distinct()
+            .ToList();
+
+        if (techFilters.Count > 0)
         {
-            var tech = technology.Trim().ToLower();
             dbQuery = dbQuery.Where(a =>
-                a.Problem.ProblemRequests.Any(r => r.Framework != null && r.Framework.ToLower().Contains(tech)));
+                a.Problem.ProblemRequests.Any(r =>
+                    r.Framework != null &&
+                    techFilters.Any(t =>
+                        r.Framework.ToLower() == t ||
+                        r.Framework.ToLower().Contains(t) ||
+                        t.Contains(r.Framework.ToLower()))));
         }
 
         var totalCount = await dbQuery.CountAsync(cancellationToken);
@@ -665,6 +687,26 @@ public class ProblemService : IProblemService
             Page: page,
             PageSize: pageSize
         );
+    }
+
+    public async Task<IReadOnlyList<string>> ListPublishedArticleTechnologiesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var frameworks = await _dbContext.KnowledgeArticles
+            .AsNoTracking()
+            .Where(a => a.IsPublished && a.Problem.Status == ProblemStatus.Solved)
+            .SelectMany(a => a.Problem.ProblemRequests)
+            .Where(r => r.Framework != null && r.Framework != "")
+            .Select(r => r.Framework!)
+            .ToListAsync(cancellationToken);
+
+        return frameworks
+            .Select(f => f.Trim())
+            .Where(f => f.Length > 0)
+            .GroupBy(f => f.ToLowerInvariant())
+            .Select(g => g.OrderBy(x => x).First())
+            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     public async Task<KnowledgeArticleDetailsDto?> GetPublishedArticleAsync(

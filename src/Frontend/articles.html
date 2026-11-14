@@ -28,8 +28,15 @@
             <p class="page-lead">Browse solved developer problems with root cause, steps, and corrected code — structured the same way every time.</p>
 
             <form id="search-form" class="search-bar mb-4">
-                <input type="search" id="search-q" class="form-control flex-grow-1" placeholder="Search by title, code, or keyword…">
-                <input type="text" id="search-tech" class="form-control" style="max-width:220px" placeholder="Technology">
+                <input type="search" id="search-q" class="form-control flex-grow-1"
+                    placeholder="Search by title, error name, technology, code, or keyword…">
+                <div class="tech-multiselect" id="tech-multiselect">
+                    <button type="button" class="form-control tech-multiselect-toggle" id="tech-toggle" aria-expanded="false">
+                        <span id="tech-toggle-label">All technologies</span>
+                        <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                    </button>
+                    <div class="tech-multiselect-menu d-none" id="tech-menu" role="listbox" aria-label="Technologies"></div>
+                </div>
                 <button type="submit" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
             </form>
 

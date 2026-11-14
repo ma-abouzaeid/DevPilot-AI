@@ -98,6 +98,18 @@
             .trim();
     }
 
+    function fallbackCopy(text) {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "absolute";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand("copy"); } catch (e) { /* ignore */ }
+        document.body.removeChild(ta);
+    }
+
     function ideBlock(label, code, filename) {
         if (!code || !String(code).trim()) return "";
         const formatted = formatSourceCode(code);
@@ -112,12 +124,49 @@
             '<div class="ide-toolbar">' +
             '<div class="ide-dots" aria-hidden="true"><span></span><span></span><span></span></div>' +
             '<span class="ide-filename">' + escapeHtml(filename || "snippet.txt") + "</span>" +
+            '<button type="button" class="ide-copy-btn" data-copy="' + encodeURIComponent(formatted) + '">' +
+            '<i class="fa-regular fa-copy"></i> Copy</button>' +
             "</div>" +
             '<div class="ide-body ide-body-readonly">' +
             '<pre class="ide-gutter" aria-hidden="true">' + gutter + "</pre>" +
             '<pre class="ide-code"><code>' + escapeHtml(formatted) + "</code></pre>" +
             "</div></div></div>"
         );
+    }
+
+    function wireIdeCopyButtons(scope) {
+        if (!scope) return;
+        scope.querySelectorAll(".ide-copy-btn").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                const text = decodeURIComponent(btn.getAttribute("data-copy") || "");
+                const done = function () {
+                    btn.classList.add("is-copied");
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
+                    setTimeout(function () {
+                        btn.classList.remove("is-copied");
+                        btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
+                    }, 1500);
+                };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(done).catch(function () {
+                        fallbackCopy(text);
+                        done();
+                    });
+                } else {
+                    fallbackCopy(text);
+                    done();
+                }
+            });
+        });
+
+        scope.querySelectorAll(".ide-body-readonly").forEach(function (body) {
+            const gutter = body.querySelector(".ide-gutter");
+            const codeEl = body.querySelector(".ide-code");
+            if (!gutter || !codeEl) return;
+            codeEl.addEventListener("scroll", function () {
+                gutter.scrollTop = codeEl.scrollTop;
+            });
+        });
     }
 
     function textSection(label, text) {
@@ -350,6 +399,8 @@
             (solutions.length ? solutions.map(renderSolutionCard).join("") : "") +
             "</div></div>" +
             "</div>";
+
+        wireIdeCopyButtons(root);
     }
 
     load().catch(function (err) {

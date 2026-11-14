@@ -17,6 +17,7 @@ public interface IProblemService
     Task<PagedResultDto<ProblemSearchResultDto>> SearchProblemsAsync(string? query, string? technology, int page = 1, int pageSize = 10, CancellationToken cancellationToken = default);
     Task<MyProblemsDashboardDto> GetMyProblemsDashboardAsync(int userId, int recentCount = 8, CancellationToken cancellationToken = default);
     Task<PagedResultDto<KnowledgeArticleListItemDto>> SearchPublishedArticlesAsync(string? query, string? technology, int page = 1, int pageSize = 10, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> ListPublishedArticleTechnologiesAsync(CancellationToken cancellationToken = default);
     Task<KnowledgeArticleDetailsDto?> GetPublishedArticleAsync(int? knowledgeArticleId = null, int? problemId = null, string? articleOrProblemCode = null, CancellationToken cancellationToken = default);
     Task<PlatformStatsDto> GetPlatformStatsAsync(CancellationToken cancellationToken = default);
 }

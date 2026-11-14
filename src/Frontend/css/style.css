@@ -940,7 +940,82 @@ body.brand-busy-open { overflow: hidden; }
     color: var(--ink);
 }
 
-.search-bar { display: flex; gap: 10px; flex-wrap: wrap; }
+.search-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+.tech-multiselect {
+    position: relative;
+    width: min(260px, 100%);
+    flex: 0 0 auto;
+}
+.tech-multiselect-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    text-align: left;
+    cursor: pointer;
+    background: #fff;
+}
+.tech-multiselect-toggle.is-open {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+}
+.tech-multiselect-toggle #tech-toggle-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.tech-multiselect-toggle .fa-chevron-down {
+    font-size: 12px;
+    color: var(--gray);
+    transition: transform 0.15s ease;
+}
+.tech-multiselect-toggle.is-open .fa-chevron-down {
+    transform: rotate(180deg);
+}
+.tech-multiselect-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 30;
+    max-height: 260px;
+    overflow: auto;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: #fff;
+    box-shadow: 0 16px 36px rgba(11, 31, 51, 0.14);
+}
+.tech-multiselect-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin: 0;
+    font-size: 0.92rem;
+    color: var(--ink);
+}
+.tech-multiselect-option:hover {
+    background: rgba(15, 118, 110, 0.06);
+}
+.tech-multiselect-option input {
+    margin: 0;
+    accent-color: var(--brand);
+}
+.tech-multiselect-empty {
+    padding: 12px 10px;
+    color: var(--gray);
+    font-size: 0.9rem;
+}
+.tech-multiselect-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 6px 4px 2px;
+    border-top: 1px solid var(--border);
+    margin-top: 6px;
+}
 .search-bar .form-control {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -1219,6 +1294,13 @@ body.brand-busy-open { overflow: hidden; }
 
 .ide-readonly {
     margin-top: 0.35rem;
+}
+.article-body .article-code-heading {
+    margin-top: 1.25rem;
+    margin-bottom: 0.65rem;
+}
+.article-body .ide-editor {
+    margin-bottom: 1rem;
 }
 .ide-readonly .ide-body-readonly {
     min-height: 220px;

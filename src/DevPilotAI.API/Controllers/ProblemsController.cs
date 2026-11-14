@@ -173,13 +173,29 @@ public class ProblemsController : ControllerBase
     public async Task<IActionResult> SearchPublishedArticles(
         [FromQuery] string? q,
         [FromQuery] string? technology,
+        [FromQuery] string[]? technologies,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 12,
         CancellationToken cancellationToken = default)
     {
-        var result = await _problemService.SearchPublishedArticlesAsync(q, technology, page, pageSize, cancellationToken);
+        var tech = technology;
+        if (technologies is { Length: > 0 })
+        {
+            var joined = string.Join(",", technologies.Where(t => !string.IsNullOrWhiteSpace(t)));
+            tech = string.IsNullOrWhiteSpace(tech) ? joined : $"{tech},{joined}";
+        }
+
+        var result = await _problemService.SearchPublishedArticlesAsync(q, tech, page, pageSize, cancellationToken);
         var response = ApiResponse<PagedResultDto<KnowledgeArticleListItemDto>>.SuccessResult(result, "Published articles retrieved successfully.", GetTraceId());
         return Ok(response);
+    }
+
+    [HttpGet("article-technologies")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ListArticleTechnologies(CancellationToken cancellationToken)
+    {
+        var result = await _problemService.ListPublishedArticleTechnologiesAsync(cancellationToken);
+        return Ok(ApiResponse<IReadOnlyList<string>>.SuccessResult(result, "Article technologies loaded.", GetTraceId()));
     }
 
     [HttpGet("articles/{idOrCode}")]
