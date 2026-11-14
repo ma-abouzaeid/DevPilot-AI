@@ -74,4 +74,40 @@ public class DebuggingResultParserTests
         Assert.Equal("Build failed", payload.Problem);
         Assert.Equal("Wrong TFM", payload.RootCause);
     }
+
+    [Fact]
+    public void FromPersistedAttempt_RebuildsCorrectedCodeAndSteps()
+    {
+        var explanation = "Null reference in GetTotal\nLocation: OrderService.GetTotal — line 14";
+        var proposed = """
+            Initialize the dictionary before use.
+
+            1. Add constructor: Create OrderService() and assign _prices.
+            2. Use TryGetValue: Avoid indexer crashes on missing keys.
+
+            Corrected code:
+            public class OrderService
+            {
+                private readonly Dictionary<string, decimal> _prices = new();
+            }
+            """;
+
+        var payload = DebuggingResultParser.FromPersistedAttempt(
+            explanation,
+            "Field was never initialized",
+            proposed,
+            "Fallback");
+
+        Assert.Equal("Null reference in GetTotal", payload.Problem);
+        Assert.Equal("OrderService.GetTotal — line 14", payload.Location);
+        Assert.Equal("Field was never initialized", payload.RootCause);
+        Assert.Contains("Initialize the dictionary", payload.SolutionSummary);
+        Assert.Equal(2, payload.Steps!.Count);
+        Assert.Contains("Dictionary<string, decimal>", payload.CorrectedCode);
+
+        var article = DebuggingResultParser.BuildArticleMarkdown("How to fix NRE", payload, "C#");
+        Assert.Contains("## What went wrong", article);
+        Assert.Contains("## Corrected code", article);
+        Assert.Contains("```", article);
+    }
 }

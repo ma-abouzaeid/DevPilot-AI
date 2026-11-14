@@ -16,10 +16,12 @@ namespace DevPilotAI.API.Controllers;
 public class PlansController : ControllerBase
 {
     private readonly IPlanUsageService _planUsageService;
+    private readonly ICreditCostService _creditCostService;
 
-    public PlansController(IPlanUsageService planUsageService)
+    public PlansController(IPlanUsageService planUsageService, ICreditCostService creditCostService)
     {
         _planUsageService = planUsageService;
+        _creditCostService = creditCostService;
     }
 
     private string GetTraceId() =>
@@ -43,6 +45,14 @@ public class PlansController : ControllerBase
     {
         var plans = await _planUsageService.ListPublicPlansAsync(cancellationToken);
         return Ok(ApiResponse<IReadOnlyList<PlanListItemDto>>.SuccessResult(plans, "Plans retrieved.", GetTraceId()));
+    }
+
+    [HttpGet("credit-costs")]
+    [AllowAnonymous]
+    public async Task<IActionResult> CreditCosts(CancellationToken cancellationToken)
+    {
+        var costs = await _creditCostService.ListPublicAsync(cancellationToken);
+        return Ok(ApiResponse<IReadOnlyList<CreditCostItemDto>>.SuccessResult(costs, "Credit costs retrieved.", GetTraceId()));
     }
 
     [HttpGet("me")]

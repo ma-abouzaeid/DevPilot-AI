@@ -33,6 +33,7 @@ public class GitHubService : IGitHubService
     private readonly IProblemService _problemService;
     private readonly IConfiguration _configuration;
     private readonly IPlanUsageService? _planUsageService;
+    private readonly ICreditCostService? _creditCostService;
     private readonly IAuditService? _auditService;
 
     public GitHubService(
@@ -43,7 +44,8 @@ public class GitHubService : IGitHubService
         IProblemService problemService,
         IConfiguration configuration,
         IPlanUsageService? planUsageService = null,
-        IAuditService? auditService = null)
+        IAuditService? auditService = null,
+        ICreditCostService? creditCostService = null)
     {
         _db = db;
         _gitHub = gitHub;
@@ -53,6 +55,7 @@ public class GitHubService : IGitHubService
         _configuration = configuration;
         _planUsageService = planUsageService;
         _auditService = auditService;
+        _creditCostService = creditCostService;
     }
 
     public async Task<GitHubConnectionStatusDto> GetConnectionStatusAsync(int userId, CancellationToken cancellationToken = default)
@@ -350,9 +353,13 @@ public class GitHubService : IGitHubService
             userPrompt.AppendLine(content);
         }
 
+        var reviewCost = _creditCostService != null
+            ? await _creditCostService.GetCostAsync("CodeReview", cancellationToken)
+            : CreditCosts.CodeReview;
+
         if (_planUsageService != null)
         {
-            await _planUsageService.EnsureCreditsAsync(userId, CreditCosts.CodeReview, cancellationToken);
+            await _planUsageService.EnsureCreditsAsync(userId, reviewCost, cancellationToken);
         }
 
         var ai = await _aiGateway.ExecuteAsync(new AIGatewayRequest(
@@ -374,7 +381,7 @@ public class GitHubService : IGitHubService
         {
             await _planUsageService.ChargeCreditsAsync(
                 userId,
-                CreditCosts.CodeReview,
+                reviewCost,
                 $"GitHub code review for {dto.FullName}",
                 referenceId: $"github-review:{dto.FullName}",
                 aiUsageEventId: ai.AIUsageEventId,
@@ -436,7 +443,7 @@ public class GitHubService : IGitHubService
                     ai.AIRequestId,
                     ai.AIUsageEventId,
                     ai.ProviderName,
-                    Credits = CreditCosts.CodeReview
+                    Credits = reviewCost
                 },
                 userId: userId,
                 cancellationToken: cancellationToken);

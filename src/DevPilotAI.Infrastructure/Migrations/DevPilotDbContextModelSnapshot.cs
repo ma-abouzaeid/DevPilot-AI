@@ -593,6 +593,83 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.ToTable("CodeReviewFindings");
                 });
 
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.CreditActionCost", b =>
+                {
+                    b.Property<string>("ActionKey")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("Credits")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("ShowOnPlansPage")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ActionKey");
+
+                    b.HasIndex("SortOrder");
+
+                    b.ToTable("CreditActionCosts");
+
+                    b.HasData(
+                        new
+                        {
+                            ActionKey = "Debugging",
+                            Credits = 5,
+                            DisplayName = "AI Debug",
+                            ShowOnPlansPage = true,
+                            SortOrder = 1,
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            ActionKey = "KnowledgeAdaptation",
+                            Credits = 2,
+                            DisplayName = "Knowledge reuse",
+                            ShowOnPlansPage = true,
+                            SortOrder = 2,
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            ActionKey = "ChallengeEvaluation",
+                            Credits = 5,
+                            DisplayName = "Challenge evaluate",
+                            ShowOnPlansPage = true,
+                            SortOrder = 3,
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            ActionKey = "CodeReview",
+                            Credits = 15,
+                            DisplayName = "Code Review",
+                            ShowOnPlansPage = true,
+                            SortOrder = 4,
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            ActionKey = "ChallengeGeneration",
+                            Credits = 3,
+                            DisplayName = "Challenge generation",
+                            ShowOnPlansPage = false,
+                            SortOrder = 5,
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
+                });
+
             modelBuilder.Entity("DevPilotAI.Domain.Entities.DebuggingAttempt", b =>
                 {
                     b.Property<int>("DebuggingAttemptId")

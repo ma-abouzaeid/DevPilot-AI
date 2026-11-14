@@ -45,12 +45,11 @@
             </div>
 
             <div class="surface-card mt-4">
-                <h2 class="h5 mb-2">How credits work</h2>
-                <ul class="text-gray mb-0">
-                    <li>AI Debug: 5 credits · Knowledge reuse: 2 · Challenge evaluate: 5 · Code Review: 15</li>
-                    <li>Tokens stay internal to the AI gateway; you only see Credits in the product.</li>
-                    <li>Billing checkout (Stripe) is not wired yet — Pro can be activated in-app for now.</li>
-                </ul>
+                <h2 class="h5 mb-3">Credit costs</h2>
+                <p class="text-gray mb-3">Credits deducted when you use each AI action.</p>
+                <div class="credit-cost-grid" id="credit-costs">
+                    <div class="empty-state">Loading credit costs…</div>
+                </div>
             </div>
         </div>
     </section>

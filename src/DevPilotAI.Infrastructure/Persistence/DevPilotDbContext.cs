@@ -51,6 +51,7 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
     public DbSet<AIUsageEvent> AIUsageEvents => Set<AIUsageEvent>();
     public DbSet<UsagePeriod> UsagePeriods => Set<UsagePeriod>();
     public DbSet<UsageLedger> UsageLedgers => Set<UsageLedger>();
+    public DbSet<CreditActionCost> CreditActionCosts => Set<CreditActionCost>();
 
     public void SoftDelete<TEntity>(TEntity entity) where TEntity : class, ISoftDeletable
     {
@@ -317,7 +318,63 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
             b.HasIndex(ul => ul.CreatedAt);
         });
 
+        modelBuilder.Entity<CreditActionCost>(b =>
+        {
+            b.HasKey(c => c.ActionKey);
+            b.Property(c => c.ActionKey).HasMaxLength(50);
+            b.Property(c => c.DisplayName).HasMaxLength(100).IsRequired();
+            b.HasIndex(c => c.SortOrder);
+        });
+
         var seedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        modelBuilder.Entity<CreditActionCost>().HasData(
+            new CreditActionCost
+            {
+                ActionKey = "Debugging",
+                DisplayName = "AI Debug",
+                Credits = 5,
+                ShowOnPlansPage = true,
+                SortOrder = 1,
+                UpdatedAt = seedAt
+            },
+            new CreditActionCost
+            {
+                ActionKey = "KnowledgeAdaptation",
+                DisplayName = "Knowledge reuse",
+                Credits = 2,
+                ShowOnPlansPage = true,
+                SortOrder = 2,
+                UpdatedAt = seedAt
+            },
+            new CreditActionCost
+            {
+                ActionKey = "ChallengeEvaluation",
+                DisplayName = "Challenge evaluate",
+                Credits = 5,
+                ShowOnPlansPage = true,
+                SortOrder = 3,
+                UpdatedAt = seedAt
+            },
+            new CreditActionCost
+            {
+                ActionKey = "CodeReview",
+                DisplayName = "Code Review",
+                Credits = 15,
+                ShowOnPlansPage = true,
+                SortOrder = 4,
+                UpdatedAt = seedAt
+            },
+            new CreditActionCost
+            {
+                ActionKey = "ChallengeGeneration",
+                DisplayName = "Challenge generation",
+                Credits = 3,
+                ShowOnPlansPage = false,
+                SortOrder = 5,
+                UpdatedAt = seedAt
+            }
+        );
 
         modelBuilder.Entity<Plan>().HasData(
             new Plan

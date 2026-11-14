@@ -100,9 +100,41 @@
         if (tab === "overview") loadOverview();
         if (tab === "users") loadUsers();
         if (tab === "plans") loadPlans();
+        if (tab === "credits") loadCreditCosts();
         if (tab === "articles") loadArticles();
         if (tab === "ai") loadAi();
         if (tab === "audit") loadAudit();
+    }
+
+    async function loadCreditCosts() {
+        var res = await api("/api/Admin/credit-costs");
+        var items = res.data || [];
+        var host = document.getElementById("credits-list");
+        if (!items.length) {
+            host.innerHTML = '<div class="col-12"><div class="empty-state">No credit costs found.</div></div>';
+            return;
+        }
+
+        host.innerHTML = items.map(function (item) {
+            var key = val(item, "actionKey", "ActionKey");
+            var name = val(item, "displayName", "DisplayName") || key;
+            var credits = val(item, "credits", "Credits") || 0;
+            var show = val(item, "showOnPlansPage", "ShowOnPlansPage");
+            return (
+                '<div class="col-md-6 col-xl-4">' +
+                '<div class="surface-card h-100">' +
+                '<label class="form-label">' + escapeHtml(name) + "</label>" +
+                '<input type="hidden" class="credit-action-key" value="' + escapeHtml(key) + '">' +
+                '<div class="input-group mb-2">' +
+                '<input class="form-control credit-action-credits" type="number" min="0" value="' + credits + '">' +
+                '<span class="input-group-text">credits</span>' +
+                "</div>" +
+                '<div class="form-check">' +
+                '<input class="form-check-input credit-action-visible" type="checkbox" ' + (show ? "checked" : "") + ">" +
+                '<label class="form-check-label">Show on Plans page</label>' +
+                "</div></div></div>"
+            );
+        }).join("");
     }
 
     async function loadOverview() {
@@ -635,6 +667,28 @@
             });
             showAlert("Article saved.", "success");
             await loadArticles();
+        } catch (err) {
+            onError(err);
+        }
+    });
+
+    document.getElementById("credits-save").addEventListener("click", async function () {
+        clearAlert();
+        try {
+            var cards = document.querySelectorAll("#credits-list .surface-card");
+            var items = Array.prototype.map.call(cards, function (card) {
+                return {
+                    actionKey: card.querySelector(".credit-action-key").value,
+                    credits: Number(card.querySelector(".credit-action-credits").value),
+                    showOnPlansPage: card.querySelector(".credit-action-visible").checked
+                };
+            });
+            await api("/api/Admin/credit-costs", {
+                method: "PUT",
+                body: JSON.stringify({ items: items })
+            });
+            showAlert("Credit costs updated.", "success");
+            await loadCreditCosts();
         } catch (err) {
             onError(err);
         }

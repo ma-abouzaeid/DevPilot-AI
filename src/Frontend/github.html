@@ -78,19 +78,25 @@
 
                             <div id="panel-debug">
                                 <p class="text-gray small mb-3">Uses the selected file as source code and runs the same structured debugging loop.</p>
-                                <div class="mb-3">
-                                    <label class="form-label" for="error-message">Error message</label>
-                                    <textarea class="form-control font-monospace" id="error-message" rows="3"
-                                        placeholder="Paste the exact error related to this file"></textarea>
+                                <div class="empty-state mb-0" id="debug-file-gate">
+                                    Select a file from the list to unlock error details and AI analysis.
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label" for="debug-notes">Notes <span class="text-muted">(optional)</span></label>
-                                    <textarea class="form-control" id="debug-notes" rows="2"
-                                        placeholder="What were you trying to do?"></textarea>
+                                <div id="debug-fields" class="d-none">
+                                    <p class="text-gray small mb-3" id="selected-file-path"></p>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="error-message">Error message</label>
+                                        <textarea class="form-control font-monospace" id="error-message" rows="3"
+                                            placeholder="Paste the exact error related to this file" disabled></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="debug-notes">Notes <span class="text-muted">(optional)</span></label>
+                                        <textarea class="form-control" id="debug-notes" rows="2"
+                                            placeholder="What were you trying to do?" disabled></textarea>
+                                    </div>
+                                    <button type="button" class="btn btn-primary" id="btn-debug" disabled>
+                                        <i class="fa-solid fa-bug"></i> Analyze file with AI
+                                    </button>
                                 </div>
-                                <button type="button" class="btn btn-primary" id="btn-debug">
-                                    <i class="fa-solid fa-bug"></i> Analyze file with AI
-                                </button>
                             </div>
 
                             <div id="panel-review" class="d-none">
@@ -106,8 +112,26 @@
                         </div>
 
                         <div class="surface-card d-none" id="result-card">
-                            <h2 class="h5 mb-3">Result</h2>
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                                <div>
+                                    <h2 class="h5 mb-1" id="result-heading">Result</h2>
+                                    <p class="text-gray mb-0 small" id="result-mode-label">Initial analysis</p>
+                                </div>
+                                <span class="badge text-bg-primary" id="result-code"></span>
+                            </div>
+                            <p class="provider-meta text-gray mb-3 d-none" id="provider-row">
+                                Provider: <strong id="result-provider"></strong>
+                            </p>
                             <div id="result-body"></div>
+                            <div class="d-flex flex-wrap gap-2 mt-4 d-none" id="feedback-actions">
+                                <button type="button" class="btn btn-success" id="btn-solved" style="width:auto;">
+                                    <i class="fa-solid fa-check"></i> Problem solved
+                                </button>
+                                <button type="button" class="btn btn-outline-card" id="btn-unsolved" style="width:auto;">
+                                    <i class="fa-solid fa-rotate"></i> Still have a problem
+                                </button>
+                            </div>
+                            <p id="feedback-message" class="mt-3 text-gray d-none"></p>
                         </div>
                     </div>
                 </div>

@@ -18,6 +18,7 @@ public class ProblemService : IProblemService
     private readonly ISimilarityEngine? _similarityEngine;
     private readonly IChallengeService? _challengeService;
     private readonly IPlanUsageService? _planUsageService;
+    private readonly ICreditCostService? _creditCostService;
     private readonly IAuditService? _auditService;
 
     public ProblemService(
@@ -26,7 +27,8 @@ public class ProblemService : IProblemService
         ISimilarityEngine? similarityEngine = null,
         IChallengeService? challengeService = null,
         IPlanUsageService? planUsageService = null,
-        IAuditService? auditService = null)
+        IAuditService? auditService = null,
+        ICreditCostService? creditCostService = null)
     {
         _dbContext = dbContext;
         _aiGateway = aiGateway;
@@ -34,6 +36,7 @@ public class ProblemService : IProblemService
         _challengeService = challengeService;
         _planUsageService = planUsageService;
         _auditService = auditService;
+        _creditCostService = creditCostService;
     }
 
     public async Task<DebuggingResultDto> SubmitProblemAsync(CreateProblemDto dto, CancellationToken cancellationToken = default)
@@ -289,12 +292,31 @@ public class ProblemService : IProblemService
             problem.Status = ProblemStatus.Solved;
             problem.ResolvedAt = DateTime.UtcNow;
 
+            var structured = DebuggingResultParser.FromPersistedAttempt(
+                attempt.Explanation,
+                attempt.RootCauseAnalysis,
+                attempt.ProposedSolution,
+                problem.Title);
+
+            var framework = await _dbContext.ProblemRequests
+                .AsNoTracking()
+                .Where(r => r.ProblemId == problemId)
+                .OrderByDescending(r => r.CreatedAt)
+                .Select(r => r.Framework)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var articleSummary = !string.IsNullOrWhiteSpace(structured.SolutionSummary)
+                ? (structured.SolutionSummary.Length > 200
+                    ? structured.SolutionSummary[..200].Trim()
+                    : structured.SolutionSummary.Trim())
+                : problem.Summary;
+
             var solution = new ProblemSolution
             {
                 ProblemId = problemId,
                 SuccessfulAttemptId = attemptId,
                 RootCause = attempt.RootCauseAnalysis,
-                Summary = problem.Title,
+                Summary = articleSummary,
                 DetailedSteps = attempt.ProposedSolution,
                 SolvedAt = DateTime.UtcNow
             };
@@ -312,7 +334,7 @@ public class ProblemService : IProblemService
                     ProblemId = problemId,
                     ArticleCode = articleCode,
                     Title = $"How to fix: {problem.Title}",
-                    Summary = problem.Summary,
+                    Summary = articleSummary,
                     CurrentVersion = 1,
                     IsPublished = true
                 };
@@ -322,6 +344,8 @@ public class ProblemService : IProblemService
             else
             {
                 article.CurrentVersion++;
+                article.Summary = articleSummary;
+                article.Title = $"How to fix: {problem.Title}";
             }
 
             var version = new ArticleVersion
@@ -329,7 +353,10 @@ public class ProblemService : IProblemService
                 KnowledgeArticleId = article.KnowledgeArticleId,
                 VersionNumber = article.CurrentVersion,
                 Title = article.Title,
-                ContentMarkdown = $"# {article.Title}\n\n## Root Cause\n{attempt.RootCauseAnalysis}\n\n## Solution\n{attempt.ProposedSolution}",
+                ContentMarkdown = DebuggingResultParser.BuildArticleMarkdown(
+                    article.Title,
+                    structured,
+                    framework),
                 ChangeReason = isSolved ? "Resolution confirmed by developer feedback" : "Updated resolution synthesis",
                 CreatedAt = DateTime.UtcNow
             };
@@ -370,15 +397,11 @@ public class ProblemService : IProblemService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        var payload = DebuggingResultParser.ParseOrFallback(
+        var payload = DebuggingResultParser.FromPersistedAttempt(
+            attempt.Explanation,
+            attempt.RootCauseAnalysis,
             attempt.ProposedSolution,
             problem.Title);
-
-        // Prefer persisted root-cause/explanation when feedback path reuses an attempt.
-        if (!string.IsNullOrWhiteSpace(attempt.RootCauseAnalysis))
-        {
-            payload.RootCause = attempt.RootCauseAnalysis;
-        }
 
         var dto = DebuggingResultParser.ToDto(
             problem.ProblemId,
@@ -389,7 +412,10 @@ public class ProblemService : IProblemService
 
         return dto with
         {
-            ProposedSolution = attempt.ProposedSolution
+            ProposedSolution = attempt.ProposedSolution,
+            CorrectedCode = string.IsNullOrWhiteSpace(payload.CorrectedCode)
+                ? dto.CorrectedCode
+                : payload.CorrectedCode
         };
     }
 
@@ -774,7 +800,9 @@ public class ProblemService : IProblemService
             request.Logs,
             existingSolution);
 
-        var creditCost = CreditCosts.ForTaskType(taskType);
+        var creditCost = _creditCostService != null
+            ? await _creditCostService.GetCostAsync(taskType, cancellationToken)
+            : CreditCosts.ForTaskType(taskType);
         if (_planUsageService != null)
         {
             await _planUsageService.EnsureFeatureAsync(problem.UserId, PlanFeatureKeys.AiDebugging, cancellationToken);

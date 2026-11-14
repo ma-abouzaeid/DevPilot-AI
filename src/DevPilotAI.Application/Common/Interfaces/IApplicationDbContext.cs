@@ -46,6 +46,7 @@ public interface IApplicationDbContext
     DbSet<AIUsageEvent> AIUsageEvents { get; }
     DbSet<UsagePeriod> UsagePeriods { get; }
     DbSet<UsageLedger> UsageLedgers { get; }
+    DbSet<CreditActionCost> CreditActionCosts { get; }
 
     void SoftDelete<TEntity>(TEntity entity) where TEntity : class, ISoftDeletable;
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

@@ -3,6 +3,8 @@ using DevPilotAI.Application.Admin;
 using DevPilotAI.Application.Common;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Models;
+using DevPilotAI.Application.Plans;
+using DevPilotAI.Application.Plans.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,10 +16,12 @@ namespace DevPilotAI.API.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly IAdminService _adminService;
+    private readonly ICreditCostService _creditCostService;
 
-    public AdminController(IAdminService adminService)
+    public AdminController(IAdminService adminService, ICreditCostService creditCostService)
     {
         _adminService = adminService;
+        _creditCostService = creditCostService;
     }
 
     private string GetTraceId() =>
@@ -125,6 +129,20 @@ public class AdminController : ControllerBase
     {
         var data = await _adminService.UpdatePlanAsync(GetRequiredUserId(), planId, request, cancellationToken);
         return Ok(ApiResponse<AdminPlanDto>.SuccessResult(data, "Plan updated.", GetTraceId()));
+    }
+
+    [HttpGet("credit-costs")]
+    public async Task<IActionResult> ListCreditCosts(CancellationToken cancellationToken)
+    {
+        var data = await _creditCostService.ListAllAsync(cancellationToken);
+        return Ok(ApiResponse<IReadOnlyList<CreditCostItemDto>>.SuccessResult(data, "Credit costs loaded.", GetTraceId()));
+    }
+
+    [HttpPut("credit-costs")]
+    public async Task<IActionResult> UpdateCreditCosts([FromBody] UpdateCreditCostsRequestDto request, CancellationToken cancellationToken)
+    {
+        var data = await _creditCostService.UpdateAsync(request.Items, cancellationToken);
+        return Ok(ApiResponse<IReadOnlyList<CreditCostItemDto>>.SuccessResult(data, "Credit costs updated.", GetTraceId()));
     }
 
     [HttpGet("articles")]

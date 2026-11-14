@@ -23,8 +23,8 @@
 
     <section class="login-section padding-top-bottom">
         <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-12 col-lg-10">
+            <div class="row g-4 align-items-start">
+                <div class="col-12 col-lg-8">
                     <span class="welcome-badge">AI Debugging</span>
                     <h1 class="title-style mb-2">Paste the <span class="text-blue">code</span>. Drop the error.</h1>
                     <p class="text-gray mb-4">Only code and the error message are required. DevPilot infers the title, stack, and framework for you.</p>
@@ -73,40 +73,57 @@
                     </form>
 
                     <div id="result-panel" class="debug-result d-none mt-5">
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                            <h2 class="h3 mb-0">Structured Solution</h2>
-                            <span class="badge text-bg-primary" id="result-code"></span>
+                        <div id="followup-banner" class="followup-banner d-none" role="status">
+                            <div class="followup-banner-icon" aria-hidden="true">
+                                <i class="fa-solid fa-rotate"></i>
+                            </div>
+                            <div>
+                                <strong>Follow-up in progress</strong>
+                                <p class="mb-0">Previous solution is hidden while DevPilot re-analyzes this ticket with your latest code and error.</p>
+                            </div>
                         </div>
-                        <p class="text-gray mb-4">Provider: <strong id="result-provider"></strong></p>
 
-                        <article class="result-block">
-                            <h3>1. Problem</h3>
-                            <p id="result-problem"></p>
-                        </article>
-                        <article class="result-block">
-                            <h3>2. Location</h3>
-                            <p id="result-location"></p>
-                        </article>
-                        <article class="result-block">
-                            <h3>3. Root Cause</h3>
-                            <p id="result-rootCause"></p>
-                        </article>
-                        <article class="result-block">
-                            <h3>4. Solution Summary</h3>
-                            <p id="result-summary"></p>
-                        </article>
-                        <article class="result-block">
-                            <h3>5. Steps</h3>
-                            <ol id="result-steps" class="result-steps"></ol>
-                        </article>
-                        <article class="result-block">
-                            <h3>6. Corrected Code</h3>
-                            <pre class="result-code"><code id="result-correctedCode"></code></pre>
-                        </article>
-                        <article class="result-block" id="notes-block">
-                            <h3>7. Notes</h3>
-                            <p id="result-notes"></p>
-                        </article>
+                        <div id="solution-body">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                <div>
+                                    <h2 class="h3 mb-1">Structured Solution</h2>
+                                    <p class="text-gray mb-0 small" id="result-mode-label">Initial analysis</p>
+                                </div>
+                                <span class="badge text-bg-primary" id="result-code"></span>
+                            </div>
+                            <p class="provider-meta text-gray mb-4 d-none" id="provider-row">
+                                Provider: <strong id="result-provider"></strong>
+                            </p>
+
+                            <article class="result-block">
+                                <h3>1. Problem</h3>
+                                <p id="result-problem"></p>
+                            </article>
+                            <article class="result-block">
+                                <h3>2. Location</h3>
+                                <p id="result-location"></p>
+                            </article>
+                            <article class="result-block">
+                                <h3>3. Root Cause</h3>
+                                <p id="result-rootCause"></p>
+                            </article>
+                            <article class="result-block">
+                                <h3>4. Solution Summary</h3>
+                                <p id="result-summary"></p>
+                            </article>
+                            <article class="result-block">
+                                <h3>5. Steps</h3>
+                                <ol id="result-steps" class="result-steps"></ol>
+                            </article>
+                            <article class="result-block">
+                                <h3>6. Corrected Code</h3>
+                                <div id="corrected-code-host"></div>
+                            </article>
+                            <article class="result-block d-none" id="notes-block">
+                                <h3>7. Notes</h3>
+                                <p id="result-notes"></p>
+                            </article>
+                        </div>
 
                         <div class="d-flex flex-wrap gap-2 mt-4" id="feedback-actions">
                             <button type="button" class="btn btn-success" id="btn-solved">
@@ -118,6 +135,22 @@
                         </div>
                         <p id="feedback-message" class="mt-3 text-gray d-none"></p>
                     </div>
+                </div>
+
+                <div class="col-12 col-lg-4">
+                    <aside id="analysis-rail" class="analysis-rail" aria-live="polite">
+                        <div class="analysis-rail-head">
+                            <div>
+                                <span class="analysis-rail-kicker">Live activity</span>
+                                <h2 class="analysis-rail-title">Analysis log</h2>
+                            </div>
+                            <span class="analysis-status" id="analysis-status">Idle</span>
+                        </div>
+                        <p class="analysis-idle" id="analysis-idle">
+                            Submit a problem to watch DevPilot validate input, create the ticket, and run AI analysis.
+                        </p>
+                        <ol class="analysis-log d-none" id="analysis-log"></ol>
+                    </aside>
                 </div>
             </div>
         </div>

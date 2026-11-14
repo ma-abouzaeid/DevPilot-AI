@@ -112,7 +112,7 @@
             return (
                 '<div class="col-md-6">' +
                 '<div class="surface-card h-100 d-flex flex-column">' +
-                (isPro ? '<span class="badge-soft ai mb-2">Recommended</span>' : '<span class="badge-soft progress mb-2">Starter</span>') +
+                (isPro ? '<span class="badge-soft ai mb-2">Recommended</span>' : '<span class="badge-soft status-progress mb-2">Starter</span>') +
                 '<h2 class="h3 mb-1">' + escapeHtml(name) + "</h2>" +
                 '<p class="stat-value mb-2" style="font-size:2rem;">' + escapeHtml(priceLabel(p)) + "</p>" +
                 '<p class="text-gray">' + escapeHtml(description) + "</p>" +
@@ -130,9 +130,37 @@
         });
     }
 
+    async function loadCreditCosts() {
+        const host = document.getElementById("credit-costs");
+        if (!host) return;
+        try {
+            const url = new URL("/api/Plans/credit-costs", API_BASE).href;
+            const res = await window.DevPilotApi.request(url, { skipAuth: true });
+            const items = res.data || [];
+            if (!items.length) {
+                host.innerHTML = '<div class="empty-state">No credit costs configured.</div>';
+                return;
+            }
+
+            host.innerHTML = items.map(function (item) {
+                const name = item.displayName || item.DisplayName || item.actionKey || item.ActionKey || "Action";
+                const credits = item.credits ?? item.Credits ?? 0;
+                return (
+                    '<div class="credit-cost-card">' +
+                    '<div class="credit-cost-name">' + escapeHtml(name) + "</div>" +
+                    '<div class="credit-cost-value"><strong>' + credits + "</strong> credits</div>" +
+                    "</div>"
+                );
+            }).join("");
+        } catch (err) {
+            host.innerHTML = '<div class="empty-state">' + escapeHtml(err.message || "Failed to load credit costs") + "</div>";
+        }
+    }
+
     Promise.resolve()
         .then(function () { return loggedIn ? loadUsage() : null; })
         .then(loadPlans)
+        .then(loadCreditCosts)
         .catch(function (err) {
             grid.innerHTML = '<div class="col-12"><div class="empty-state">' + escapeHtml(err.message || "Failed to load") + "</div></div>";
         });

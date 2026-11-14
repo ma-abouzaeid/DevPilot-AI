@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<IGitHubService, GitHubService>();
         services.AddScoped<IChallengeService, ChallengeService>();
         services.AddScoped<IPlanUsageService, PlanUsageService>();
+        services.AddScoped<ICreditCostService, CreditCostService>();
         services.AddScoped<IAdminService, AdminService>();
 
         return services;

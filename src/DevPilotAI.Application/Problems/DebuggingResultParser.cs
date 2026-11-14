@@ -79,6 +79,175 @@ public static partial class DebuggingResultParser
         return CreateFallback(fallbackProblemTitle, trimmed);
     }
 
+    /// <summary>
+    /// Rebuilds structured fields from persisted attempt columns.
+    /// ProposedSolution is human-readable text (not AI JSON), so ParseOrFallback must not be used on it.
+    /// </summary>
+    public static StructuredDebugPayload FromPersistedAttempt(
+        string? explanation,
+        string? rootCause,
+        string? proposedSolution,
+        string? fallbackProblemTitle = null)
+    {
+        var payload = new StructuredDebugPayload
+        {
+            RootCause = string.IsNullOrWhiteSpace(rootCause) ? null : rootCause.Trim(),
+            Steps = []
+        };
+
+        if (!string.IsNullOrWhiteSpace(explanation))
+        {
+            var lines = explanation.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+            var locationIndex = Array.FindIndex(
+                lines,
+                static line => line.StartsWith("Location:", StringComparison.OrdinalIgnoreCase));
+
+            if (locationIndex >= 0)
+            {
+                payload.Location = lines[locationIndex]["Location:".Length..].Trim();
+                payload.Problem = string.Join('\n', lines.Take(locationIndex)).Trim();
+            }
+            else
+            {
+                payload.Problem = explanation.Trim();
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(payload.Problem))
+        {
+            payload.Problem = string.IsNullOrWhiteSpace(fallbackProblemTitle)
+                ? "Developer problem"
+                : fallbackProblemTitle.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(proposedSolution))
+        {
+            var text = proposedSolution.Replace("\r\n", "\n", StringComparison.Ordinal).Trim();
+            const string codeMarker = "Corrected code:";
+            var codeIndex = text.IndexOf(codeMarker, StringComparison.OrdinalIgnoreCase);
+            var body = text;
+            if (codeIndex >= 0)
+            {
+                payload.CorrectedCode = text[(codeIndex + codeMarker.Length)..].Trim();
+                body = text[..codeIndex].Trim();
+            }
+
+            var summaryLines = new List<string>();
+            var steps = new List<StructuredDebugStep>();
+            var inSteps = false;
+
+            foreach (var rawLine in body.Split('\n'))
+            {
+                var line = rawLine.TrimEnd();
+                var match = PersistedStepRegex().Match(line.Trim());
+                if (match.Success)
+                {
+                    inSteps = true;
+                    steps.Add(new StructuredDebugStep
+                    {
+                        Order = int.Parse(match.Groups[1].Value),
+                        Title = match.Groups[2].Value.Trim(),
+                        Detail = match.Groups[3].Value.Trim()
+                    });
+                    continue;
+                }
+
+                if (!inSteps)
+                {
+                    summaryLines.Add(line);
+                }
+                else if (steps.Count > 0 && !string.IsNullOrWhiteSpace(line))
+                {
+                    var last = steps[^1];
+                    last.Detail = string.IsNullOrWhiteSpace(last.Detail)
+                        ? line.Trim()
+                        : $"{last.Detail} {line.Trim()}";
+                }
+            }
+
+            payload.SolutionSummary = string.Join('\n', summaryLines).Trim();
+            payload.Steps = steps;
+        }
+
+        if (string.IsNullOrWhiteSpace(payload.Location))
+        {
+            payload.Location = "See the submitted source and stack context.";
+        }
+
+        if (string.IsNullOrWhiteSpace(payload.RootCause))
+        {
+            payload.RootCause = "Review the persisted analysis for this solved attempt.";
+        }
+
+        if (string.IsNullOrWhiteSpace(payload.SolutionSummary))
+        {
+            payload.SolutionSummary = "Apply the persisted fix steps below.";
+        }
+
+        return payload;
+    }
+
+    public static string BuildArticleMarkdown(
+        string title,
+        StructuredDebugPayload payload,
+        string? framework = null)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("## What went wrong");
+        sb.AppendLine(payload.Problem?.Trim() ?? title);
+        sb.AppendLine();
+
+        sb.AppendLine("## Where it happened");
+        sb.AppendLine(string.IsNullOrWhiteSpace(payload.Location)
+            ? "Location could not be determined precisely."
+            : payload.Location.Trim());
+        if (!string.IsNullOrWhiteSpace(framework))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"**Stack / framework:** {framework.Trim()}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("## Why it happened");
+        sb.AppendLine(payload.RootCause?.Trim() ?? "Root cause analysis was not available.");
+        sb.AppendLine();
+
+        sb.AppendLine("## How to fix it");
+        sb.AppendLine(payload.SolutionSummary?.Trim() ?? "Follow the steps below.");
+        sb.AppendLine();
+
+        var steps = payload.Steps ?? [];
+        if (steps.Count > 0)
+        {
+            sb.AppendLine("## Fix steps");
+            foreach (var step in steps.OrderBy(s => s.Order))
+            {
+                var stepTitle = string.IsNullOrWhiteSpace(step.Title) ? "Step" : step.Title.Trim();
+                var detail = string.IsNullOrWhiteSpace(step.Detail) ? "" : step.Detail.Trim();
+                sb.AppendLine($"{Math.Max(1, step.Order)}. **{stepTitle}** — {detail}");
+            }
+
+            sb.AppendLine();
+        }
+
+        if (!string.IsNullOrWhiteSpace(payload.CorrectedCode))
+        {
+            sb.AppendLine("## Corrected code");
+            sb.AppendLine();
+            sb.AppendLine("```");
+            sb.AppendLine(payload.CorrectedCode.Trim());
+            sb.AppendLine("```");
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("## Key takeaway");
+        sb.AppendLine(string.IsNullOrWhiteSpace(payload.Notes)
+            ? "Initialize required state before use, and prefer safe lookups over unchecked indexing."
+            : payload.Notes.Trim());
+
+        return sb.ToString().Trim();
+    }
+
     public static string BuildSystemPrompt() =>
         """
         You are DevPilot AI, an expert software debugging assistant.
@@ -91,13 +260,13 @@ public static partial class DebuggingResultParser
           "title": "short searchable problem title (max ~80 chars)",
           "framework": "detected language/framework/stack or empty string",
           "problem": "short clear description of the problem",
-          "location": "where the issue is (file/function/line/area if known, otherwise best guess)",
+          "location": "Class.Method or file area, and include the line number like 'line 14' whenever you can infer it from the submitted code",
           "rootCause": "the root cause in plain language",
           "solutionSummary": "one short paragraph summarizing the fix",
           "steps": [
             { "order": 1, "title": "short step title", "detail": "what to do in this step" }
           ],
-          "correctedCode": "the corrected code snippet or empty string if not applicable",
+          "correctedCode": "the full corrected code, properly formatted with newlines and indentation (never minify onto one line). Empty string if not applicable.",
           "notes": "optional extra tips or empty string"
         }
         Rules:
@@ -106,6 +275,8 @@ public static partial class DebuggingResultParser
         - Keep explanations practical and developer-friendly.
         - Prefer concrete fixes over generic advice.
         - Infer title and framework even when the user did not provide them.
+        - For location, always try to name the method/class AND the approximate line number from the submitted source (e.g. "OrderService.GetTotal — line 14 (_prices[id])").
+        - correctedCode must be readable multi-line source with normal indentation.
         """;
 
     public static string BuildUserPrompt(
@@ -225,6 +396,9 @@ public static partial class DebuggingResultParser
 
     [GeneratedRegex(@"```(?:json)?\s*(\{[\s\S]*?\})\s*```", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex JsonFenceRegex();
+
+    [GeneratedRegex(@"^(\d+)\.\s*([^:]+):\s*(.*)$", RegexOptions.CultureInvariant)]
+    private static partial Regex PersistedStepRegex();
 }
 
 public class StructuredDebugPayload

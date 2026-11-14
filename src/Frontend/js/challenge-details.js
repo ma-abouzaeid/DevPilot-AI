@@ -25,6 +25,33 @@
         alertBox.classList.remove("d-none");
     }
 
+    function splitRequirements(raw) {
+        const text = String(raw || "").replace(/\r\n/g, "\n").trim();
+        if (!text) return ["Fix the bug and keep the behavior correct."];
+
+        if (text.indexOf("\n") >= 0) {
+            return text.split("\n")
+                .map(function (line) { return line.replace(/^\d+\.\s*/, "").trim(); })
+                .filter(Boolean);
+        }
+
+        const numbered = text.split(/(?=\d+\.\s+)/)
+            .map(function (part) { return part.replace(/^\d+\.\s*/, "").trim(); })
+            .filter(Boolean);
+
+        if (numbered.length >= 2) return numbered;
+        return [text];
+    }
+
+    function renderRequirements(raw) {
+        const items = splitRequirements(raw);
+        return '<ol class="challenge-requirements">' +
+            items.map(function (item) {
+                return "<li>" + escapeHtml(item) + "</li>";
+            }).join("") +
+            "</ol>";
+    }
+
     function updateIdeChrome(textarea, gutter, meta) {
         const value = textarea.value;
         const lines = value.length ? value.split("\n").length : 1;
@@ -66,8 +93,8 @@
             '<p class="mb-0"><strong class="text-accent-brand"><i class="fa-solid fa-star"></i> ' + maxPoints + " pts max</strong></p>" +
             "</div>" +
             '<div class="surface-card">' +
-            "<h2 class=\"h6\">Requirements</h2>" +
-            '<p class="mb-0 text-gray">' + escapeHtml(requirements) + "</p>" +
+            "<h2 class=\"h6 mb-3\">Requirements</h2>" +
+            renderRequirements(requirements) +
             "</div></div>" +
 
             '<div class="col-lg-8">' +
@@ -135,27 +162,72 @@
         });
     }
 
+    function isAdminViewer() {
+        return !!(window.DevPilotApi && typeof window.DevPilotApi.isAdmin === "function" && window.DevPilotApi.isAdmin());
+    }
+
+    function scoreRow(label, value) {
+        const score = Math.max(0, Math.min(100, Number(value) || 0));
+        return (
+            '<div class="challenge-score-row">' +
+            '<div class="challenge-score-meta">' +
+            "<span>" + escapeHtml(label) + "</span>" +
+            "<strong>" + score + "</strong>" +
+            "</div>" +
+            '<div class="challenge-score-track" aria-hidden="true">' +
+            '<span class="challenge-score-fill" style="width:' + score + '%"></span>' +
+            "</div></div>"
+        );
+    }
+
     function renderResult(data) {
         const card = document.getElementById("result-card");
         const body = document.getElementById("result-body");
         const passed = data.isPassed || data.IsPassed;
         const points = data.pointsAwarded ?? data.PointsAwarded ?? 0;
         const max = data.maxPoints ?? data.MaxPoints ?? 0;
+        const provider = data.providerUsed || data.ProviderUsed || "";
+        const feedback = data.feedbackSummary || data.FeedbackSummary || "";
+        const advice = data.advice || data.Advice || "";
+        const details = data.detailedReport || data.DetailedReport || "";
+
         card.classList.remove("d-none");
         body.innerHTML =
-            '<p class="mb-2">' +
-            (passed ? '<span class="badge-soft solved">Passed</span>' : '<span class="badge-soft open">Needs work</span>') +
-            ' · <strong class="text-accent-brand">' + points + " / " + max + " pts</strong>" +
-            ' · Provider: ' + escapeHtml(data.providerUsed || data.ProviderUsed || "") +
-            "</p>" +
-            "<h3 class=\"h6\">Feedback</h3><p>" + escapeHtml(data.feedbackSummary || data.FeedbackSummary || "") + "</p>" +
-            "<h3 class=\"h6\">Advice</h3><p>" + escapeHtml(data.advice || data.Advice || "") + "</p>" +
-            "<h3 class=\"h6\">Scores</h3>" +
-            "<ul><li>Correctness: " + (data.correctnessScore ?? data.CorrectnessScore ?? 0) +
-            "</li><li>Code quality: " + (data.codeQualityScore ?? data.CodeQualityScore ?? 0) +
-            "</li><li>Security: " + (data.securityScore ?? data.SecurityScore ?? 0) + "</li></ul>" +
-            "<h3 class=\"h6\">Details</h3><p class=\"text-gray\">" + escapeHtml(data.detailedReport || data.DetailedReport || "") + "</p>" +
-            '<a class="btn btn-outline-card mt-2" style="width:auto;" href="challenges.html">Back to challenges</a>';
+            '<div class="challenge-feedback">' +
+            '<div class="challenge-feedback-header">' +
+            (passed
+                ? '<span class="badge-soft solved">Passed</span>'
+                : '<span class="badge-soft open">Needs work</span>') +
+            '<span class="challenge-feedback-points"><i class="fa-solid fa-star"></i> ' +
+            points + " / " + max + " pts</span>" +
+            (isAdminViewer() && provider
+                ? '<span class="challenge-feedback-provider">Provider: ' + escapeHtml(provider) + "</span>"
+                : "") +
+            "</div>" +
+
+            (feedback
+                ? '<section class="challenge-feedback-block"><h3>Feedback</h3><p>' + escapeHtml(feedback) + "</p></section>"
+                : "") +
+            (advice
+                ? '<section class="challenge-feedback-block"><h3>Advice</h3><p>' + escapeHtml(advice) + "</p></section>"
+                : "") +
+
+            '<section class="challenge-feedback-block">' +
+            "<h3>Scores</h3>" +
+            '<div class="challenge-score-list">' +
+            scoreRow("Correctness", data.correctnessScore ?? data.CorrectnessScore) +
+            scoreRow("Code quality", data.codeQualityScore ?? data.CodeQualityScore) +
+            scoreRow("Security", data.securityScore ?? data.SecurityScore) +
+            "</div></section>" +
+
+            (details
+                ? '<section class="challenge-feedback-block"><h3>Details</h3><p>' + escapeHtml(details) + "</p></section>"
+                : "") +
+
+            '<div class="challenge-feedback-actions">' +
+            '<a class="btn btn-outline-card" style="width:auto;" href="challenges.html">Back to challenges</a>' +
+            "</div></div>";
+
         card.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 

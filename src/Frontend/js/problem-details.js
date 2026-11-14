@@ -21,17 +21,268 @@
     function statusBadge(status) {
         const s = (status || "").toLowerCase();
         if (s === "solved") return '<span class="badge-soft solved">Solved</span>';
-        if (s === "inprogress" || s === "in_progress") return '<span class="badge-soft progress">In Progress</span>';
+        if (s === "inprogress" || s === "in_progress") return '<span class="badge-soft status-progress">In Progress</span>';
         return '<span class="badge-soft open">Open</span>';
     }
 
-    function preBlock(label, text) {
-        if (!text) return "";
+    function pick(obj) {
+        const keys = Array.prototype.slice.call(arguments, 1);
+        for (let i = 0; i < keys.length; i++) {
+            const value = obj[keys[i]];
+            if (value != null && String(value).trim() !== "") return value;
+        }
+        return "";
+    }
+
+    function formatSourceCode(raw) {
+        if (!raw) return "";
+        let text = String(raw).replace(/\r\n/g, "\n").trim();
+        const newlineCount = (text.match(/\n/g) || []).length;
+        if (newlineCount >= 2) return text;
+
+        let out = "";
+        let indent = 0;
+        let inString = false;
+        let stringQuote = "";
+        let escaped = false;
+
+        function newline() {
+            out += "\n" + "    ".repeat(Math.max(indent, 0));
+        }
+
+        for (let i = 0; i < text.length; i++) {
+            const ch = text[i];
+            if (inString) {
+                out += ch;
+                if (escaped) escaped = false;
+                else if (ch === "\\") escaped = true;
+                else if (ch === stringQuote) inString = false;
+                continue;
+            }
+            if (ch === "\"" || ch === "'") {
+                inString = true;
+                stringQuote = ch;
+                out += ch;
+                continue;
+            }
+            if (ch === "{") {
+                out = out.replace(/[ \t]+$/, "");
+                out += " {";
+                indent += 1;
+                newline();
+                continue;
+            }
+            if (ch === "}") {
+                indent = Math.max(indent - 1, 0);
+                out = out.replace(/[ \t]+$/, "");
+                newline();
+                out += "}";
+                const next = text[i + 1];
+                if (next && next !== ";" && next !== ")" && next !== "," && next !== "}") newline();
+                continue;
+            }
+            if (ch === ";") {
+                out += ";";
+                const next = text[i + 1];
+                if (next && next !== "}" && next !== ")") newline();
+                continue;
+            }
+            out += ch;
+        }
+
+        return out
+            .split("\n")
+            .map(function (line) { return line.replace(/[ \t]+$/g, ""); })
+            .join("\n")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim();
+    }
+
+    function ideBlock(label, code, filename) {
+        if (!code || !String(code).trim()) return "";
+        const formatted = formatSourceCode(code);
+        const lines = formatted.length ? formatted.split("\n") : [" "];
+        let gutter = "";
+        for (let i = 1; i <= lines.length; i++) gutter += i + (i < lines.length ? "\n" : "");
+
         return (
-            "<h3 class=\"h6 mt-3\">" + escapeHtml(label) + "</h3>" +
-            '<pre class="code-panel mb-0" style="white-space:pre-wrap;max-height:320px;overflow:auto;">' +
-            escapeHtml(text) +
-            "</pre>"
+            '<div class="problem-section">' +
+            (label ? '<h3 class="problem-section-title">' + escapeHtml(label) + "</h3>" : "") +
+            '<div class="ide-editor ide-readonly article-ide">' +
+            '<div class="ide-toolbar">' +
+            '<div class="ide-dots" aria-hidden="true"><span></span><span></span><span></span></div>' +
+            '<span class="ide-filename">' + escapeHtml(filename || "snippet.txt") + "</span>" +
+            "</div>" +
+            '<div class="ide-body ide-body-readonly">' +
+            '<pre class="ide-gutter" aria-hidden="true">' + gutter + "</pre>" +
+            '<pre class="ide-code"><code>' + escapeHtml(formatted) + "</code></pre>" +
+            "</div></div></div>"
+        );
+    }
+
+    function textSection(label, text) {
+        if (!text || !String(text).trim()) return "";
+        return (
+            '<div class="problem-section">' +
+            '<h3 class="problem-section-title">' + escapeHtml(label) + "</h3>" +
+            '<p class="problem-section-text">' + escapeHtml(text) + "</p>" +
+            "</div>"
+        );
+    }
+
+    function parseExplanation(explanation) {
+        const text = String(explanation || "").replace(/\r\n/g, "\n").trim();
+        if (!text) return { problem: "", location: "" };
+        const lines = text.split("\n");
+        let locationIndex = -1;
+        for (let i = 0; i < lines.length; i++) {
+            if (/^Location:\s*/i.test(lines[i])) {
+                locationIndex = i;
+                break;
+            }
+        }
+        if (locationIndex >= 0) {
+            return {
+                problem: lines.slice(0, locationIndex).join("\n").trim(),
+                location: lines[locationIndex].replace(/^Location:\s*/i, "").trim()
+            };
+        }
+        return { problem: text, location: "" };
+    }
+
+    function parseProposedSolution(proposed) {
+        const text = String(proposed || "").replace(/\r\n/g, "\n").trim();
+        if (!text) return { summary: "", steps: [], code: "" };
+
+        let body = text;
+        let code = "";
+        const codeMarker = /Corrected code:\s*/i;
+        const codeMatch = text.search(codeMarker);
+        if (codeMatch >= 0) {
+            const after = text.slice(codeMatch).replace(codeMarker, "");
+            code = after.trim();
+            body = text.slice(0, codeMatch).trim();
+        }
+
+        const lines = body.split("\n");
+        const summaryLines = [];
+        const steps = [];
+        let inSteps = false;
+
+        lines.forEach(function (rawLine) {
+            const line = rawLine.trim();
+            const stepMatch = line.match(/^(\d+)\.\s*([^:]+):\s*(.*)$/);
+            if (stepMatch) {
+                inSteps = true;
+                steps.push({
+                    order: Number(stepMatch[1]),
+                    title: stepMatch[2].trim(),
+                    detail: stepMatch[3].trim()
+                });
+                return;
+            }
+            if (!inSteps) {
+                if (line) summaryLines.push(line);
+            } else if (steps.length && line) {
+                steps[steps.length - 1].detail += " " + line;
+            }
+        });
+
+        return {
+            summary: summaryLines.join(" ").trim(),
+            steps: steps,
+            code: code
+        };
+    }
+
+    function renderSteps(steps) {
+        if (!steps || !steps.length) return "";
+        return (
+            '<div class="problem-section">' +
+            '<h3 class="problem-section-title">Steps</h3>' +
+            '<ol class="article-steps">' +
+            steps.map(function (step) {
+                return (
+                    "<li><strong>" + escapeHtml(step.title || ("Step " + step.order)) + "</strong>" +
+                    (step.detail ? "<br>" + escapeHtml(step.detail) : "") +
+                    "</li>"
+                );
+            }).join("") +
+            "</ol></div>"
+        );
+    }
+
+    function renderRequestCard(r, index) {
+        const framework = pick(r, "framework", "Framework");
+        const description = pick(r, "description", "Description");
+        const errorMessage = pick(r, "errorMessage", "ErrorMessage");
+        const stackTrace = pick(r, "stackTrace", "StackTrace");
+        const sourceCode = pick(r, "sourceCode", "SourceCode");
+        const logs = pick(r, "logs", "Logs");
+
+        return (
+            '<article class="surface-card problem-history-card mb-3">' +
+            '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
+            '<h3 class="h6 mb-0">Request #' + (index + 1) + "</h3>" +
+            '<span class="text-gray small">' + escapeHtml(formatDate(pick(r, "createdAt", "CreatedAt"))) + "</span>" +
+            "</div>" +
+            (framework ? '<div class="mb-2"><span class="badge-soft status-progress">' + escapeHtml(framework) + "</span></div>" : "") +
+            textSection("Notes", description) +
+            (errorMessage
+                ? '<div class="problem-section"><h3 class="problem-section-title">Error</h3>' +
+                  '<pre class="problem-error-box">' + escapeHtml(errorMessage) + "</pre></div>"
+                : "") +
+            (stackTrace
+                ? '<div class="problem-section"><h3 class="problem-section-title">Stack trace</h3>' +
+                  '<pre class="problem-error-box">' + escapeHtml(stackTrace) + "</pre></div>"
+                : "") +
+            ideBlock("Source code", sourceCode, "source.txt") +
+            ideBlock("Logs", logs, "logs.txt") +
+            "</article>"
+        );
+    }
+
+    function renderAttemptCard(a) {
+        const rootCause = pick(a, "rootCause", "RootCause", "rootCauseAnalysis", "RootCauseAnalysis");
+        const explanation = pick(a, "explanation", "Explanation");
+        const proposed = pick(a, "proposedSolution", "ProposedSolution");
+        const parsedExplain = parseExplanation(explanation);
+        const parsedSolution = parseProposedSolution(proposed);
+
+        return (
+            '<article class="surface-card problem-history-card mb-3">' +
+            '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">' +
+            '<h3 class="h6 mb-0">AI attempt #' + escapeHtml(pick(a, "attemptNumber", "AttemptNumber") || "1") + "</h3>" +
+            '<span class="text-gray small">' + escapeHtml(formatDate(pick(a, "createdAt", "CreatedAt"))) + "</span>" +
+            "</div>" +
+            textSection("Problem", parsedExplain.problem) +
+            textSection("Location", parsedExplain.location) +
+            textSection("Root cause", rootCause) +
+            textSection("Solution summary", parsedSolution.summary) +
+            renderSteps(parsedSolution.steps) +
+            ideBlock("Corrected code", parsedSolution.code, "fixed.txt") +
+            (!parsedSolution.summary && !parsedSolution.steps.length && !parsedSolution.code && proposed
+                ? textSection("Proposed solution", proposed)
+                : "") +
+            "</article>"
+        );
+    }
+
+    function renderSolutionCard(s) {
+        const detailed = pick(s, "detailedSteps", "DetailedSteps");
+        const parsed = parseProposedSolution(detailed);
+        return (
+            '<article class="surface-card problem-history-card mb-3">' +
+            '<h3 class="h6 mb-3">Confirmed solution</h3>' +
+            textSection("Root cause", pick(s, "rootCause", "RootCause")) +
+            textSection("Summary", pick(s, "summary", "Summary")) +
+            textSection("Solution summary", parsed.summary) +
+            renderSteps(parsed.steps) +
+            ideBlock("Corrected code", parsed.code, "fixed.txt") +
+            (!parsed.summary && !parsed.steps.length && !parsed.code && detailed
+                ? textSection("Steps", detailed)
+                : "") +
+            "</article>"
         );
     }
 
@@ -46,11 +297,11 @@
         if (!res.ok || !res.data) throw new Error(res.message || "Problem not found");
 
         const d = res.data;
-        const problemId = d.problemId || d.ProblemId;
-        const title = d.title || d.Title || "Problem";
-        const code = d.problemCode || d.ProblemCode || "";
-        const status = d.status || d.Status || "";
-        const summary = d.summary || d.Summary || "";
+        const problemId = pick(d, "problemId", "ProblemId");
+        const title = pick(d, "title", "Title") || "Problem";
+        const code = pick(d, "problemCode", "ProblemCode");
+        const status = pick(d, "status", "Status");
+        const summary = pick(d, "summary", "Summary");
         const isOwner = d.isOwner || d.IsOwner;
         const requests = d.requests || d.Requests || [];
         const attempts = d.attempts || d.Attempts || [];
@@ -59,86 +310,45 @@
 
         const actions = [];
         if (isOwner && !solved) {
-            actions.push('<a class="btn btn-primary" href="submit-problem.html?problemId=' + encodeURIComponent(problemId) + '">Continue debugging</a>');
+            actions.push('<a class="btn btn-primary" style="width:auto;" href="submit-problem.html?problemId=' + encodeURIComponent(problemId) + '">Continue debugging</a>');
         }
         if (solved) {
-            actions.push('<a class="btn btn-primary" href="article-details.html?problemId=' + encodeURIComponent(problemId) + '">Open article</a>');
-            actions.push('<a class="btn btn-outline-card" href="challenges.html">Practice challenges</a>');
+            actions.push('<a class="btn btn-primary" style="width:auto;" href="article-details.html?problemId=' + encodeURIComponent(problemId) + '">Open article</a>');
+            actions.push('<a class="btn btn-outline-card" style="width:auto;" href="challenges.html">Practice challenges</a>');
         }
-        if (isOwner) {
-            actions.push('<a class="btn btn-outline-card" href="dashboard.html">Back to dashboard</a>');
-        }
-
-        const requestHtml = requests.length
-            ? requests.map(function (r, index) {
-                return (
-                    '<div class="surface-card mb-3">' +
-                    '<div class="d-flex justify-content-between align-items-center mb-2">' +
-                    "<h3 class=\"h6 mb-0\">Request #" + (index + 1) + "</h3>" +
-                    '<span class="text-gray small">' + escapeHtml(formatDate(r.createdAt || r.CreatedAt)) + "</span>" +
-                    "</div>" +
-                    (r.framework || r.Framework ? '<span class="badge-soft progress mb-2">' + escapeHtml(r.framework || r.Framework) + "</span>" : "") +
-                    (r.description || r.Description ? "<p>" + escapeHtml(r.description || r.Description) + "</p>" : "") +
-                    preBlock("Error", r.errorMessage || r.ErrorMessage) +
-                    preBlock("Stack trace", r.stackTrace || r.StackTrace) +
-                    preBlock("Source code", r.sourceCode || r.SourceCode) +
-                    preBlock("Logs", r.logs || r.Logs) +
-                    "</div>"
-                );
-            }).join("")
-            : '<div class="empty-state">No requests yet.</div>';
-
-        const attemptHtml = attempts.length
-            ? attempts.map(function (a) {
-                return (
-                    '<div class="surface-card mb-3">' +
-                    '<div class="d-flex justify-content-between align-items-center mb-2">' +
-                    "<h3 class=\"h6 mb-0\">AI attempt #" + escapeHtml(a.attemptNumber || a.AttemptNumber) + "</h3>" +
-                    '<span class="text-gray small">' + escapeHtml(formatDate(a.createdAt || a.CreatedAt)) + "</span>" +
-                    "</div>" +
-                    "<p><strong>Root cause</strong><br>" + escapeHtml(a.rootCauseAnalysis || a.RootCauseAnalysis || "—") + "</p>" +
-                    "<p><strong>Explanation</strong><br>" + escapeHtml(a.explanation || a.Explanation || "—") + "</p>" +
-                    "<p class=\"mb-0\"><strong>Proposed solution</strong><br>" + escapeHtml(a.proposedSolution || a.ProposedSolution || "—") + "</p>" +
-                    "</div>"
-                );
-            }).join("")
-            : '<div class="empty-state">No AI attempts yet.</div>';
-
-        const solutionHtml = solutions.length
-            ? solutions.map(function (s) {
-                return (
-                    '<div class="surface-card mb-3">' +
-                    "<h3 class=\"h6\">Confirmed solution</h3>" +
-                    "<p><strong>Root cause</strong><br>" + escapeHtml(s.rootCause || s.RootCause || "—") + "</p>" +
-                    "<p><strong>Summary</strong><br>" + escapeHtml(s.summary || s.Summary || "—") + "</p>" +
-                    "<p class=\"mb-0\"><strong>Steps</strong><br>" + escapeHtml(s.detailedSteps || s.DetailedSteps || "—") + "</p>" +
-                    "</div>"
-                );
-            }).join("")
-            : "";
+        actions.push('<a class="btn btn-outline-card" style="width:auto;" href="dashboard.html">Back to dashboard</a>');
 
         root.innerHTML =
             '<div class="surface-card mb-4">' +
             '<div class="d-flex flex-wrap gap-2 mb-3">' +
             '<span class="badge-soft ai">' + escapeHtml(code) + "</span>" +
             statusBadge(status) +
-            (isOwner ? '<span class="badge-soft progress">Your ticket</span>' : "") +
+            (isOwner ? '<span class="badge-soft status-progress">Your ticket</span>' : "") +
             "</div>" +
             '<h1 class="page-title mb-2">' + escapeHtml(title) + "</h1>" +
-            (summary ? '<p class="text-gray">' + escapeHtml(summary) + "</p>" : "") +
-            '<p class="text-gray small mb-3">Opened ' + escapeHtml(formatDate(d.createdAt || d.CreatedAt)) +
-            (d.resolvedAt || d.ResolvedAt ? " · Resolved " + escapeHtml(formatDate(d.resolvedAt || d.ResolvedAt)) : "") +
+            (summary ? '<p class="page-lead mb-2">' + escapeHtml(summary) + "</p>" : "") +
+            '<p class="text-gray small mb-3">Opened ' + escapeHtml(formatDate(pick(d, "createdAt", "CreatedAt"))) +
+            (pick(d, "resolvedAt", "ResolvedAt") ? " · Resolved " + escapeHtml(formatDate(pick(d, "resolvedAt", "ResolvedAt"))) : "") +
             "</p>" +
-            (actions.length ? '<div class="d-flex flex-wrap gap-2">' + actions.join("") + "</div>" : "") +
+            '<div class="d-flex flex-wrap gap-2">' + actions.join("") + "</div>" +
             "</div>" +
 
             '<div class="row g-4">' +
             '<div class="col-lg-6">' +
-            '<h2 class="h5 mb-3">Submission history</h2>' + requestHtml +
-            "</div>" +
+            '<div class="surface-card mb-0">' +
+            '<h2 class="h5 mb-3">Submission history</h2>' +
+            (requests.length
+                ? requests.map(renderRequestCard).join("")
+                : '<div class="empty-state">No requests yet.</div>') +
+            "</div></div>" +
             '<div class="col-lg-6">' +
-            '<h2 class="h5 mb-3">AI debug trail</h2>' + attemptHtml + solutionHtml +
-            "</div>" +
+            '<div class="surface-card mb-0">' +
+            '<h2 class="h5 mb-3">AI debug trail</h2>' +
+            (attempts.length
+                ? attempts.map(renderAttemptCard).join("")
+                : '<div class="empty-state">No AI attempts yet.</div>') +
+            (solutions.length ? solutions.map(renderSolutionCard).join("") : "") +
+            "</div></div>" +
             "</div>";
     }
 

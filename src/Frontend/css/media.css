@@ -28,6 +28,29 @@
    Single horizontal row with smooth touch-friendly scrolling
    ------------------------------------------------------------ */
 @media (max-width: 991.98px) {
+    .challenge-list-card {
+        flex-direction: column;
+    }
+    .challenge-list-side {
+        align-items: stretch;
+        min-width: 0;
+    }
+    .challenge-list-points {
+        text-align: left;
+    }
+
+    .analysis-rail {
+        position: static;
+        top: auto;
+        margin-bottom: 8px;
+        min-height: 0;
+    }
+
+    .ide-readonly .ide-body-readonly,
+    .ide-readonly .ide-code {
+        max-height: 360px;
+    }
+
     .title-style {
         font-size: clamp(32px, 5vw, 42px);
     }

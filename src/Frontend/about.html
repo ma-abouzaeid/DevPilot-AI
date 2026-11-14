@@ -49,7 +49,7 @@
                 </div>
             </div>
 
-            <div class="surface-card mt-4 content-prose">
+            <div class="surface-card mt-4 content-prose" id="about-mission">
                 <h2>Our mission</h2>
                 <p>We noticed developers ask AI for help, get a fix, and move on without fully understanding what happened. DevPilot closes that gap: understand, confirm, save, teach, and practice.</p>
                 <a href="register.html" class="btn btn-primary mt-2">Join DevPilot AI</a>
@@ -64,6 +64,14 @@
     <script src="js/navbar.js"></script>
     <script src="js/footer.js"></script>
     <script src="js/animations.js"></script>
+    <script>
+        (function () {
+            if (window.DevPilotApi && window.DevPilotApi.isAuthenticated()) {
+                var mission = document.getElementById("about-mission");
+                if (mission) mission.classList.add("d-none");
+            }
+        })();
+    </script>
 </body>
 
 </html>

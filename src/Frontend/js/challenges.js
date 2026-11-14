@@ -20,7 +20,7 @@
 
     function difficultyBadge(diff) {
         const d = (diff || "").toLowerCase();
-        if (d === "beginner") return '<span class="badge-soft progress">Beginner</span>';
+        if (d === "beginner") return '<span class="badge-soft status-progress">Beginner</span>';
         if (d === "advanced") return '<span class="badge-soft open">Advanced</span>';
         return '<span class="badge-soft ai">Intermediate</span>';
     }
@@ -62,16 +62,16 @@
     }
 
     async function loadChallenges() {
-        grid.innerHTML = '<div class="col-12"><div class="empty-state">Loading challenges…</div></div>';
+        grid.innerHTML = '<div class="empty-state">Loading challenges…</div>';
         const url = new URL("/api/Challenges", API_BASE).href;
         const res = await window.DevPilotApi.request(url);
         const items = res.data || [];
         if (!items.length) {
             grid.innerHTML =
-                '<div class="col-12"><div class="empty-state surface-card">' +
+                '<div class="empty-state surface-card">' +
                 "<p>No challenges yet. Solve a bug and mark it solved — DevPilot will generate a practice challenge.</p>" +
                 '<a class="btn btn-primary mt-2" href="submit-problem.html">Debug a problem</a>' +
-                "</div></div>";
+                "</div>";
             return;
         }
 
@@ -84,25 +84,29 @@
             const solved = c.solvedByCurrentUser || c.SolvedByCurrentUser;
             const best = c.bestPointsForCurrentUser ?? c.BestPointsForCurrentUser;
             return (
-                '<div class="col-md-6 col-lg-4">' +
-                '<div class="surface-card h-100 d-flex flex-column">' +
-                '<div class="d-flex justify-content-between align-items-center mb-2">' +
+                '<article class="challenge-list-card">' +
+                '<div class="challenge-list-main">' +
+                '<div class="challenge-list-badges">' +
                 difficultyBadge(difficulty) +
                 (solved ? '<span class="badge-soft solved">Solved</span>' : "") +
                 "</div>" +
-                "<h3 class=\"h5\">" + escapeHtml(title) + "</h3>" +
-                '<p class="text-gray flex-grow-1">' + escapeHtml(description) + "</p>" +
-                '<div class="d-flex justify-content-between align-items-center mt-2">' +
-                '<span class="text-accent-brand"><i class="fa-solid fa-star"></i> ' + maxPoints + " pts" +
-                (best != null ? (' · best ' + best) : "") + "</span>" +
-                '<a class="btn btn-primary btn-sm" href="challenge-details.html?id=' + encodeURIComponent(id) + '">' +
+                '<h3 class="challenge-list-title">' + escapeHtml(title) + "</h3>" +
+                '<p class="challenge-list-desc">' + escapeHtml(description) + "</p>" +
+                "</div>" +
+                '<div class="challenge-list-side">' +
+                '<div class="challenge-list-points">' +
+                '<span class="challenge-list-points-value"><i class="fa-solid fa-star"></i> ' + maxPoints + "</span>" +
+                '<span class="challenge-list-points-label">pts max' +
+                (best != null ? " · best " + best : "") +
+                "</span></div>" +
+                '<a class="btn btn-primary" href="challenge-details.html?id=' + encodeURIComponent(id) + '">' +
                 (solved ? "Retry" : "Solve") + "</a>" +
-                "</div></div></div>"
+                "</div></article>"
             );
         }).join("");
     }
 
     Promise.all([loadChallenges(), loadLeaderboard()]).catch(function (err) {
-        grid.innerHTML = '<div class="col-12"><div class="empty-state">' + escapeHtml(err.message || "Failed to load") + "</div></div>";
+        grid.innerHTML = '<div class="empty-state">' + escapeHtml(err.message || "Failed to load") + "</div>";
     });
 })();

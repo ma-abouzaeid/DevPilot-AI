@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using DevPilotAI.Application.Challenges.DTOs;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
@@ -12,22 +13,27 @@ namespace DevPilotAI.Application.Challenges;
 public class ChallengeService : IChallengeService
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+    private static readonly Regex RequirementsSplitRegex = new(@"(?=\d+\.\s+)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex RequirementsItemRegex = new(@"^\d+\.\s*", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private readonly IApplicationDbContext _db;
     private readonly IAIGateway _aiGateway;
     private readonly IPlanUsageService? _planUsageService;
+    private readonly ICreditCostService? _creditCostService;
     private readonly IAuditService? _auditService;
 
     public ChallengeService(
         IApplicationDbContext db,
         IAIGateway aiGateway,
         IPlanUsageService? planUsageService = null,
-        IAuditService? auditService = null)
+        IAuditService? auditService = null,
+        ICreditCostService? creditCostService = null)
     {
         _db = db;
         _aiGateway = aiGateway;
         _planUsageService = planUsageService;
         _auditService = auditService;
+        _creditCostService = creditCostService;
     }
 
     public async Task<Challenge?> GenerateFromSolvedProblemAsync(
@@ -56,7 +62,11 @@ public class ChallengeService : IChallengeService
             {
               "title": "short challenge title",
               "description": "what the buggy scenario is (2-4 sentences)",
-              "requirements": "what the developer must fix / achieve",
+              "requirements": [
+                "first concrete requirement",
+                "second concrete requirement",
+                "third concrete requirement"
+              ],
               "starterCode": "a SMALL different code snippet that contains a similar bug (not a copy of the original)",
               "difficulty": "Beginner|Intermediate|Advanced"
             }
@@ -65,6 +75,7 @@ public class ChallengeService : IChallengeService
             - Same error class / root-cause family, but DIFFERENT code.
             - Do not include the fixed solution in starterCode.
             - Prefer practical, compilable-looking snippets.
+            - requirements MUST be a JSON array of 3 to 5 short actionable items (not one paragraph).
             """;
 
         var userPrompt = $"""
@@ -78,11 +89,15 @@ public class ChallengeService : IChallengeService
             Create a mini challenge for other developers to practice this fix.
             """;
 
+        var generationCost = _creditCostService != null
+            ? await _creditCostService.GetCostAsync("ChallengeGeneration", cancellationToken)
+            : CreditCosts.ChallengeGeneration;
+
         if (_planUsageService != null)
         {
             try
             {
-                await _planUsageService.EnsureCreditsAsync(problem.UserId, CreditCosts.ChallengeGeneration, cancellationToken);
+                await _planUsageService.EnsureCreditsAsync(problem.UserId, generationCost, cancellationToken);
             }
             catch
             {
@@ -114,7 +129,7 @@ public class ChallengeService : IChallengeService
             {
                 await _planUsageService.ChargeCreditsAsync(
                     problem.UserId,
-                    CreditCosts.ChallengeGeneration,
+                    generationCost,
                     $"Challenge generation for problem {problem.ProblemCode}",
                     referenceId: $"challenge-gen:{problem.ProblemId}",
                     aiUsageEventId: ai.AIUsageEventId,
@@ -146,9 +161,7 @@ public class ChallengeService : IChallengeService
             Description = string.IsNullOrWhiteSpace(generated.Description)
                 ? $"Practice fixing a bug similar to {problem.Title}."
                 : generated.Description.Trim(),
-            Requirements = string.IsNullOrWhiteSpace(generated.Requirements)
-                ? "Fix the bug in the starter code and make the behavior correct."
-                : generated.Requirements.Trim(),
+            Requirements = FormatRequirementsList(generated.Requirements),
             StarterCode = string.IsNullOrWhiteSpace(generated.StarterCode)
                 ? "// TODO: fix the bug\n"
                 : generated.StarterCode.Trim(),
@@ -354,9 +367,13 @@ public class ChallengeService : IChallengeService
             Related original bug title: {challenge.Problem.Title}
             """;
 
+        var evaluationCost = _creditCostService != null
+            ? await _creditCostService.GetCostAsync("ChallengeEvaluation", cancellationToken)
+            : CreditCosts.ChallengeEvaluation;
+
         if (_planUsageService != null)
         {
-            await _planUsageService.EnsureCreditsAsync(userId, CreditCosts.ChallengeEvaluation, cancellationToken);
+            await _planUsageService.EnsureCreditsAsync(userId, evaluationCost, cancellationToken);
         }
 
         var ai = await _aiGateway.ExecuteAsync(new AIGatewayRequest(
@@ -381,7 +398,7 @@ public class ChallengeService : IChallengeService
         {
             await _planUsageService.ChargeCreditsAsync(
                 userId,
-                CreditCosts.ChallengeEvaluation,
+                evaluationCost,
                 $"Challenge evaluation #{challengeId}",
                 referenceId: $"challenge-eval:{challengeId}:{attempt.ChallengeAttemptId}",
                 aiUsageEventId: ai.AIUsageEventId,
@@ -546,8 +563,17 @@ public class ChallengeService : IChallengeService
         {
             try
             {
-                var parsed = JsonSerializer.Deserialize<GeneratedChallenge>(json, JsonOptions);
-                if (parsed != null) return parsed;
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                var parsed = new GeneratedChallenge
+                {
+                    Title = root.TryGetProperty("title", out var title) ? title.GetString() : null,
+                    Description = root.TryGetProperty("description", out var description) ? description.GetString() : null,
+                    StarterCode = root.TryGetProperty("starterCode", out var starter) ? starter.GetString() : null,
+                    Difficulty = root.TryGetProperty("difficulty", out var difficulty) ? difficulty.GetString() : null,
+                    Requirements = ExtractRequirementsProperty(root)
+                };
+                return parsed;
             }
             catch (JsonException) { }
         }
@@ -556,10 +582,60 @@ public class ChallengeService : IChallengeService
         {
             Title = "Practice bug fix",
             Description = "Fix the bug in the starter code.",
-            Requirements = "Make the code behave correctly without throwing the original error.",
+            Requirements = "Fix the bug in the starter code and make the behavior correct.",
             StarterCode = raw.Length > 500 ? raw[..500] : raw,
             Difficulty = "Intermediate"
         };
+    }
+
+    private static string? ExtractRequirementsProperty(JsonElement root)
+    {
+        if (!root.TryGetProperty("requirements", out var requirements))
+        {
+            return null;
+        }
+
+        if (requirements.ValueKind == JsonValueKind.Array)
+        {
+            var items = requirements.EnumerateArray()
+                .Select(item => item.GetString()?.Trim())
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Cast<string>()
+                .ToList();
+            return items.Count == 0 ? null : string.Join('\n', items);
+        }
+
+        return requirements.GetString();
+    }
+
+    private static string FormatRequirementsList(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return "Fix the bug in the starter code and make the behavior correct.";
+        }
+
+        var text = raw.Replace("\r\n", "\n", StringComparison.Ordinal).Trim();
+        if (text.Contains('\n', StringComparison.Ordinal))
+        {
+            return string.Join(
+                '\n',
+                text.Split('\n')
+                    .Select(static line => RequirementsItemRegex.Replace(line.Trim(), string.Empty).Trim())
+                    .Where(static line => line.Length > 0));
+        }
+
+        var numbered = RequirementsSplitRegex.Split(text)
+            .Select(static part => RequirementsItemRegex.Replace(part.Trim(), string.Empty).Trim())
+            .Where(static part => part.Length > 0)
+            .ToList();
+
+        if (numbered.Count >= 2)
+        {
+            return string.Join('\n', numbered);
+        }
+
+        return text;
     }
 
     private static GradedChallenge ParseEvaluation(string? raw, int maxPoints)

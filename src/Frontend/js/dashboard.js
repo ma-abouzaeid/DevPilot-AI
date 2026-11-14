@@ -17,7 +17,7 @@
     function statusBadge(status) {
         const s = (status || "").toLowerCase();
         if (s === "solved") return '<span class="badge-soft solved">Solved</span>';
-        if (s === "inprogress" || s === "in_progress") return '<span class="badge-soft progress">In Progress</span>';
+        if (s === "inprogress" || s === "in_progress") return '<span class="badge-soft status-progress">In Progress</span>';
         return '<span class="badge-soft open">Open</span>';
     }
 

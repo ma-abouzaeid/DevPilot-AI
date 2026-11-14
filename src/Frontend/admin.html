@@ -38,6 +38,9 @@
                     <button class="nav-link" data-tab="plans" type="button">Plans</button>
                 </li>
                 <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-tab="credits" type="button">Credit costs</button>
+                </li>
+                <li class="nav-item" role="presentation">
                     <button class="nav-link" data-tab="articles" type="button">Articles</button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -152,6 +155,23 @@
                 </div>
                 <div class="surface-card">
                     <div id="plans-list" class="row g-3"></div>
+                </div>
+            </div>
+
+            <div id="tab-credits" class="admin-panel d-none">
+                <div class="surface-card">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                        <div>
+                            <h2 class="h5 mb-1">Credit costs</h2>
+                            <p class="text-gray mb-0">Set how many credits are deducted for each AI action.</p>
+                        </div>
+                        <button type="button" class="btn btn-primary" id="credits-save" style="width:auto;">
+                            <i class="fa-solid fa-floppy-disk"></i> Save costs
+                        </button>
+                    </div>
+                    <div id="credits-list" class="row g-3">
+                        <div class="col-12"><div class="empty-state">Loading…</div></div>
+                    </div>
                 </div>
             </div>
 
