@@ -347,18 +347,18 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label" for="errors-path">Path contains</label>
-                            <input type="text" class="form-control" id="errors-path" placeholder="/api/GitHub">
+                            <input type="text" class="form-control" id="errors-path" placeholder="e.g. /api/GitHub" value="">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label" for="errors-code">Error code</label>
-                            <input type="text" class="form-control" id="errors-code" placeholder="GITHUB_">
+                            <input type="text" class="form-control" id="errors-code" placeholder="e.g. GITHUB_" value="">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label" for="errors-min-status">Min status</label>
                             <select class="form-select" id="errors-min-status">
-                                <option value="">All</option>
+                                <option value="" selected>All</option>
                                 <option value="400">400+</option>
-                                <option value="500" selected>500+</option>
+                                <option value="500">500+</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -396,14 +396,14 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="admin-details-title">Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" data-admin-details-close aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <pre class="admin-json-view mb-0" id="admin-details-json"></pre>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-card" id="admin-details-copy" style="width:auto;">Copy JSON</button>
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" style="width:auto;">Close</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" data-admin-details-close style="width:auto;">Close</button>
                 </div>
             </div>
         </div>

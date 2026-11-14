@@ -847,11 +847,7 @@ public class AdminService : IAdminService
         CancellationToken cancellationToken = default)
     {
         (page, pageSize) = NormalizePaging(page, pageSize);
-        var query = _db.AIUsageEvents.AsNoTracking()
-            .Include(e => e.Provider)
-            .Include(e => e.Model)
-            .Include(e => e.AIRequest)
-            .AsQueryable();
+        var query = _db.AIUsageEvents.AsNoTracking().AsQueryable();
 
         if (userId.HasValue) query = query.Where(e => e.UserId == userId.Value);
         if (!string.IsNullOrWhiteSpace(status))
@@ -874,11 +870,62 @@ public class AdminService : IAdminService
             .Where(u => ids.Contains(u.UserId))
             .ToDictionaryAsync(u => u.UserId, u => u.Email, cancellationToken);
 
+        var providerIds = rows.Select(r => r.ProviderId).Distinct().ToList();
+        var modelIds = rows.Where(r => r.ModelId.HasValue).Select(r => r.ModelId!.Value).Distinct().ToList();
+        var requestIds = rows.Select(r => r.AIRequestId).Distinct().ToList();
+
+        var providers = await _db.AIProviders.AsNoTracking()
+            .Where(p => providerIds.Contains(p.AIProviderId))
+            .ToDictionaryAsync(p => p.AIProviderId, p => p.Name, cancellationToken);
+
+        var models = await _db.AIModels.AsNoTracking()
+            .Where(m => modelIds.Contains(m.AIModelId))
+            .ToDictionaryAsync(m => m.AIModelId, m => m.ModelName, cancellationToken);
+
+        var requests = await _db.AIRequests.AsNoTracking()
+            .Where(r => requestIds.Contains(r.AIRequestId))
+            .ToDictionaryAsync(r => r.AIRequestId, cancellationToken);
+
+        // Fallback: resolve provider/model via AIRequest FKs when usage-event nav ids are sparse.
+        var requestProviderIds = requests.Values.Select(r => r.AIProviderId).Distinct().ToList();
+        var requestModelIds = requests.Values.Select(r => r.AIModelId).Distinct().ToList();
+        var missingProviderIds = requestProviderIds.Where(id => !providers.ContainsKey(id)).ToList();
+        if (missingProviderIds.Count > 0)
+        {
+            var extraProviders = await _db.AIProviders.AsNoTracking()
+                .Where(p => missingProviderIds.Contains(p.AIProviderId))
+                .ToDictionaryAsync(p => p.AIProviderId, p => p.Name, cancellationToken);
+            foreach (var kv in extraProviders) providers[kv.Key] = kv.Value;
+        }
+
+        var missingModelIds = requestModelIds.Where(id => !models.ContainsKey(id)).ToList();
+        if (missingModelIds.Count > 0)
+        {
+            var extraModels = await _db.AIModels.AsNoTracking()
+                .Where(m => missingModelIds.Contains(m.AIModelId))
+                .ToDictionaryAsync(m => m.AIModelId, m => m.ModelName, cancellationToken);
+            foreach (var kv in extraModels) models[kv.Key] = kv.Value;
+        }
+
         var items = rows.Select(e =>
         {
-            var providerName = e.Provider?.Name;
-            var modelName = e.Model?.ModelName;
-            var errorMessage = e.AIRequest?.ErrorMessage;
+            requests.TryGetValue(e.AIRequestId, out var aiRequest);
+            var providerId = e.ProviderId > 0 ? e.ProviderId : aiRequest?.AIProviderId ?? 0;
+            var modelId = e.ModelId ?? aiRequest?.AIModelId;
+            providers.TryGetValue(providerId, out var providerName);
+            string? modelName = null;
+            if (modelId.HasValue) models.TryGetValue(modelId.Value, out modelName);
+
+            var errorMessage = !string.IsNullOrWhiteSpace(aiRequest?.ErrorMessage)
+                ? aiRequest!.ErrorMessage
+                : e.ErrorCode;
+            // Prefer resolved names; fall back to ids so admin UI never looks "empty" when FK exists.
+            var providerLabel = !string.IsNullOrWhiteSpace(providerName)
+                ? providerName
+                : (providerId > 0 ? $"Provider #{providerId}" : null);
+            var modelLabel = !string.IsNullOrWhiteSpace(modelName)
+                ? modelName
+                : (modelId.HasValue ? $"Model #{modelId.Value}" : null);
             var details = BuildJson(new
             {
                 e.AIUsageEventId,
@@ -888,10 +935,10 @@ public class AdminService : IAdminService
                 e.ProblemId,
                 e.OperationType,
                 e.Status,
-                Provider = providerName,
-                Model = modelName,
-                e.ProviderId,
-                e.ModelId,
+                Provider = providerLabel,
+                Model = modelLabel,
+                ProviderId = providerId,
+                ModelId = modelId,
                 e.InputTokens,
                 e.OutputTokens,
                 e.TotalTokens,
@@ -911,17 +958,21 @@ public class AdminService : IAdminService
                 e.StartedAt,
                 e.CompletedAt,
                 e.CreatedAt,
-                AIRequest = e.AIRequest == null ? null : new
+                AIRequest = aiRequest == null ? null : new
                 {
-                    e.AIRequest.AIRequestId,
-                    e.AIRequest.TaskType,
-                    e.AIRequest.Success,
-                    e.AIRequest.ErrorMessage,
-                    e.AIRequest.PromptTokensUsed,
-                    e.AIRequest.CompletionTokensUsed,
-                    e.AIRequest.TotalTokensUsed,
-                    e.AIRequest.DurationMs,
-                    e.AIRequest.CreatedAt
+                    aiRequest.AIRequestId,
+                    aiRequest.TaskType,
+                    aiRequest.Success,
+                    aiRequest.ErrorMessage,
+                    aiRequest.AIProviderId,
+                    aiRequest.AIModelId,
+                    Provider = providers.TryGetValue(aiRequest.AIProviderId, out var pName) ? pName : null,
+                    Model = models.TryGetValue(aiRequest.AIModelId, out var mName) ? mName : null,
+                    aiRequest.PromptTokensUsed,
+                    aiRequest.CompletionTokensUsed,
+                    aiRequest.TotalTokensUsed,
+                    aiRequest.DurationMs,
+                    aiRequest.CreatedAt
                 }
             });
 
@@ -941,8 +992,8 @@ public class AdminService : IAdminService
                 e.CorrelationId,
                 e.CreatedAt,
                 e.ErrorCode,
-                providerName,
-                modelName,
+                providerLabel,
+                modelLabel,
                 errorMessage,
                 e.DurationMs,
                 e.RetrySequence,
@@ -963,27 +1014,38 @@ public class AdminService : IAdminService
         CancellationToken cancellationToken = default)
     {
         (page, pageSize) = NormalizePaging(page, pageSize);
-        var query = _db.SystemErrorLogs.AsNoTracking().AsQueryable();
 
-        if (userId.HasValue) query = query.Where(e => e.UserId == userId.Value);
-        if (!string.IsNullOrWhiteSpace(pathContains))
+        List<SystemErrorLog> rows;
+        int total;
+        try
         {
-            var path = pathContains.Trim();
-            query = query.Where(e => e.Path.Contains(path));
-        }
-        if (!string.IsNullOrWhiteSpace(errorCode))
-        {
-            var code = errorCode.Trim().ToUpperInvariant();
-            query = query.Where(e => e.ErrorCode.ToUpper().Contains(code));
-        }
-        if (minStatusCode.HasValue) query = query.Where(e => e.StatusCode >= minStatusCode.Value);
+            var query = _db.SystemErrorLogs.AsNoTracking().AsQueryable();
 
-        var total = await query.CountAsync(cancellationToken);
-        var rows = await query
-            .OrderByDescending(e => e.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(cancellationToken);
+            if (userId.HasValue) query = query.Where(e => e.UserId == userId.Value);
+            if (!string.IsNullOrWhiteSpace(pathContains))
+            {
+                var path = pathContains.Trim();
+                query = query.Where(e => e.Path.Contains(path));
+            }
+            if (!string.IsNullOrWhiteSpace(errorCode))
+            {
+                var code = errorCode.Trim().ToUpperInvariant();
+                query = query.Where(e => e.ErrorCode.ToUpper().Contains(code));
+            }
+            if (minStatusCode.HasValue) query = query.Where(e => e.StatusCode >= minStatusCode.Value);
+
+            total = await query.CountAsync(cancellationToken);
+            rows = await query
+                .OrderByDescending(e => e.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
+        catch (Exception)
+        {
+            // Table may not exist yet before AddSystemErrorLogs.sql is applied.
+            return new PagedResultDto<AdminSystemErrorDto>([], 0, page, pageSize);
+        }
 
         var ids = rows.Where(r => r.UserId.HasValue).Select(r => r.UserId!.Value).Distinct().ToList();
         var emails = await _db.Users.IgnoreQueryFilters().AsNoTracking()

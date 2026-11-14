@@ -169,6 +169,28 @@
         document.getElementById("tab-review").classList.toggle("btn-outline-card", mode !== "review");
     }
 
+    function renderDisconnectedUi() {
+        connectionText.textContent = "Not connected. Authorize GitHub to browse repos and files.";
+        btnConnect.classList.remove("d-none");
+        btnDisconnect.classList.add("d-none");
+        workspace.classList.add("d-none");
+        selectedRepo = null;
+        selectedPath = null;
+        setDebugFieldsEnabled(false);
+        if (reposList) reposList.innerHTML = "";
+        if (filesList) filesList.innerHTML = "";
+    }
+
+    function bindReconnectButton(id) {
+        const reconnect = document.getElementById(id);
+        if (!reconnect) return;
+        reconnect.addEventListener("click", function () {
+            reconnectGitHub().catch(function (err) {
+                showAlert(err.message || "Reconnect failed", "danger");
+            });
+        });
+    }
+
     async function loadStatus() {
         const url = new URL("/api/GitHub/status", API_BASE).href;
         const res = await window.DevPilotApi.request(url);
@@ -181,12 +203,14 @@
             btnConnect.classList.add("d-none");
             btnDisconnect.classList.remove("d-none");
             workspace.classList.remove("d-none");
-            await loadRepos();
+            try {
+                await loadRepos();
+            } catch (err) {
+                // Keep connection chrome visible; repos panel already shows the error + reconnect CTA.
+                showAlert(err.message || "Failed to load repositories", "danger");
+            }
         } else {
-            connectionText.textContent = "Not connected. Authorize GitHub to browse repos and files.";
-            btnConnect.classList.remove("d-none");
-            btnDisconnect.classList.add("d-none");
-            workspace.classList.add("d-none");
+            renderDisconnectedUi();
         }
     }
 
@@ -204,11 +228,26 @@
     async function disconnect() {
         hideAlert();
         const url = new URL("/api/GitHub/disconnect", API_BASE).href;
-        await window.DevPilotApi.request(url, { method: "DELETE" });
-        selectedRepo = null;
-        selectedPath = null;
-        setDebugFieldsEnabled(false);
-        await loadStatus();
+        let res = await window.DevPilotApi.request(url, { method: "POST" });
+        if (!res.ok && (res.status === 405 || res.status === 404)) {
+            res = await window.DevPilotApi.request(url, { method: "DELETE" });
+        }
+        if (!res.ok) {
+            throw new Error(res.message || "Failed to disconnect GitHub");
+        }
+        renderDisconnectedUi();
+        showAlert("GitHub disconnected. You can connect again anytime.", "success");
+    }
+
+    async function reconnectGitHub() {
+        hideAlert();
+        try {
+            await disconnect();
+        } catch (err) {
+            // Still attempt OAuth even if disconnect failed — connect will replace the token.
+            console.warn("Disconnect before reconnect failed:", err);
+        }
+        await connect();
     }
 
     async function loadRepos() {
@@ -216,18 +255,20 @@
         const url = new URL("/api/GitHub/repos", API_BASE).href;
         const res = await window.DevPilotApi.request(url);
         if (!res.ok) {
+            const needsReconnect = /reconnect|expired|invalid|not connected|GITHUB_NOT_CONNECTED/i.test(
+                (res.message || "") + " " + (res.errorCode || "")
+            );
             reposList.innerHTML =
                 '<div class="empty-state">' +
                 escapeHtml(res.message || "Failed to load repositories.") +
-                '<div class="mt-2"><button type="button" class="btn btn-outline-card btn-sm" style="width:auto;" id="btn-reconnect-repos">Disconnect & reconnect</button></div>' +
+                '<div class="mt-2"><button type="button" class="btn btn-outline-card btn-sm" style="width:auto;" id="btn-reconnect-repos">' +
+                (needsReconnect ? "Clear & reconnect GitHub" : "Disconnect & reconnect") +
+                "</button></div>" +
                 "</div>";
-            const reconnect = document.getElementById("btn-reconnect-repos");
-            if (reconnect) {
-                reconnect.addEventListener("click", function () {
-                    disconnect().then(function () { return connect(); }).catch(function (err) {
-                        showAlert(err.message || "Reconnect failed", "danger");
-                    });
-                });
+            bindReconnectButton("btn-reconnect-repos");
+            if (needsReconnect) {
+                // Broken/stale connection: show Connect again so user is not stuck on Disconnect-only UI.
+                btnConnect.classList.remove("d-none");
             }
             throw new Error(res.message || "Failed to load repositories");
         }
@@ -239,14 +280,7 @@
                 "No repositories returned for this GitHub connection. Disconnect and reconnect, then approve the <strong>repo</strong> permission." +
                 '<div class="mt-2"><button type="button" class="btn btn-outline-card btn-sm" style="width:auto;" id="btn-reconnect-repos-empty">Reconnect GitHub</button></div>' +
                 "</div>";
-            const reconnectEmpty = document.getElementById("btn-reconnect-repos-empty");
-            if (reconnectEmpty) {
-                reconnectEmpty.addEventListener("click", function () {
-                    disconnect().then(function () { return connect(); }).catch(function (err) {
-                        showAlert(err.message || "Reconnect failed", "danger");
-                    });
-                });
-            }
+            bindReconnectButton("btn-reconnect-repos-empty");
             return;
         }
 
@@ -622,7 +656,9 @@
         refreshReviewGate();
     });
     btnConnect.addEventListener("click", function () { connect().catch(function (err) { showAlert(err.message, "danger"); }); });
-    btnDisconnect.addEventListener("click", function () { disconnect().catch(function (err) { showAlert(err.message, "danger"); }); });
+    btnDisconnect.addEventListener("click", function () {
+        disconnect().catch(function (err) { showAlert(err.message, "danger"); });
+    });
     btnDebug.addEventListener("click", runDebug);
     if (btnSolved) btnSolved.addEventListener("click", markSolved);
     if (btnUnsolved) btnUnsolved.addEventListener("click", followUpSameProblem);

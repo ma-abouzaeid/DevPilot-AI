@@ -60,11 +60,18 @@ public class GitHubService : IGitHubService
 
     public async Task<GitHubConnectionStatusDto> GetConnectionStatusAsync(int userId, CancellationToken cancellationToken = default)
     {
-        var account = await _db.GitHubAccounts.AsNoTracking()
+        var account = await _db.GitHubAccounts
             .FirstOrDefaultAsync(a => a.UserId == userId, cancellationToken);
 
         if (account == null)
         {
+            return new GitHubConnectionStatusDto(false, null, null, null);
+        }
+
+        if (!TryReadAccessToken(account, out _))
+        {
+            // Token was encrypted with ephemeral keys (app recycle) — clear so the user can reconnect.
+            await RemoveGitHubAccountAsync(account, cancellationToken);
             return new GitHubConnectionStatusDto(false, null, null, null);
         }
 
@@ -161,18 +168,14 @@ public class GitHubService : IGitHubService
 
     public async Task DisconnectAsync(int userId, CancellationToken cancellationToken = default)
     {
-        var account = await _db.GitHubAccounts.FirstOrDefaultAsync(a => a.UserId == userId, cancellationToken)
-            ?? throw AppError.NotFound("GitHub account is not connected.");
-
-        var repos = await _db.GitHubRepositories.Where(r => r.GitHubAccountId == account.GitHubAccountId).ToListAsync(cancellationToken);
-        foreach (var repo in repos)
+        var account = await _db.GitHubAccounts.FirstOrDefaultAsync(a => a.UserId == userId, cancellationToken);
+        if (account == null)
         {
-            repo.IsDeleted = true;
-            repo.DeletedAt = DateTime.UtcNow;
+            // Idempotent: already disconnected (or broken row already cleaned up).
+            return;
         }
 
-        _db.GitHubAccounts.Remove(account);
-        await _db.SaveChangesAsync(cancellationToken);
+        await RemoveGitHubAccountAsync(account, cancellationToken);
     }
 
     public async Task<IReadOnlyList<GitHubRepoDto>> ListRepositoriesAsync(int userId, CancellationToken cancellationToken = default)
@@ -531,16 +534,57 @@ public class GitHubService : IGitHubService
         var account = await _db.GitHubAccounts.FirstOrDefaultAsync(a => a.UserId == userId, cancellationToken)
             ?? throw AppError.InvalidRequest("Connect GitHub first.", "GITHUB_NOT_CONNECTED");
 
+        if (!TryReadAccessToken(account, out var accessToken) || string.IsNullOrWhiteSpace(accessToken))
+        {
+            await RemoveGitHubAccountAsync(account, cancellationToken);
+            throw AppError.InvalidRequest(
+                "GitHub connection expired after a server restart. Click Connect GitHub again.",
+                "GITHUB_NOT_CONNECTED");
+        }
+
+        return (account, accessToken!);
+    }
+
+    private bool TryReadAccessToken(GitHubAccount account, out string? accessToken)
+    {
+        accessToken = null;
         try
         {
             var blob = _protector.Unprotect(account.AccessTokenEncrypted);
-            var accessToken = DeserializeAccessToken(blob);
-            return (account, accessToken);
+            accessToken = DeserializeAccessToken(blob);
+            return !string.IsNullOrWhiteSpace(accessToken);
         }
         catch
         {
-            throw AppError.Unauthorized("GitHub token is invalid. Please reconnect GitHub.");
+            return false;
         }
+    }
+
+    private async Task RemoveGitHubAccountAsync(GitHubAccount account, CancellationToken cancellationToken)
+    {
+        // Hard-delete repos (soft-delete leaves FK rows that block account removal with DeleteBehavior.NoAction).
+        var repos = await _db.GitHubRepositories
+            .IgnoreQueryFilters()
+            .Where(r => r.GitHubAccountId == account.GitHubAccountId)
+            .ToListAsync(cancellationToken);
+
+        if (repos.Count > 0)
+        {
+            var repoIds = repos.Select(r => r.GitHubRepositoryId).ToList();
+            var reviews = await _db.CodeReviews
+                .IgnoreQueryFilters()
+                .Where(r => r.GitHubRepositoryId != null && repoIds.Contains(r.GitHubRepositoryId.Value))
+                .ToListAsync(cancellationToken);
+            foreach (var review in reviews)
+            {
+                review.GitHubRepositoryId = null;
+            }
+
+            _db.GitHubRepositories.RemoveRange(repos);
+        }
+
+        _db.GitHubAccounts.Remove(account);
+        await _db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<GitHubRepository> UpsertRepositoryAsync(GitHubAccount account, GitHubRepoInfo repo, CancellationToken cancellationToken)

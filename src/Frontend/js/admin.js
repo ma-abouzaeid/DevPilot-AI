@@ -23,15 +23,6 @@
         detailsCache: {}
     };
 
-    var detailsModal = null;
-    function getDetailsModal() {
-        if (!detailsModal) {
-            var el = document.getElementById("admin-details-modal");
-            if (el && window.bootstrap) detailsModal = new bootstrap.Modal(el);
-        }
-        return detailsModal;
-    }
-
     function prettyJson(raw) {
         if (raw == null || raw === "") return "{}";
         if (typeof raw === "object") {
@@ -45,16 +36,61 @@
         }
     }
 
+    function parseDetailsObject(raw) {
+        if (raw == null || raw === "") return null;
+        if (typeof raw === "object") return raw;
+        try { return JSON.parse(String(raw)); } catch (e) { return null; }
+    }
+
     function openDetailsPopup(title, rawJson) {
-        document.getElementById("admin-details-title").textContent = title || "Details";
-        document.getElementById("admin-details-json").textContent = prettyJson(rawJson);
-        var modal = getDetailsModal();
-        if (modal) modal.show();
+        var titleEl = document.getElementById("admin-details-title");
+        var jsonEl = document.getElementById("admin-details-json");
+        var modalEl = document.getElementById("admin-details-modal");
+        if (!titleEl || !jsonEl || !modalEl) {
+            window.alert((title || "Details") + "\n\n" + prettyJson(rawJson));
+            return;
+        }
+        titleEl.textContent = title || "Details";
+        jsonEl.textContent = prettyJson(rawJson);
+        try {
+            if (window.bootstrap && bootstrap.Modal) {
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                return;
+            }
+        } catch (err) { /* fall through */ }
+        modalEl.classList.add("show");
+        modalEl.style.display = "block";
+        modalEl.removeAttribute("aria-hidden");
+        modalEl.setAttribute("aria-modal", "true");
+        document.body.classList.add("modal-open");
+        if (!document.getElementById("admin-details-backdrop")) {
+            var backdrop = document.createElement("div");
+            backdrop.className = "modal-backdrop fade show";
+            backdrop.id = "admin-details-backdrop";
+            document.body.appendChild(backdrop);
+        }
     }
 
     function cacheDetails(key, json) {
         state.detailsCache[key] = json;
         return key;
+    }
+
+    function resolveProviderModel(e) {
+        var provider = val(e, "providerName", "ProviderName") || "";
+        var model = val(e, "modelName", "ModelName") || "";
+        if (provider && model) return { provider: provider, model: model };
+        var details = parseDetailsObject(val(e, "detailsJson", "DetailsJson"));
+        if (details) {
+            provider = provider || details.provider || details.Provider || "";
+            model = model || details.model || details.Model || "";
+            var req = details.aiRequest || details.AIRequest;
+            if (req) {
+                provider = provider || req.provider || req.Provider || "";
+                model = model || req.model || req.Model || "";
+            }
+        }
+        return { provider: provider || "—", model: model || "—" };
     }
 
     function showAlert(message, type) {
@@ -398,135 +434,167 @@
     }
 
     async function loadAi() {
-        var res = await api("/api/Admin/ai-usage", null, {
-            userId: document.getElementById("ai-user-id").value || undefined,
-            status: document.getElementById("ai-status").value || undefined,
-            page: state.aiPage,
-            pageSize: 50
-        });
-        var data = res.data || {};
-        var items = val(data, "items", "Items") || [];
         var tbody = document.getElementById("ai-tbody");
-        if (!items.length) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-gray">No AI usage yet.</td></tr>';
-        } else {
-            tbody.innerHTML = items.map(function (e, index) {
-                var provider = val(e, "providerName", "ProviderName") || "—";
-                var model = val(e, "modelName", "ModelName") || "—";
-                var status = val(e, "status", "Status") || "—";
-                var errorMessage = val(e, "errorMessage", "ErrorMessage") || val(e, "errorCode", "ErrorCode") || "";
-                var cacheKey = cacheDetails("ai-" + (val(e, "aiUsageEventId", "AIUsageEventId") || index), val(e, "detailsJson", "DetailsJson") || e);
-                return (
-                    "<tr>" +
-                    "<td>" + fmtDate(val(e, "createdAt", "CreatedAt")) + "</td>" +
-                    "<td>" + escapeHtml(val(e, "userEmail", "UserEmail") || ("#" + val(e, "userId", "UserId"))) + "</td>" +
-                    "<td>" + escapeHtml(val(e, "operationType", "OperationType") || "—") + "</td>" +
-                    "<td><div><strong>" + escapeHtml(provider) + "</strong></div>" +
-                    '<div class="small text-gray">' + escapeHtml(model) + "</div>" +
-                    (status === "Failed" && errorMessage
-                        ? '<div class="small text-danger mt-1">' + escapeHtml(String(errorMessage).slice(0, 120)) + (String(errorMessage).length > 120 ? "…" : "") + "</div>"
-                        : "") +
-                    "</td>" +
-                    "<td>" + (val(e, "totalTokens", "TotalTokens") == null ? "—" : val(e, "totalTokens", "TotalTokens")) + "</td>" +
-                    "<td>" + (val(e, "creditsCharged", "CreditsCharged") == null ? "—" : val(e, "creditsCharged", "CreditsCharged")) + "</td>" +
-                    "<td>" + escapeHtml(status) + "</td>" +
-                    '<td><button type="button" class="btn btn-outline-card btn-sm" style="width:auto;" data-details="' +
-                    escapeHtml(cacheKey) + '" data-details-title="AI usage details">View</button></td>' +
-                    "</tr>"
-                );
-            }).join("");
+        tbody.innerHTML = '<tr><td colspan="8" class="text-gray">Loading…</td></tr>';
+        try {
+            var res = await api("/api/Admin/ai-usage", null, {
+                userId: document.getElementById("ai-user-id").value || undefined,
+                status: document.getElementById("ai-status").value || undefined,
+                page: state.aiPage,
+                pageSize: 50
+            });
+            var data = res.data || {};
+            var items = val(data, "items", "Items") || [];
+            if (!items.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-gray">No AI usage yet.</td></tr>';
+            } else {
+                tbody.innerHTML = items.map(function (e, index) {
+                    var names = resolveProviderModel(e);
+                    var status = val(e, "status", "Status") || "—";
+                    var detailsRaw = val(e, "detailsJson", "DetailsJson");
+                    var detailsObj = parseDetailsObject(detailsRaw);
+                    var errorMessage = val(e, "errorMessage", "ErrorMessage")
+                        || (detailsObj && (detailsObj.errorMessage || detailsObj.ErrorMessage))
+                        || val(e, "errorCode", "ErrorCode")
+                        || "";
+                    var cacheKey = cacheDetails(
+                        "ai-" + (val(e, "aiUsageEventId", "AIUsageEventId") || index),
+                        detailsRaw || e
+                    );
+                    return (
+                        "<tr>" +
+                        "<td>" + fmtDate(val(e, "createdAt", "CreatedAt")) + "</td>" +
+                        "<td>" + escapeHtml(val(e, "userEmail", "UserEmail") || ("#" + val(e, "userId", "UserId"))) + "</td>" +
+                        "<td>" + escapeHtml(val(e, "operationType", "OperationType") || "—") + "</td>" +
+                        "<td><div><strong>" + escapeHtml(names.provider) + "</strong></div>" +
+                        '<div class="small text-gray">' + escapeHtml(names.model) + "</div>" +
+                        (String(status).toLowerCase() === "failed" && errorMessage
+                            ? '<div class="small text-danger mt-1">' + escapeHtml(String(errorMessage).slice(0, 120)) + (String(errorMessage).length > 120 ? "…" : "") + "</div>"
+                            : "") +
+                        "</td>" +
+                        "<td>" + (val(e, "totalTokens", "TotalTokens") == null ? "—" : val(e, "totalTokens", "TotalTokens")) + "</td>" +
+                        "<td>" + (val(e, "creditsCharged", "CreditsCharged") == null ? "—" : val(e, "creditsCharged", "CreditsCharged")) + "</td>" +
+                        "<td>" + escapeHtml(status) + "</td>" +
+                        '<td><button type="button" class="btn btn-outline-card btn-sm" style="width:auto;" data-details="' +
+                        escapeHtml(cacheKey) + '" data-details-title="AI usage details">View</button></td>' +
+                        "</tr>"
+                    );
+                }).join("");
+            }
+            renderPager(
+                document.getElementById("ai-pager"),
+                val(data, "page", "Page") || state.aiPage,
+                val(data, "pageSize", "PageSize") || 50,
+                val(data, "totalCount", "TotalCount") || 0,
+                function (p) { state.aiPage = p; loadAi().catch(onError); }
+            );
+        } catch (err) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-danger">Failed to load AI usage.</td></tr>';
+            throw err;
         }
-        renderPager(
-            document.getElementById("ai-pager"),
-            val(data, "page", "Page") || state.aiPage,
-            val(data, "pageSize", "PageSize") || 50,
-            val(data, "totalCount", "TotalCount") || 0,
-            function (p) { state.aiPage = p; loadAi().catch(onError); }
-        );
     }
 
     async function loadAudit() {
-        var res = await api("/api/Admin/audit-logs", null, {
-            userId: document.getElementById("audit-user-id").value || undefined,
-            action: document.getElementById("audit-action").value.trim() || undefined,
-            page: state.auditPage,
-            pageSize: 50
-        });
-        var data = res.data || {};
-        var items = val(data, "items", "Items") || [];
         var tbody = document.getElementById("audit-tbody");
-        if (!items.length) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-gray">No audit events.</td></tr>';
-        } else {
-            tbody.innerHTML = items.map(function (e, index) {
-                var details = val(e, "newValues", "NewValues") || val(e, "oldValues", "OldValues") || "";
-                if (details && details.length > 100) details = details.slice(0, 100) + "…";
-                var cacheKey = cacheDetails("audit-" + (val(e, "auditLogId", "AuditLogId") || index), val(e, "detailsJson", "DetailsJson") || e);
-                return (
-                    "<tr>" +
-                    "<td>" + fmtDate(val(e, "createdAt", "CreatedAt")) + "</td>" +
-                    "<td><code>" + escapeHtml(val(e, "action", "Action")) + "</code></td>" +
-                    "<td>" + escapeHtml(val(e, "userEmail", "UserEmail") || (val(e, "userId", "UserId") || "—")) + "</td>" +
-                    "<td>" + escapeHtml(val(e, "entityName", "EntityName")) + " #" + escapeHtml(val(e, "entityId", "EntityId")) + "</td>" +
-                    "<td class='small text-gray'>" + escapeHtml(details) + "</td>" +
-                    '<td><button type="button" class="btn btn-outline-card btn-sm" style="width:auto;" data-details="' +
-                    escapeHtml(cacheKey) + '" data-details-title="Audit details">View</button></td>' +
-                    "</tr>"
-                );
-            }).join("");
+        tbody.innerHTML = '<tr><td colspan="6" class="text-gray">Loading…</td></tr>';
+        try {
+            var res = await api("/api/Admin/audit-logs", null, {
+                userId: document.getElementById("audit-user-id").value || undefined,
+                action: document.getElementById("audit-action").value.trim() || undefined,
+                page: state.auditPage,
+                pageSize: 50
+            });
+            var data = res.data || {};
+            var items = val(data, "items", "Items") || [];
+            if (!items.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-gray">No audit events.</td></tr>';
+            } else {
+                tbody.innerHTML = items.map(function (e, index) {
+                    var preview = val(e, "newValues", "NewValues") || val(e, "oldValues", "OldValues") || "";
+                    if (preview && preview.length > 100) preview = preview.slice(0, 100) + "…";
+                    var cacheKey = cacheDetails(
+                        "audit-" + (val(e, "auditLogId", "AuditLogId") || index),
+                        val(e, "detailsJson", "DetailsJson") || e
+                    );
+                    return (
+                        "<tr>" +
+                        "<td>" + fmtDate(val(e, "createdAt", "CreatedAt")) + "</td>" +
+                        "<td><code>" + escapeHtml(val(e, "action", "Action")) + "</code></td>" +
+                        "<td>" + escapeHtml(val(e, "userEmail", "UserEmail") || (val(e, "userId", "UserId") || "—")) + "</td>" +
+                        "<td>" + escapeHtml(val(e, "entityName", "EntityName")) + " #" + escapeHtml(val(e, "entityId", "EntityId")) + "</td>" +
+                        '<td class="small text-gray admin-json-preview" role="button" tabindex="0" title="Open full JSON" data-details="' +
+                        escapeHtml(cacheKey) + '" data-details-title="Audit details">' + escapeHtml(preview) + "</td>" +
+                        '<td><button type="button" class="btn btn-outline-card btn-sm" style="width:auto;" data-details="' +
+                        escapeHtml(cacheKey) + '" data-details-title="Audit details">View</button></td>' +
+                        "</tr>"
+                    );
+                }).join("");
+            }
+            renderPager(
+                document.getElementById("audit-pager"),
+                val(data, "page", "Page") || state.auditPage,
+                val(data, "pageSize", "PageSize") || 50,
+                val(data, "totalCount", "TotalCount") || 0,
+                function (p) { state.auditPage = p; loadAudit().catch(onError); }
+            );
+        } catch (err) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-danger">Failed to load audit log.</td></tr>';
+            throw err;
         }
-        renderPager(
-            document.getElementById("audit-pager"),
-            val(data, "page", "Page") || state.auditPage,
-            val(data, "pageSize", "PageSize") || 50,
-            val(data, "totalCount", "TotalCount") || 0,
-            function (p) { state.auditPage = p; loadAudit().catch(onError); }
-        );
     }
 
     async function loadErrors() {
-        var res = await api("/api/Admin/system-errors", null, {
-            userId: document.getElementById("errors-user-id").value || undefined,
-            pathContains: document.getElementById("errors-path").value.trim() || undefined,
-            errorCode: document.getElementById("errors-code").value.trim() || undefined,
-            minStatusCode: document.getElementById("errors-min-status").value || undefined,
-            page: state.errorsPage,
-            pageSize: 50
-        });
-        var data = res.data || {};
-        var items = val(data, "items", "Items") || [];
         var tbody = document.getElementById("errors-tbody");
-        if (!items.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-gray">No system errors logged yet. Run AddSystemErrorLogs.sql on the DB if this is empty after failures.</td></tr>';
-        } else {
-            tbody.innerHTML = items.map(function (e, index) {
-                var path = val(e, "path", "Path") || "—";
-                var method = val(e, "httpMethod", "HttpMethod") || "";
-                var action = val(e, "action", "Action") || "—";
-                var message = val(e, "message", "Message") || "";
-                var cacheKey = cacheDetails("err-" + (val(e, "systemErrorLogId", "SystemErrorLogId") || index), val(e, "detailsJson", "DetailsJson") || e);
-                return (
-                    "<tr>" +
-                    "<td>" + fmtDate(val(e, "createdAt", "CreatedAt")) + "</td>" +
-                    "<td><strong>" + escapeHtml(val(e, "statusCode", "StatusCode")) + "</strong></td>" +
-                    "<td><code>" + escapeHtml(method + " " + path) + "</code></td>" +
-                    "<td class='small'>" + escapeHtml(action) + "</td>" +
-                    "<td><div><code>" + escapeHtml(val(e, "errorCode", "ErrorCode") || "—") + "</code></div>" +
-                    '<div class="small text-gray">' + escapeHtml(String(message).slice(0, 100)) + (String(message).length > 100 ? "…" : "") + "</div></td>" +
-                    "<td>" + escapeHtml(val(e, "userEmail", "UserEmail") || (val(e, "userId", "UserId") || "—")) + "</td>" +
-                    '<td><button type="button" class="btn btn-outline-card btn-sm" style="width:auto;" data-details="' +
-                    escapeHtml(cacheKey) + '" data-details-title="System error details">View</button></td>' +
-                    "</tr>"
-                );
-            }).join("");
+        tbody.innerHTML = '<tr><td colspan="7" class="text-gray">Loading…</td></tr>';
+        try {
+            var res = await api("/api/Admin/system-errors", null, {
+                userId: document.getElementById("errors-user-id").value || undefined,
+                pathContains: document.getElementById("errors-path").value.trim() || undefined,
+                errorCode: document.getElementById("errors-code").value.trim() || undefined,
+                minStatusCode: document.getElementById("errors-min-status").value || undefined,
+                page: state.errorsPage,
+                pageSize: 50
+            });
+            var data = res.data || {};
+            var items = val(data, "items", "Items") || [];
+            if (!items.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-gray">No system errors logged yet. Clear filters, then run <code>deployment/AddSystemErrorLogs.sql</code> on the DB if this stays empty after real API failures.</td></tr>';
+            } else {
+                tbody.innerHTML = items.map(function (e, index) {
+                    var path = val(e, "path", "Path") || "—";
+                    var method = val(e, "httpMethod", "HttpMethod") || "";
+                    var action = val(e, "action", "Action") || "—";
+                    var message = val(e, "message", "Message") || "";
+                    var cacheKey = cacheDetails(
+                        "err-" + (val(e, "systemErrorLogId", "SystemErrorLogId") || index),
+                        val(e, "detailsJson", "DetailsJson") || e
+                    );
+                    return (
+                        "<tr>" +
+                        "<td>" + fmtDate(val(e, "createdAt", "CreatedAt")) + "</td>" +
+                        "<td><strong>" + escapeHtml(val(e, "statusCode", "StatusCode")) + "</strong></td>" +
+                        "<td><code>" + escapeHtml(method + " " + path) + "</code></td>" +
+                        "<td class='small'>" + escapeHtml(action) + "</td>" +
+                        "<td><div><code>" + escapeHtml(val(e, "errorCode", "ErrorCode") || "—") + "</code></div>" +
+                        '<div class="small text-gray">' + escapeHtml(String(message).slice(0, 100)) + (String(message).length > 100 ? "…" : "") + "</div></td>" +
+                        "<td>" + escapeHtml(val(e, "userEmail", "UserEmail") || (val(e, "userId", "UserId") || "—")) + "</td>" +
+                        '<td><button type="button" class="btn btn-outline-card btn-sm" style="width:auto;" data-details="' +
+                        escapeHtml(cacheKey) + '" data-details-title="System error details">View</button></td>' +
+                        "</tr>"
+                    );
+                }).join("");
+            }
+            renderPager(
+                document.getElementById("errors-pager"),
+                val(data, "page", "Page") || state.errorsPage,
+                val(data, "pageSize", "PageSize") || 50,
+                val(data, "totalCount", "TotalCount") || 0,
+                function (p) { state.errorsPage = p; loadErrors().catch(onError); }
+            );
+        } catch (err) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-danger">Failed to load system errors (API unavailable or SystemErrorLogs table missing).</td></tr>';
+            throw err;
         }
-        renderPager(
-            document.getElementById("errors-pager"),
-            val(data, "page", "Page") || state.errorsPage,
-            val(data, "pageSize", "PageSize") || 50,
-            val(data, "totalCount", "TotalCount") || 0,
-            function (p) { state.errorsPage = p; loadErrors().catch(onError); }
-        );
     }
 
     function onError(err) {
@@ -563,11 +631,42 @@
         loadErrors().catch(onError);
     });
 
+    function closeDetailsPopup() {
+        var modalEl = document.getElementById("admin-details-modal");
+        if (!modalEl) return;
+        try {
+            if (window.bootstrap && bootstrap.Modal) {
+                var inst = bootstrap.Modal.getInstance(modalEl);
+                if (inst) inst.hide();
+            }
+        } catch (err) { /* fall through */ }
+        modalEl.classList.remove("show");
+        modalEl.style.display = "none";
+        modalEl.setAttribute("aria-hidden", "true");
+        modalEl.removeAttribute("aria-modal");
+        document.body.classList.remove("modal-open");
+        var backdrop = document.getElementById("admin-details-backdrop");
+        if (backdrop) backdrop.remove();
+    }
+
     document.body.addEventListener("click", function (e) {
+        if (e.target.closest("[data-admin-details-close]") || e.target.id === "admin-details-backdrop") {
+            closeDetailsPopup();
+            return;
+        }
         var btn = e.target.closest("[data-details]");
         if (!btn) return;
+        e.preventDefault();
         var key = btn.getAttribute("data-details");
         openDetailsPopup(btn.getAttribute("data-details-title") || "Details", state.detailsCache[key] || "{}");
+    });
+
+    document.body.addEventListener("keydown", function (e) {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        var el = e.target.closest("[data-details].admin-json-preview");
+        if (!el) return;
+        e.preventDefault();
+        openDetailsPopup(el.getAttribute("data-details-title") || "Details", state.detailsCache[el.getAttribute("data-details")] || "{}");
     });
 
     var copyBtn = document.getElementById("admin-details-copy");

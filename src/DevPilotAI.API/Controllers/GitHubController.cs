@@ -89,6 +89,7 @@ public class GitHubController : ControllerBase
     }
 
     [HttpDelete("disconnect")]
+    [HttpPost("disconnect")]
     [Authorize]
     public async Task<IActionResult> Disconnect(CancellationToken cancellationToken)
     {

@@ -1611,6 +1611,15 @@ html {
     max-height: 60vh;
     overflow: auto;
 }
+.admin-json-preview {
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+}
+.admin-json-preview:hover,
+.admin-json-preview:focus {
+    color: var(--brand);
+}
 .admin-table thead th {
     color: var(--gray);
     font-weight: 600;
