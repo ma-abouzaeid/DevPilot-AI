@@ -215,16 +215,15 @@ public class SimilarityEngineTests
 
         var problemService = new ProblemService(context, mockAiGateway.Object, engine);
 
-        var newProblemDto = new CreateProblemDto(
-            UserId: 2,
-            Title: "CORS policy blocking frontend requests",
-            Description: "Browser blocks fetch due to CORS origin policy missing header",
-            ErrorMessage: "CORS policy: No 'Access-Control-Allow-Origin' header is present",
-            StackTrace: null,
-            SourceCode: "fetch('https://api.devpilot.ai');",
-            Logs: null,
-            Framework: "ASP.NET Core"
-        );
+        var newProblemDto = new CreateProblemDto
+        {
+            UserId = 2,
+            Title = "CORS policy blocking frontend requests",
+            Description = "Browser blocks fetch due to CORS origin policy missing header",
+            ErrorMessage = "CORS policy: No 'Access-Control-Allow-Origin' header is present",
+            SourceCode = "fetch('https://api.devpilot.ai');",
+            Framework = "ASP.NET Core"
+        };
 
         var result = await problemService.SubmitProblemAsync(newProblemDto);
 

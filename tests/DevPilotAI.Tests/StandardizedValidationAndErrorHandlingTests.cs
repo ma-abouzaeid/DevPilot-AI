@@ -116,13 +116,12 @@ public class StandardizedValidationAndErrorHandlingTests
     [Fact]
     public void CreateProblemDto_MissingCodeAndError_ShouldFailValidation()
     {
-        var dto = new CreateProblemDto(
-            UserId: 1,
-            Title: null,
-            Description: null,
-            ErrorMessage: "",
-            SourceCode: ""
-        );
+        var dto = new CreateProblemDto
+        {
+            UserId = 1,
+            ErrorMessage = "",
+            SourceCode = ""
+        };
 
         var errors = ValidateDto(dto);
         Assert.Contains(errors, e => e.MemberNames.Contains("ErrorMessage"));
@@ -132,7 +131,7 @@ public class StandardizedValidationAndErrorHandlingTests
     [Fact]
     public void AddProblemRequestDto_ContentTooShort_ShouldFailValidation()
     {
-        var dto = new AddProblemRequestDto(Content: "hi"); // < 5
+        var dto = new AddProblemRequestDto { Content = "hi" }; // < 5
 
         var errors = ValidateDto(dto);
         Assert.Contains(errors, e => e.MemberNames.Contains("Content"));
@@ -141,7 +140,7 @@ public class StandardizedValidationAndErrorHandlingTests
     [Fact]
     public void FeedbackRequestDto_ZeroAttemptId_ShouldFailRangeValidation()
     {
-        var dto = new FeedbackRequestDto(AttemptId: 0, IsSolved: true);
+        var dto = new FeedbackRequestDto { AttemptId = 0, IsSolved = true };
 
         var errors = ValidateDto(dto);
         Assert.Contains(errors, e => e.MemberNames.Contains("AttemptId"));
@@ -158,13 +157,14 @@ public class StandardizedValidationAndErrorHandlingTests
         var service = new ProblemService(dbContext, mockAi.Object);
 
         var tasks = Enumerable.Range(1, 5).Select(i =>
-            service.SubmitProblemAsync(new CreateProblemDto(
-                UserId: 1,
-                Title: $"Concurrent Problem {i}",
-                Description: "Valid problem description for testing concurrency.",
-                ErrorMessage: $"Error {i}",
-                SourceCode: $"console.log({i});"
-            ))
+            service.SubmitProblemAsync(new CreateProblemDto
+            {
+                UserId = 1,
+                Title = $"Concurrent Problem {i}",
+                Description = "Valid problem description for testing concurrency.",
+                ErrorMessage = $"Error {i}",
+                SourceCode = $"console.log({i});"
+            })
         ).ToList();
 
         var results = await Task.WhenAll(tasks);
@@ -311,12 +311,14 @@ public class StandardizedValidationAndErrorHandlingTests
             HttpContext = new DefaultHttpContext { User = claims }
         };
 
-        var incomingDto = new CreateProblemDto(
-            UserId: 0,
-            Title: "Valid Title",
-            Description: "Valid Description longer than ten",
-            ErrorMessage: "Something failed",
-            SourceCode: "var x = 1;");
+        var incomingDto = new CreateProblemDto
+        {
+            UserId = 0,
+            Title = "Valid Title",
+            Description = "Valid Description longer than ten",
+            ErrorMessage = "Something failed",
+            SourceCode = "var x = 1;"
+        };
 
         var result = await controller.SubmitProblem(incomingDto, CancellationToken.None);
 
@@ -463,7 +465,14 @@ public class StandardizedValidationAndErrorHandlingTests
             HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) } // No claims
         };
 
-        var dto = new CreateProblemDto(0, "Title", "Valid description that is longer than ten", "boom", null, "code();");
+        var dto = new CreateProblemDto
+        {
+            UserId = 0,
+            Title = "Title",
+            Description = "Valid description that is longer than ten",
+            ErrorMessage = "boom",
+            SourceCode = "code();"
+        };
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.SubmitProblem(dto, CancellationToken.None));
     }
@@ -487,7 +496,7 @@ public class StandardizedValidationAndErrorHandlingTests
         dbContext.Problems.Add(problem);
         await dbContext.SaveChangesAsync();
 
-        var dto = new AddProblemRequestDto("Followup request text");
+        var dto = new AddProblemRequestDto { Content = "Followup request text" };
 
         // User 2 attempts to modify User 1's problem
         var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>

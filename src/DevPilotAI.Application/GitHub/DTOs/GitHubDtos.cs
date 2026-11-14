@@ -34,24 +34,21 @@ public record GitHubFileDto(
     string? HtmlUrl
 );
 
-public record GitHubCodeReviewRequestDto(
+public class GitHubCodeReviewRequestDto
+{
     [Required]
     [StringLength(200)]
-    [property: Required]
-    [property: StringLength(200)]
-    string FullName,
+    public string FullName { get; set; } = string.Empty;
 
     [StringLength(200)]
-    [property: StringLength(200)]
-    string? Branch = null,
+    public string? Branch { get; set; }
 
     /// <summary>Specific files to review. Empty = auto-select top source files.</summary>
-    IReadOnlyList<string>? Paths = null,
+    public IReadOnlyList<string>? Paths { get; set; }
 
     [Range(1, 12)]
-    [property: Range(1, 12)]
-    int MaxFiles = 6
-);
+    public int MaxFiles { get; set; } = 6;
+}
 
 public record GitHubCodeReviewFindingDto(
     string FilePath,
@@ -72,32 +69,24 @@ public record GitHubCodeReviewResultDto(
     string ProviderUsed
 );
 
-public record GitHubDebugRequestDto(
+public class GitHubDebugRequestDto
+{
     [Required]
     [StringLength(200)]
-    [property: Required]
-    [property: StringLength(200)]
-    string FullName,
+    public string FullName { get; set; } = string.Empty;
 
     [Required]
     [StringLength(500)]
-    [property: Required]
-    [property: StringLength(500)]
-    string Path,
+    public string Path { get; set; } = string.Empty;
 
     [Required]
     [MinLength(2)]
     [StringLength(4000)]
-    [property: Required]
-    [property: MinLength(2)]
-    [property: StringLength(4000)]
-    string ErrorMessage,
+    public string ErrorMessage { get; set; } = string.Empty;
 
     [StringLength(200)]
-    [property: StringLength(200)]
-    string? Branch = null,
+    public string? Branch { get; set; }
 
     [StringLength(10000)]
-    [property: StringLength(10000)]
-    string? Description = null
-);
+    public string? Description { get; set; }
+}

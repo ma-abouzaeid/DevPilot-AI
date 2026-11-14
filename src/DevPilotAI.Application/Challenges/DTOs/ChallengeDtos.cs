@@ -29,15 +29,13 @@ public record ChallengeDetailsDto(
     int? BestPointsForCurrentUser
 );
 
-public record SubmitChallengeSolutionDto(
+public class SubmitChallengeSolutionDto
+{
     [Required]
     [MinLength(3)]
     [StringLength(50000)]
-    [property: Required]
-    [property: MinLength(3)]
-    [property: StringLength(50000)]
-    string SubmittedCode
-);
+    public string SubmittedCode { get; set; } = string.Empty;
+}
 
 public record ChallengeEvaluationResultDto(
     int ChallengeAttemptId,

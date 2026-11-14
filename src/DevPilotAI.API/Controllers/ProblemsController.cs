@@ -46,7 +46,7 @@ public class ProblemsController : ControllerBase
     public async Task<IActionResult> SubmitProblem([FromBody] CreateProblemDto dto, CancellationToken cancellationToken)
     {
         var authenticatedUserId = GetRequiredAuthenticatedUserId();
-        dto = dto with { UserId = authenticatedUserId };
+        dto.UserId = authenticatedUserId;
 
         var result = await _problemService.SubmitProblemAsync(dto, cancellationToken);
         var response = ApiResponse<DebuggingResultDto>.SuccessResult(result, "Your problem has been submitted successfully.", GetTraceId());

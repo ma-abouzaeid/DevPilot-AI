@@ -482,14 +482,15 @@ public class GitHubService : IGitHubService
                 cancellationToken: cancellationToken);
         }
 
-        return await _problemService.SubmitProblemAsync(new CreateProblemDto(
-            UserId: userId,
-            Title: null,
-            Description: description,
-            ErrorMessage: dto.ErrorMessage.Trim(),
-            SourceCode: file.Content,
-            Framework: GuessFramework(dto.Path)
-        ), cancellationToken);
+        return await _problemService.SubmitProblemAsync(new CreateProblemDto
+        {
+            UserId = userId,
+            Title = null,
+            Description = description,
+            ErrorMessage = dto.ErrorMessage.Trim(),
+            SourceCode = file.Content,
+            Framework = GuessFramework(dto.Path)
+        }, cancellationToken);
     }
 
     private async Task<(GitHubAccount Account, string AccessToken)> GetConnectedAccountAsync(int userId, CancellationToken cancellationToken)

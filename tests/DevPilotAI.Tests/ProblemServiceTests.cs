@@ -53,16 +53,17 @@ public class ProblemServiceTests
 
         var service = new ProblemService(dbContext, mockAiGateway.Object);
 
-        var dto = new CreateProblemDto(
-            UserId: 1,
-            Title: "JWT Auth Failed",
-            Description: "Returns 401 Unauthorized",
-            ErrorMessage: "401 Unauthorized",
-            StackTrace: "at AuthHandler.cs:20",
-            SourceCode: "app.UseAuthentication();",
-            Logs: "Log item",
-            Framework: "ASP.NET Core"
-        );
+        var dto = new CreateProblemDto
+        {
+            UserId = 1,
+            Title = "JWT Auth Failed",
+            Description = "Returns 401 Unauthorized",
+            ErrorMessage = "401 Unauthorized",
+            StackTrace = "at AuthHandler.cs:20",
+            SourceCode = "app.UseAuthentication();",
+            Logs = "Log item",
+            Framework = "ASP.NET Core"
+        };
 
         var result = await service.SubmitProblemAsync(dto);
 
@@ -88,16 +89,12 @@ public class ProblemServiceTests
         var mockAiGateway = new Mock<IAIGateway>();
         var service = new ProblemService(dbContext, mockAiGateway.Object);
 
-        var dto = new CreateProblemDto(
-            UserId: 1,
-            Title: null,
-            Description: null,
-            ErrorMessage: "NullReferenceException",
-            StackTrace: null,
-            SourceCode: "",
-            Logs: null,
-            Framework: null
-        );
+        var dto = new CreateProblemDto
+        {
+            UserId = 1,
+            ErrorMessage = "NullReferenceException",
+            SourceCode = ""
+        };
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.SubmitProblemAsync(dto));
     }
@@ -136,13 +133,12 @@ public class ProblemServiceTests
 
         var service = new ProblemService(dbContext, mockAiGateway.Object);
 
-        var dto = new CreateProblemDto(
-            UserId: 1,
-            Title: null,
-            Description: null,
-            ErrorMessage: "NullReferenceException: Object reference not set",
-            SourceCode: "var name = user.Profile.Name;"
-        );
+        var dto = new CreateProblemDto
+        {
+            UserId = 1,
+            ErrorMessage = "NullReferenceException: Object reference not set",
+            SourceCode = "var name = user.Profile.Name;"
+        };
 
         var result = await service.SubmitProblemAsync(dto);
 
@@ -165,7 +161,15 @@ public class ProblemServiceTests
 
         var service = new ProblemService(dbContext, mockAiGateway.Object);
 
-        var createDto = new CreateProblemDto(1, "NullRef Exception", "Object null", "NullReferenceException", null, "var x = obj.Value;", null, "C#");
+        var createDto = new CreateProblemDto
+        {
+            UserId = 1,
+            Title = "NullRef Exception",
+            Description = "Object null",
+            ErrorMessage = "NullReferenceException",
+            SourceCode = "var x = obj.Value;",
+            Framework = "C#"
+        };
         var submitted = await service.SubmitProblemAsync(createDto);
 
         var feedbackResult = await service.SubmitFeedbackAsync(submitted.ProblemId, submitted.DebuggingAttemptId, isSolved: true, comments: "Works great");
@@ -193,7 +197,15 @@ public class ProblemServiceTests
 
         var service = new ProblemService(dbContext, mockAiGateway.Object);
 
-        var createDto = new CreateProblemDto(1, "CORS Error", "Blocked by CORS", "CORS Error", null, "fetch('/api')", null, "ASP.NET");
+        var createDto = new CreateProblemDto
+        {
+            UserId = 1,
+            Title = "CORS Error",
+            Description = "Blocked by CORS",
+            ErrorMessage = "CORS Error",
+            SourceCode = "fetch('/api')",
+            Framework = "ASP.NET"
+        };
         var submitted = await service.SubmitProblemAsync(createDto);
 
         var history = await service.GetProblemHistoryAsync(submitted.ProblemId);
@@ -217,12 +229,21 @@ public class ProblemServiceTests
                 "Groq", "llama", 10, 10, 40));
 
         var service = new ProblemService(dbContext, mockAiGateway.Object);
-        var submitted = await service.SubmitProblemAsync(new CreateProblemDto(
-            1, null, null, "NullRef", null, "var x = a.B;", null, null));
+        var submitted = await service.SubmitProblemAsync(new CreateProblemDto
+        {
+            UserId = 1,
+            ErrorMessage = "NullRef",
+            SourceCode = "var x = a.B;"
+        });
 
         var followUp = await service.FollowUpProblemAsync(
             submitted.ProblemId,
-            new FollowUpProblemDto("Still NullRef", "var x = a?.B;", "Tried null-conditional"),
+            new FollowUpProblemDto
+            {
+                ErrorMessage = "Still NullRef",
+                SourceCode = "var x = a?.B;",
+                Description = "Tried null-conditional"
+            },
             userId: 1);
 
         Assert.Equal(submitted.ProblemId, followUp.ProblemId);
@@ -241,8 +262,18 @@ public class ProblemServiceTests
             .ReturnsAsync(new AIGatewayResponse(true, """{"problem":"p","location":"l","rootCause":"r","solutionSummary":"s","steps":[{"order":1,"title":"t","detail":"d"}],"correctedCode":"","notes":""}""", "Groq", "m", 1, 1, 1));
 
         var service = new ProblemService(dbContext, mockAiGateway.Object);
-        var mine = await service.SubmitProblemAsync(new CreateProblemDto(7, null, null, "err-a", null, "code-a", null, null));
-        await service.SubmitProblemAsync(new CreateProblemDto(99, null, null, "err-b", null, "code-b", null, null));
+        var mine = await service.SubmitProblemAsync(new CreateProblemDto
+        {
+            UserId = 7,
+            ErrorMessage = "err-a",
+            SourceCode = "code-a"
+        });
+        await service.SubmitProblemAsync(new CreateProblemDto
+        {
+            UserId = 99,
+            ErrorMessage = "err-b",
+            SourceCode = "code-b"
+        });
         await service.SubmitFeedbackAsync(mine.ProblemId, mine.DebuggingAttemptId, true, "ok", userId: 7);
 
         var dashboard = await service.GetMyProblemsDashboardAsync(7);
@@ -263,8 +294,18 @@ public class ProblemServiceTests
             .ReturnsAsync(new AIGatewayResponse(true, """{"title":"Auth fix","framework":"ASP.NET","problem":"401","location":"Auth","rootCause":"order","solutionSummary":"reorder","steps":[{"order":1,"title":"Fix","detail":"UseAuthentication first"}],"correctedCode":"app.UseAuthentication();","notes":""}""", "Groq", "m", 1, 1, 1));
 
         var service = new ProblemService(dbContext, mockAiGateway.Object);
-        var open = await service.SubmitProblemAsync(new CreateProblemDto(1, null, null, "open-err", null, "open-code", null, null));
-        var solved = await service.SubmitProblemAsync(new CreateProblemDto(1, null, null, "solved-err", null, "solved-code", null, null));
+        var open = await service.SubmitProblemAsync(new CreateProblemDto
+        {
+            UserId = 1,
+            ErrorMessage = "open-err",
+            SourceCode = "open-code"
+        });
+        var solved = await service.SubmitProblemAsync(new CreateProblemDto
+        {
+            UserId = 1,
+            ErrorMessage = "solved-err",
+            SourceCode = "solved-code"
+        });
         await service.SubmitFeedbackAsync(solved.ProblemId, solved.DebuggingAttemptId, true, "works", userId: 1);
 
         var articles = await service.SearchPublishedArticlesAsync(null, null);
