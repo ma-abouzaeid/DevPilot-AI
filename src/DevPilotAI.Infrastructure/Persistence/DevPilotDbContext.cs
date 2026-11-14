@@ -81,8 +81,12 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
             .WithMany(r => r.UserRoles)
             .HasForeignKey(ur => ur.RoleId);
 
-        modelBuilder.Entity<EmailVerification>()
-            .HasKey(ev => ev.VerificationId);
+        modelBuilder.Entity<EmailVerification>(b =>
+        {
+            b.HasKey(ev => ev.VerificationId);
+            b.Property(ev => ev.PendingEmail).HasMaxLength(255);
+            b.Property(ev => ev.Method).HasMaxLength(50);
+        });
 
         modelBuilder.Entity<RefreshToken>()
             .HasKey(rt => rt.RefreshTokenId);
@@ -343,7 +347,7 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
                 IsPublic = true,
                 PeriodType = "Monthly",
                 CreditsPerPeriod = 1000,
-                Price = 19.00m,
+                Price = 20.00m,
                 Currency = "USD",
                 CreatedAt = seedAt,
                 UpdatedAt = seedAt

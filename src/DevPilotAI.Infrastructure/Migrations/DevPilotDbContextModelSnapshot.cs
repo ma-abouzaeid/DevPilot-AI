@@ -684,7 +684,12 @@ namespace DevPilotAI.Infrastructure.Migrations
 
                     b.Property<string>("Method")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("PendingEmail")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("TokenHash")
                         .HasColumnType("nvarchar(max)");
@@ -987,7 +992,7 @@ namespace DevPilotAI.Infrastructure.Migrations
                             IsPublic = true,
                             Name = "Pro",
                             PeriodType = "Monthly",
-                            Price = 19.00m,
+                            Price = 20.00m,
                             Status = "Active",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });

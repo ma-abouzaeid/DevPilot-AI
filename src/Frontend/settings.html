@@ -23,7 +23,7 @@
         <div class="container" style="max-width: 720px;">
             <span class="page-kicker"><i class="fa-solid fa-user-gear"></i> Account</span>
             <h1 class="page-title">Settings</h1>
-            <p class="page-lead">Update your profile details or deactivate your account.</p>
+            <p class="page-lead">Update your profile, password, or email — your tickets and plan stay on the same account.</p>
 
             <div class="alert d-none" id="settings-alert" role="alert"></div>
 
@@ -36,14 +36,74 @@
                         <small class="text-gray">Shown on the challenge leaderboard and dashboard.</small>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" for="profile-email">Email</label>
-                        <input type="email" class="form-control" id="profile-email" readonly disabled>
-                        <small class="text-gray" id="email-verified-hint">Email cannot be changed here.</small>
+                        <label class="form-label" for="profile-email-display">Current email</label>
+                        <input type="email" class="form-control" id="profile-email-display" readonly disabled>
+                        <small class="text-gray" id="email-verified-hint">Loading…</small>
                     </div>
                     <button type="submit" class="btn btn-primary" id="btn-save-profile">
-                        <i class="fa-solid fa-floppy-disk"></i> Save changes
+                        <i class="fa-solid fa-floppy-disk"></i> Save name
                     </button>
                 </form>
+            </div>
+
+            <div class="surface-card mb-4">
+                <h2 class="h5 mb-3">Change password</h2>
+                <form id="password-form" class="debug-form" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label" for="current-password">Current password</label>
+                        <input type="password" class="form-control" id="current-password" required autocomplete="current-password">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="new-password">New password</label>
+                        <input type="password" class="form-control" id="new-password" required minlength="8" autocomplete="new-password">
+                        <small class="text-gray">At least 8 characters, with upper, lower, and a number.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="confirm-password">Confirm new password</label>
+                        <input type="password" class="form-control" id="confirm-password" required minlength="8" autocomplete="new-password">
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="btn-change-password">
+                        <i class="fa-solid fa-key"></i> Update password
+                    </button>
+                </form>
+            </div>
+
+            <div class="surface-card mb-4">
+                <h2 class="h5 mb-3">Change email</h2>
+                <p class="text-gray small">We verify you with your current password, then send a code to the <strong>new</strong> email. After verify, the account keeps the same tickets, plan, and GitHub link.</p>
+
+                <form id="email-change-form" class="debug-form" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label" for="email-current-password">Current password</label>
+                        <input type="password" class="form-control" id="email-current-password" required autocomplete="current-password">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="new-email">New email</label>
+                        <input type="email" class="form-control" id="new-email" required autocomplete="email">
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="btn-request-email">
+                        <i class="fa-solid fa-envelope"></i> Send verification code
+                    </button>
+                </form>
+
+                <div id="email-confirm-panel" class="mt-4 d-none">
+                    <hr>
+                    <p class="mb-2">Enter the 6-digit code sent to <strong id="pending-email-label"></strong></p>
+                    <form id="email-confirm-form" class="debug-form" novalidate>
+                        <div class="mb-3">
+                            <label class="form-label" for="email-otp">Verification code</label>
+                            <input type="text" class="form-control" id="email-otp" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required autocomplete="one-time-code">
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="submit" class="btn btn-primary" id="btn-confirm-email">
+                                <i class="fa-solid fa-circle-check"></i> Confirm email change
+                            </button>
+                            <button type="button" class="btn btn-outline-card" id="btn-resend-email" style="width:auto;">
+                                Resend code
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             <div class="surface-card border-danger-subtle">

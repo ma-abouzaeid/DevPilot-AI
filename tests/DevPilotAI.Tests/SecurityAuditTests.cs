@@ -260,7 +260,7 @@ public class SecurityAuditTests
         using var context = GetInMemoryDbContext();
         var mockAccessor = new Mock<IHttpContextAccessor>();
         var auditService = new AuditService(context, mockAccessor.Object, NullLogger<AuditService>.Instance);
-        var userService = new UserService(context, auditService);
+        var userService = new UserService(context, new Mock<IEmailService>().Object, auditService);
 
         var user = new User
         {

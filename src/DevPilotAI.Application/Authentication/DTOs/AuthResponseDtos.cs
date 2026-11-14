@@ -4,7 +4,8 @@ public record UserDto(
     int UserId,
     string Name,
     string Email,
-    DateTime? EmailVerifiedAt
+    DateTime? EmailVerifiedAt,
+    string? PendingEmailChange = null
 );
 
 public record RegisterResponseDto(

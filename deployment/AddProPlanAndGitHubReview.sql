@@ -12,9 +12,11 @@ IF NOT EXISTS (SELECT 1 FROM dbo.Plans WHERE Code = N'PRO')
 BEGIN
     SET IDENTITY_INSERT dbo.Plans ON;
     INSERT INTO dbo.Plans (PlanId, Name, Code, Description, Status, IsDefault, IsPublic, PeriodType, CreditsPerPeriod, Price, Currency, CreatedAt, UpdatedAt)
-    VALUES (2, N'Pro', N'PRO', N'Higher AI credits plus GitHub Code Review for teams that ship faster.', N'Active', 0, 1, N'Monthly', 1000, 19.00, N'USD', SYSUTCDATETIME(), SYSUTCDATETIME());
+    VALUES (2, N'Pro', N'PRO', N'Higher AI credits plus GitHub Code Review for teams that ship faster.', N'Active', 0, 1, N'Monthly', 1000, 20.00, N'USD', SYSUTCDATETIME(), SYSUTCDATETIME());
     SET IDENTITY_INSERT dbo.Plans OFF;
 END
+ELSE
+    UPDATE dbo.Plans SET Price = 20.00, UpdatedAt = SYSUTCDATETIME() WHERE Code = N'PRO';
 
 -- Free plan: review disabled
 IF NOT EXISTS (SELECT 1 FROM dbo.PlanFeatures WHERE PlanId = 1 AND FeatureId = 3)

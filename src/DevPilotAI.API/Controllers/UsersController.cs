@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using DevPilotAI.Application.Authentication.DTOs;
+using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Models;
 using DevPilotAI.Application.Users;
 using Microsoft.AspNetCore.Authorization;
@@ -24,54 +25,62 @@ public class UsersController : ControllerBase
             ? correlationId.ToString().Trim()
             : HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
 
+    private int GetRequiredUserId()
+    {
+        var userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId) || userId <= 0)
+        {
+            throw AppError.Unauthorized("Invalid or missing user identity in access token.");
+        }
+        return userId;
+    }
+
     [HttpDelete("me")]
-    
     public async Task<IActionResult> DeleteCurrentUser(CancellationToken cancellationToken)
     {
-        var userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        {
-            var traceId = GetTraceId();
-            return Unauthorized(ApiResponse<object?>.FailureResult("Invalid or missing user identity in access token.", "UNAUTHORIZED", null, traceId));
-        }
-
-        await _userService.DeleteAccountAsync(userId, cancellationToken);
-
-        var response = ApiResponse<object?>.SuccessResult(null, "Your account has been deactivated successfully.", GetTraceId());
-        return Ok(response);
+        await _userService.DeleteAccountAsync(GetRequiredUserId(), cancellationToken);
+        return Ok(ApiResponse<object?>.SuccessResult(null, "Your account has been deactivated successfully.", GetTraceId()));
     }
 
-    // GET current user profile
     [HttpGet("me")]
-    
     public async Task<IActionResult> GetCurrentProfile(CancellationToken cancellationToken)
     {
-        var userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        {
-            var traceId = GetTraceId();
-            return Unauthorized(ApiResponse<object?>.FailureResult("Invalid or missing user identity in access token.", "UNAUTHORIZED", null, traceId));
-        }
-
-        var profile = await _userService.GetCurrentProfileAsync(userId, cancellationToken);
-        var response = ApiResponse<UserDto>.SuccessResult(profile, "User profile retrieved successfully.", GetTraceId());
-        return Ok(response);
+        var profile = await _userService.GetCurrentProfileAsync(GetRequiredUserId(), cancellationToken);
+        return Ok(ApiResponse<UserDto>.SuccessResult(profile, "User profile retrieved successfully.", GetTraceId()));
     }
 
-    // PUT update current user profile (name only)
     [HttpPut("me")]
-   
     public async Task<IActionResult> UpdateCurrentProfile([FromBody] UpdateUserProfileRequestDto request, CancellationToken cancellationToken)
     {
-        var userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-        {
-            var traceId = GetTraceId();
-            return Unauthorized(ApiResponse<object?>.FailureResult("Invalid or missing user identity in access token.", "UNAUTHORIZED", null, traceId));
-        }
+        var updated = await _userService.UpdateCurrentProfileAsync(GetRequiredUserId(), request, cancellationToken);
+        return Ok(ApiResponse<UserDto>.SuccessResult(updated, "User profile updated successfully.", GetTraceId()));
+    }
 
-        var updated = await _userService.UpdateCurrentProfileAsync(userId, request, cancellationToken);
-        var response = ApiResponse<UserDto>.SuccessResult(updated, "User profile updated successfully.", GetTraceId());
-        return Ok(response);
+    [HttpPost("me/change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto request, CancellationToken cancellationToken)
+    {
+        await _userService.ChangePasswordAsync(GetRequiredUserId(), request, cancellationToken);
+        return Ok(ApiResponse<object?>.SuccessResult(null, "Password changed successfully. Please sign in again on other devices.", GetTraceId()));
+    }
+
+    [HttpPost("me/change-email")]
+    public async Task<IActionResult> RequestEmailChange([FromBody] RequestEmailChangeDto request, CancellationToken cancellationToken)
+    {
+        var result = await _userService.RequestEmailChangeAsync(GetRequiredUserId(), request, cancellationToken);
+        return Ok(ApiResponse<EmailChangeResponseDto>.SuccessResult(result, result.Message, GetTraceId()));
+    }
+
+    [HttpPost("me/confirm-email-change")]
+    public async Task<IActionResult> ConfirmEmailChange([FromBody] ConfirmEmailChangeDto request, CancellationToken cancellationToken)
+    {
+        var profile = await _userService.ConfirmEmailChangeAsync(GetRequiredUserId(), request, cancellationToken);
+        return Ok(ApiResponse<UserDto>.SuccessResult(profile, "Email updated successfully.", GetTraceId()));
+    }
+
+    [HttpPost("me/resend-email-change")]
+    public async Task<IActionResult> ResendEmailChange(CancellationToken cancellationToken)
+    {
+        var result = await _userService.ResendEmailChangeAsync(GetRequiredUserId(), cancellationToken);
+        return Ok(ApiResponse<EmailChangeResponseDto>.SuccessResult(result, result.Message, GetTraceId()));
     }
 }

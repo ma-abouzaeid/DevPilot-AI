@@ -163,7 +163,7 @@ public class SoftDeleteStrategyTests
     public async Task DeleteAccountAsync_SoftDeletesUser_AndRevokesAllActiveRefreshTokens()
     {
         using var context = GetDbContext();
-        var userService = new UserService(context);
+        var userService = new UserService(context, new Mock<IEmailService>().Object);
 
         var user = new User
         {
@@ -217,7 +217,7 @@ public class SoftDeleteStrategyTests
     public async Task DeleteAccountAsync_RepeatedCall_IsSafeAndIdempotent()
     {
         using var context = GetDbContext();
-        var userService = new UserService(context);
+        var userService = new UserService(context, new Mock<IEmailService>().Object);
 
         var user = new User
         {
@@ -243,7 +243,7 @@ public class SoftDeleteStrategyTests
     public async Task DeleteAccountAsync_NonExistentUser_ThrowsKeyNotFoundException()
     {
         using var context = GetDbContext();
-        var userService = new UserService(context);
+        var userService = new UserService(context, new Mock<IEmailService>().Object);
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() => userService.DeleteAccountAsync(99999));
     }

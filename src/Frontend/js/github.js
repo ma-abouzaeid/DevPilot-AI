@@ -306,9 +306,10 @@
     refreshReviewGate();
 
     const params = new URLSearchParams(window.location.search);
+    const initialMode = (params.get("mode") || "").toLowerCase() === "review" ? "review" : "debug";
     if (params.get("connected") === "1") {
         showAlert("GitHub connected successfully" + (params.get("user") ? (" as @" + params.get("user")) : "") + ".", "success");
-        window.history.replaceState({}, "", "github.html");
+        window.history.replaceState({}, "", "github.html" + (initialMode === "review" ? "?mode=review" : ""));
     } else if (params.get("connected") === "0" || params.get("error")) {
         const err = params.get("error") || "unknown";
         const msg = params.get("message");
@@ -320,7 +321,10 @@
         window.history.replaceState({}, "", "github.html");
     }
 
-    setMode("debug");
+    setMode(initialMode);
+    if (initialMode === "review") {
+        refreshReviewGate();
+    }
     loadStatus().catch(function (err) {
         showAlert(err.message || "Failed to load GitHub status", "danger");
     });
