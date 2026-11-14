@@ -24,6 +24,8 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
     public DbSet<DebuggingAttempt> DebuggingAttempts => Set<DebuggingAttempt>();
     public DbSet<DeveloperFeedback> DeveloperFeedbacks => Set<DeveloperFeedback>();
     public DbSet<ProblemSolution> ProblemSolutions => Set<ProblemSolution>();
+    public DbSet<ProblemEmbedding> ProblemEmbeddings => Set<ProblemEmbedding>();
+    public DbSet<SimilarityMatch> SimilarityMatches => Set<SimilarityMatch>();
 
     public DbSet<KnowledgeArticle> KnowledgeArticles => Set<KnowledgeArticle>();
     public DbSet<ArticleVersion> ArticleVersions => Set<ArticleVersion>();
@@ -99,6 +101,39 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<AIProvider>()
             .HasIndex(p => p.Name)
             .IsUnique();
+
+        modelBuilder.Entity<ProblemEmbedding>(b =>
+        {
+            b.HasKey(pe => pe.EmbeddingId);
+            b.Property(pe => pe.EmbeddingData).HasColumnType("varbinary(max)").IsRequired();
+            b.Property(pe => pe.ModelVersion).HasMaxLength(100).IsRequired();
+
+            b.HasOne(pe => pe.ProblemRequest)
+                .WithOne(pr => pr.Embedding)
+                .HasForeignKey<ProblemEmbedding>(pe => pe.ProblemRequestId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasIndex(pe => pe.ProblemRequestId).IsUnique();
+        });
+
+        modelBuilder.Entity<SimilarityMatch>(b =>
+        {
+            b.HasKey(sm => sm.SimilarityMatchId);
+            b.Property(sm => sm.SimilarityScore).HasPrecision(6, 5);
+
+            b.HasOne(sm => sm.ProblemRequest)
+                .WithMany(pr => pr.SimilarityMatches)
+                .HasForeignKey(sm => sm.ProblemRequestId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasOne(sm => sm.MatchedProblem)
+                .WithMany(p => p.SimilarityMatches)
+                .HasForeignKey(sm => sm.MatchedProblemId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasIndex(sm => sm.ProblemRequestId);
+            b.HasIndex(sm => sm.MatchedProblemId);
+        });
 
         modelBuilder.Entity<AuditLog>(b =>
         {

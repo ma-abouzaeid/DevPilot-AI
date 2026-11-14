@@ -16,4 +16,6 @@ public class ProblemRequest
 
     public ICollection<ProblemAttachment> Attachments { get; set; } = new List<ProblemAttachment>();
     public ICollection<DebuggingAttempt> DebuggingAttempts { get; set; } = new List<DebuggingAttempt>();
+    public ProblemEmbedding? Embedding { get; set; }
+    public ICollection<SimilarityMatch> SimilarityMatches { get; set; } = new List<SimilarityMatch>();
 }

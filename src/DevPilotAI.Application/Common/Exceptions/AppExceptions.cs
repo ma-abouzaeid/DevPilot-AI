@@ -48,4 +48,12 @@ public static class AppError
         ex.Data["ErrorCode"] = errorCode;
         return ex;
     }
+
+    public static InvalidOperationException ServiceUnavailable(string message, string errorCode = "AI_GATEWAY_UNAVAILABLE")
+    {
+        var ex = new InvalidOperationException(message);
+        ex.Data["ErrorCode"] = errorCode;
+        ex.Data["StatusCode"] = HttpStatusCode.ServiceUnavailable;
+        return ex;
+    }
 }

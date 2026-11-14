@@ -31,7 +31,19 @@ public class ProblemServiceTests
             .Setup(g => g.ExecuteAsync(It.IsAny<AIGatewayRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AIGatewayResponse(
                 IsSuccess: true,
-                Content: "Test Solution",
+                Content: """
+                {
+                  "problem": "JWT Auth Failed",
+                  "location": "AuthHandler.cs:20",
+                  "rootCause": "Authentication middleware missing",
+                  "solutionSummary": "Register authentication before authorization.",
+                  "steps": [
+                    { "order": 1, "title": "Add UseAuthentication", "detail": "Call app.UseAuthentication() before UseAuthorization()." }
+                  ],
+                  "correctedCode": "app.UseAuthentication();\napp.UseAuthorization();",
+                  "notes": ""
+                }
+                """,
                 ProviderName: "Groq",
                 ModelName: "llama-3",
                 PromptTokens: 10,
@@ -56,7 +68,12 @@ public class ProblemServiceTests
 
         Assert.NotNull(result);
         Assert.Equal("DEV-000001", result.ProblemCode);
-        Assert.Equal("Test Solution", result.ProposedSolution);
+        Assert.Equal("JWT Auth Failed", result.Problem);
+        Assert.Equal("AuthHandler.cs:20", result.Location);
+        Assert.Equal("Authentication middleware missing", result.RootCause);
+        Assert.Equal("Register authentication before authorization.", result.SolutionSummary);
+        Assert.Single(result.Steps);
+        Assert.Contains("UseAuthentication", result.CorrectedCode);
         Assert.Equal("Groq", result.ProviderUsed);
 
         var dbProblem = await dbContext.Problems.FirstOrDefaultAsync(p => p.ProblemId == result.ProblemId);

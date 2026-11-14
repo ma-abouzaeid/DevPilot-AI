@@ -44,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<IAIGateway, AIGatewayService>();
+        services.AddScoped<ISimilarityEngine, SimilarityEngine>();
 
         services.AddDevPilotRateLimiting(configuration);
 

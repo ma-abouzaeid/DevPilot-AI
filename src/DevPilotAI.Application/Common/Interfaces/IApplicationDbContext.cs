@@ -18,6 +18,8 @@ public interface IApplicationDbContext
     DbSet<DebuggingAttempt> DebuggingAttempts { get; }
     DbSet<DeveloperFeedback> DeveloperFeedbacks { get; }
     DbSet<ProblemSolution> ProblemSolutions { get; }
+    DbSet<ProblemEmbedding> ProblemEmbeddings { get; }
+    DbSet<SimilarityMatch> SimilarityMatches { get; }
 
     DbSet<KnowledgeArticle> KnowledgeArticles { get; }
     DbSet<ArticleVersion> ArticleVersions { get; }

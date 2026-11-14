@@ -2,8 +2,14 @@ using DevPilotAI.API.Extensions;
 using DevPilotAI.API.Middleware;
 using DevPilotAI.Application;
 using DevPilotAI.Infrastructure;
+using DevPilotAI.Infrastructure.AIGateway;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddJsonFile(
+    $"appsettings.{builder.Environment.EnvironmentName}.local.json",
+    optional: true,
+    reloadOnChange: true);
 
 // Register layers via clean architecture composition roots
 builder.Services.AddApplicationServices();
@@ -11,6 +17,19 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddApiServices(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
+
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    try
+    {
+        await AiProviderSeeder.SeedAsync(app.Services);
+    }
+    catch (Exception ex)
+    {
+        var startupLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+        startupLogger.LogWarning(ex, "AI provider seed skipped due to startup error.");
+    }
+}
 
 app.UseForwardedHeaders();
 app.UseMiddleware<ExceptionHandlingMiddleware>();

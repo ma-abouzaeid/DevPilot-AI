@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/jpeg" href="images/logo-bg.jpg">
+    <title>Submit Problem - DevPilot AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.0/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/media.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+
+<body>
+    <div id="navbar" data-active="debug"></div>
+
+    <section class="login-section padding-top-bottom">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-12 col-lg-10">
+                    <span class="welcome-badge">AI Debugging</span>
+                    <h1 class="title-style mb-2">Describe Your <span class="text-blue">Problem</span></h1>
+                    <p class="text-gray mb-4">Submit the issue once. DevPilot returns a fixed, ordered analysis every time.</p>
+
+                    <div id="form-alert" class="alert d-none" role="alert"></div>
+
+                    <form id="problem-form" class="debug-form">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Problem title</label>
+                            <input type="text" class="form-control" id="title" name="title" minlength="3" maxlength="200" required
+                                placeholder="e.g. JWT refresh returns 401">
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="4" minlength="10" maxlength="10000" required
+                                placeholder="What were you doing? What did you expect? What happened instead?"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="framework" class="form-label">Framework / Stack</label>
+                                <input type="text" class="form-control" id="framework" maxlength="100" placeholder="ASP.NET Core, React, ...">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="errorMessage" class="form-label">Error message</label>
+                                <input type="text" class="form-control" id="errorMessage" maxlength="4000" placeholder="Exact error text">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="stackTrace" class="form-label">Stack trace</label>
+                            <textarea class="form-control font-monospace" id="stackTrace" rows="3" maxlength="20000" placeholder="Optional"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="sourceCode" class="form-label">Relevant code</label>
+                            <textarea class="form-control font-monospace" id="sourceCode" rows="8" maxlength="50000" placeholder="Paste the code involved"></textarea>
+                        </div>
+                        <div class="mb-4">
+                            <label for="logs" class="form-label">Logs</label>
+                            <textarea class="form-control font-monospace" id="logs" rows="3" maxlength="20000" placeholder="Optional logs"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
+                            <i class="fa-solid fa-bug"></i> Analyze with AI
+                        </button>
+                    </form>
+
+                    <div id="result-panel" class="debug-result d-none mt-5">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                            <h2 class="h3 mb-0">Structured Solution</h2>
+                            <span class="badge text-bg-primary" id="result-code"></span>
+                        </div>
+                        <p class="text-gray mb-4">Provider: <strong id="result-provider"></strong></p>
+
+                        <article class="result-block">
+                            <h3>1. Problem</h3>
+                            <p id="result-problem"></p>
+                        </article>
+                        <article class="result-block">
+                            <h3>2. Location</h3>
+                            <p id="result-location"></p>
+                        </article>
+                        <article class="result-block">
+                            <h3>3. Root Cause</h3>
+                            <p id="result-rootCause"></p>
+                        </article>
+                        <article class="result-block">
+                            <h3>4. Solution Summary</h3>
+                            <p id="result-summary"></p>
+                        </article>
+                        <article class="result-block">
+                            <h3>5. Steps</h3>
+                            <ol id="result-steps" class="result-steps"></ol>
+                        </article>
+                        <article class="result-block">
+                            <h3>6. Corrected Code</h3>
+                            <pre class="result-code"><code id="result-correctedCode"></code></pre>
+                        </article>
+                        <article class="result-block" id="notes-block">
+                            <h3>7. Notes</h3>
+                            <p id="result-notes"></p>
+                        </article>
+
+                        <div class="d-flex flex-wrap gap-2 mt-4" id="feedback-actions">
+                            <button type="button" class="btn btn-success" id="btn-solved">
+                                <i class="fa-solid fa-check"></i> Problem solved
+                            </button>
+                            <button type="button" class="btn btn-outline-light" id="btn-unsolved">
+                                <i class="fa-solid fa-rotate"></i> Still have a problem
+                            </button>
+                        </div>
+                        <p id="feedback-message" class="mt-3 text-gray d-none"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="footer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+    <script src="js/config.js"></script>
+    <script src="js/api-client.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/footer.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/submit-problem.js"></script>
+</body>
+
+</html>

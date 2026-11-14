@@ -24,4 +24,5 @@ public class Problem : ISoftDeletable
     public ICollection<KnowledgeArticle> KnowledgeArticles { get; set; } = new List<KnowledgeArticle>();
     public ICollection<Challenge> Challenges { get; set; } = new List<Challenge>();
     public ICollection<AIUsageEvent> AIUsageEvents { get; set; } = new List<AIUsageEvent>();
+    public ICollection<SimilarityMatch> SimilarityMatches { get; set; } = new List<SimilarityMatch>();
 }

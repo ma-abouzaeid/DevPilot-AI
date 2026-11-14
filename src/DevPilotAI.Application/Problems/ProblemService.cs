@@ -13,11 +13,16 @@ public class ProblemService : IProblemService
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly IAIGateway _aiGateway;
+    private readonly ISimilarityEngine? _similarityEngine;
 
-    public ProblemService(IApplicationDbContext dbContext, IAIGateway aiGateway)
+    public ProblemService(
+        IApplicationDbContext dbContext,
+        IAIGateway aiGateway,
+        ISimilarityEngine? similarityEngine = null)
     {
         _dbContext = dbContext;
         _aiGateway = aiGateway;
+        _similarityEngine = similarityEngine;
     }
 
     public async Task<DebuggingResultDto> SubmitProblemAsync(CreateProblemDto dto, CancellationToken cancellationToken = default)
@@ -248,15 +253,27 @@ public class ProblemService : IProblemService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new DebuggingResultDto(
-            ProblemId: problem.ProblemId,
-            ProblemCode: problem.ProblemCode,
-            DebuggingAttemptId: attemptId,
-            RootCause: attempt.RootCauseAnalysis,
-            Explanation: attempt.Explanation,
-            ProposedSolution: attempt.ProposedSolution,
-            ProviderUsed: isSolved ? "Resolution Confirmed" : "Follow-up Required"
-        );
+        var payload = DebuggingResultParser.ParseOrFallback(
+            attempt.ProposedSolution,
+            problem.Title);
+
+        // Prefer persisted root-cause/explanation when feedback path reuses an attempt.
+        if (!string.IsNullOrWhiteSpace(attempt.RootCauseAnalysis))
+        {
+            payload.RootCause = attempt.RootCauseAnalysis;
+        }
+
+        var dto = DebuggingResultParser.ToDto(
+            problem.ProblemId,
+            problem.ProblemCode,
+            attemptId,
+            isSolved ? "Resolution Confirmed" : "Follow-up Required",
+            payload);
+
+        return dto with
+        {
+            ProposedSolution = attempt.ProposedSolution
+        };
     }
 
     public async Task<Problem?> GetProblemDetailsAsync(int problemId, CancellationToken cancellationToken = default)
@@ -396,39 +413,136 @@ public class ProblemService : IProblemService
         var attemptCount = await _dbContext.DebuggingAttempts
             .CountAsync(a => a.ProblemId == problem.ProblemId, cancellationToken) + 1;
 
-        var sysPrompt = "You are an expert AI software debugging agent. Analyze the problem details, explain the root cause, and present a clear step-by-step solution.";
-        var userPrompt = $"Title: {problem.Title}\nFramework: {request.Framework}\nDescription: {request.Description}\nError: {request.ErrorMessage}\nStackTrace: {request.StackTrace}\nCode: {request.SourceCode}";
+        var queryText = $"{problem.Title}\n{request.Framework}\n{request.Description}\n{request.ErrorMessage}\n{request.StackTrace}\n{request.SourceCode}";
+
+        SimilarityMatchResult? bestMatch = null;
+
+        if (_similarityEngine != null)
+        {
+            var embeddingData = await _similarityEngine.GenerateEmbeddingAsync(queryText, cancellationToken);
+            if (embeddingData.Length > 0)
+            {
+                var existingEmbedding = await _dbContext.ProblemEmbeddings
+                    .FirstOrDefaultAsync(e => e.ProblemRequestId == request.ProblemRequestId, cancellationToken);
+
+                if (existingEmbedding == null)
+                {
+                    _dbContext.ProblemEmbeddings.Add(new ProblemEmbedding
+                    {
+                        ProblemRequestId = request.ProblemRequestId,
+                        EmbeddingData = embeddingData,
+                        ModelVersion = "feature-v1",
+                        CreatedAt = DateTime.UtcNow
+                    });
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+            }
+
+            bestMatch = await _similarityEngine.FindBestMatchAsync(
+                request.ProblemRequestId,
+                queryText,
+                request.Framework,
+                threshold: 0.85,
+                cancellationToken: cancellationToken);
+
+            if (bestMatch != null)
+            {
+                _dbContext.SimilarityMatches.Add(new SimilarityMatch
+                {
+                    ProblemRequestId = request.ProblemRequestId,
+                    MatchedProblemId = bestMatch.MatchedProblemId,
+                    SimilarityScore = (decimal)bestMatch.SimilarityScore,
+                    CreatedAt = DateTime.UtcNow
+                });
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        string taskType;
+        string? existingSolution = null;
+        string? similarityNote = null;
+
+        if (bestMatch != null)
+        {
+            taskType = "KnowledgeAdaptation";
+            existingSolution = $"From {bestMatch.MatchedProblemCode} - {bestMatch.MatchedTitle} (similarity {bestMatch.SimilarityScore:P0}):\n{bestMatch.ProvenSolution}";
+            similarityNote = $"Reused Knowledge from {bestMatch.MatchedProblemCode} (Similarity: {bestMatch.SimilarityScore:P0}).";
+        }
+        else
+        {
+            taskType = "Debugging";
+        }
+
+        var sysPrompt = DebuggingResultParser.BuildSystemPrompt();
+        if (bestMatch != null)
+        {
+            sysPrompt += "\nA verified similar solution is provided. Adapt it to the current developer context while still returning the same JSON schema.";
+        }
+
+        var userPrompt = DebuggingResultParser.BuildUserPrompt(
+            problem.Title,
+            request.Framework,
+            request.Description,
+            request.ErrorMessage,
+            request.StackTrace,
+            request.SourceCode,
+            request.Logs,
+            existingSolution);
 
         var aiResponse = await _aiGateway.ExecuteAsync(new AIGatewayRequest(
             SystemPrompt: sysPrompt,
             UserPrompt: userPrompt,
-            TaskType: "Debugging",
-            UserId: problem.UserId
+            TaskType: taskType,
+            UserId: problem.UserId,
+            MaxTokens: 4096,
+            Temperature: 0.2
         ), cancellationToken);
+
+        if (!aiResponse.IsSuccess)
+        {
+            throw AppError.ServiceUnavailable(
+                aiResponse.ErrorMessage ?? "All AI providers failed to analyze this problem.",
+                "AI_GATEWAY_UNAVAILABLE");
+        }
+
+        var payload = DebuggingResultParser.ParseOrFallback(aiResponse.Content, problem.Title);
+        if (!string.IsNullOrWhiteSpace(similarityNote))
+        {
+            payload.Notes = string.IsNullOrWhiteSpace(payload.Notes)
+                ? similarityNote
+                : $"{similarityNote} {payload.Notes}";
+            if (!payload.RootCause!.Contains(bestMatch!.MatchedProblemCode, StringComparison.OrdinalIgnoreCase))
+            {
+                payload.RootCause = $"{similarityNote} {payload.RootCause}".Trim();
+            }
+        }
+
+        var structuredDtoPreview = DebuggingResultParser.ToDto(
+            problem.ProblemId,
+            problem.ProblemCode,
+            debuggingAttemptId: 0,
+            aiResponse.ProviderName,
+            payload);
 
         var attempt = new DebuggingAttempt
         {
             ProblemId = problem.ProblemId,
             ProblemRequestId = request.ProblemRequestId,
             AttemptNumber = attemptCount,
-            RootCauseAnalysis = "Probable root cause identified from error signature.",
-            Explanation = "Detailed diagnostic explanation.",
-            ProposedSolution = aiResponse.Content,
+            RootCauseAnalysis = structuredDtoPreview.RootCause,
+            Explanation = $"{structuredDtoPreview.Problem}\nLocation: {structuredDtoPreview.Location}",
+            ProposedSolution = structuredDtoPreview.ProposedSolution,
             CreatedAt = DateTime.UtcNow
         };
 
         _dbContext.DebuggingAttempts.Add(attempt);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new DebuggingResultDto(
-            ProblemId: problem.ProblemId,
-            ProblemCode: problem.ProblemCode,
-            DebuggingAttemptId: attempt.DebuggingAttemptId,
-            RootCause: attempt.RootCauseAnalysis,
-            Explanation: attempt.Explanation,
-            ProposedSolution: attempt.ProposedSolution,
-            ProviderUsed: aiResponse.ProviderName
-        );
+        return structuredDtoPreview with
+        {
+            DebuggingAttemptId = attempt.DebuggingAttemptId,
+            ProviderUsed = aiResponse.ProviderName
+        };
     }
 
     private static bool IsUniqueConstraintViolation(DbUpdateException ex)

@@ -15,6 +15,12 @@ appsettings.Production.json
 *.key
 *.pfx
 
+## Secrets / API keys (never commit)
+docs/API Keys.txt
+**/API Keys.txt
+**/ApiKeys.txt
+secrets/
+
 ## Entity Framework / Local Database Files
 *.mdf
 *.ldf

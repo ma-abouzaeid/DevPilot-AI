@@ -29,6 +29,7 @@ if (navbarBox) {
             <div class="collapse navbar-collapse" id="navbarContent">
                 <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
                     <li class="nav-item"><a class="nav-link" data-page="home" href="index.html">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" data-page="debug" href="submit-problem.html">Debug</a></li>
                     <li class="nav-item"><a class="nav-link" data-page="articles" href="articles.html">Articles</a></li>
                     <li class="nav-item"><a class="nav-link" data-page="about" href="about.html">About</a></li>
                     <li class="nav-item"><a class="nav-link" data-page="community" href="community.html">Community</a></li>

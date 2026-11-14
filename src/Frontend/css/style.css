@@ -933,3 +933,45 @@ a {
     position: relative;
     z-index: 1;
 }
+
+/* submit-problem structured result */
+.debug-form .form-control,
+.debug-form .form-control:focus {
+    background: rgba(22, 32, 62, 0.9);
+    border-color: var(--border);
+    color: #fff;
+}
+
+.debug-form .form-label {
+    color: var(--gray);
+    font-weight: 500;
+}
+
+.debug-result .result-block {
+    border-top: 1px solid var(--border);
+    padding: 1rem 0;
+}
+
+.debug-result .result-block h3 {
+    font-size: 1.05rem;
+    color: var(--cyan);
+    margin-bottom: 0.5rem;
+}
+
+.debug-result .result-steps {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.debug-result .result-steps li {
+    margin-bottom: 0.75rem;
+}
+
+.debug-result .result-code {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    overflow-x: auto;
+    color: #d7e3ff;
+}

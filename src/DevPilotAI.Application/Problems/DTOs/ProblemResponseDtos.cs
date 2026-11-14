@@ -1,13 +1,29 @@
 namespace DevPilotAI.Application.Problems.DTOs;
 
+public record DebugStepDto(
+    int Order,
+    string Title,
+    string Detail
+);
+
+/// <summary>
+/// Fixed, ordered debugging result shown for every problem.
+/// Field order is part of the product contract.
+/// </summary>
 public record DebuggingResultDto(
     int ProblemId,
     string ProblemCode,
     int DebuggingAttemptId,
+    string Problem,
+    string Location,
     string RootCause,
-    string Explanation,
-    string ProposedSolution,
-    string ProviderUsed
+    string SolutionSummary,
+    IReadOnlyList<DebugStepDto> Steps,
+    string CorrectedCode,
+    string? Notes,
+    string ProviderUsed,
+    /// <summary>Legacy/compat: full proposed solution text (summary + steps + code).</summary>
+    string ProposedSolution
 );
 
 public record ProblemRequestDto(

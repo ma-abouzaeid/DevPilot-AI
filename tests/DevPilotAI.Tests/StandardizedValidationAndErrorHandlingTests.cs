@@ -282,7 +282,19 @@ public class StandardizedValidationAndErrorHandlingTests
     {
         var mockService = new Mock<IProblemService>();
         mockService.Setup(s => s.SubmitProblemAsync(It.IsAny<CreateProblemDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DebuggingResultDto(10, "DEV-000010", 1, "Root", "Exp", "Solution", "Groq"));
+            .ReturnsAsync(new DebuggingResultDto(
+                10,
+                "DEV-000010",
+                1,
+                "Problem",
+                "Location",
+                "Root",
+                "Summary",
+                [new DebugStepDto(1, "Step", "Do it")],
+                "code();",
+                null,
+                "Groq",
+                "Summary"));
 
         var controller = new ProblemsController(mockService.Object);
         var claims = new ClaimsPrincipal(new ClaimsIdentity(new[]
