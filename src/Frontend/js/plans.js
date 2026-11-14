@@ -48,15 +48,18 @@
         if (!res.ok || !res.data) throw new Error(res.message || "Failed to load usage");
         const d = res.data;
         currentPlanCode = (d.planCode || d.PlanCode || "").toUpperCase();
+        const unlimited = d.unlimitedCredits || d.UnlimitedCredits;
         const remaining = d.creditsRemaining ?? d.CreditsRemaining ?? 0;
         const used = d.creditsUsed ?? d.CreditsUsed ?? 0;
         const allocated = d.creditsAllocated ?? d.CreditsAllocated ?? 0;
         const canReview = d.canUseCodeReview || d.CanUseCodeReview;
-        creditsEl.textContent = String(remaining);
-        usageText.textContent =
-            (d.planName || d.PlanName || currentPlanCode) +
-            " · " + used + " / " + allocated + " credits used" +
-            (canReview ? " · Code Review enabled" : " · Code Review requires Pro");
+        creditsEl.textContent = unlimited ? "Unlimited" : String(remaining);
+        usageText.textContent = unlimited
+            ? (d.planName || d.PlanName || currentPlanCode) + " · Admin unlimited credits" +
+              (canReview ? " · Code Review enabled" : "")
+            : (d.planName || d.PlanName || currentPlanCode) +
+              " · " + used + " / " + allocated + " credits used" +
+              (canReview ? " · Code Review enabled" : " · Code Review requires Pro");
     }
 
     async function activate(planCode) {

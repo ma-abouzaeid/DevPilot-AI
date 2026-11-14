@@ -107,12 +107,16 @@
             if (!res.ok || !res.data) return;
             const d = res.data;
             document.getElementById("plan-name").textContent = d.planName || d.PlanName || d.planCode || d.PlanCode || "—";
-            document.getElementById("plan-credits").textContent = String(d.creditsRemaining ?? d.CreditsRemaining ?? 0);
+            const unlimited = d.unlimitedCredits || d.UnlimitedCredits;
+            document.getElementById("plan-credits").textContent = unlimited
+                ? "Unlimited"
+                : String(d.creditsRemaining ?? d.CreditsRemaining ?? 0);
             const used = d.creditsUsed ?? d.CreditsUsed ?? 0;
             const allocated = d.creditsAllocated ?? d.CreditsAllocated ?? 0;
             const review = d.canUseCodeReview || d.CanUseCodeReview;
-            document.getElementById("plan-credits-meta").textContent =
-                used + " / " + allocated + " used · " + (review ? "Code Review on" : "Code Review = Pro");
+            document.getElementById("plan-credits-meta").textContent = unlimited
+                ? "Admin · no credit limit · Code Review on"
+                : used + " / " + allocated + " used · " + (review ? "Code Review on" : "Code Review = Pro");
         } catch (e) {
             document.getElementById("plan-credits-meta").textContent = "Usage unavailable";
         }

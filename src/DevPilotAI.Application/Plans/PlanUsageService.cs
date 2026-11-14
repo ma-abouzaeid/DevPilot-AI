@@ -1,3 +1,4 @@
+using DevPilotAI.Application.Common;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Application.Plans.DTOs;
@@ -52,13 +53,16 @@ public class PlanUsageService : IPlanUsageService
                 .ThenInclude(pf => pf.Feature)
             .FirstAsync(p => p.PlanId == period.PlanId, cancellationToken);
 
-        var remaining = Math.Max(0, period.CreditsAllocated - period.CreditsUsed + period.CreditsRefunded);
+        var unlimited = await IsAdminAsync(userId, cancellationToken);
+        var remaining = unlimited
+            ? int.MaxValue
+            : Math.Max(0, period.CreditsAllocated - period.CreditsUsed + period.CreditsRefunded);
         var features = plan.PlanFeatures
             .Select(pf => new PlanFeatureDto(pf.Feature.Key, pf.Feature.Name, pf.IsEnabled, pf.LimitValue))
             .OrderBy(f => f.Key)
             .ToList();
 
-        var canReview = features.Any(f =>
+        var canReview = unlimited || features.Any(f =>
             f.Key == PlanFeatureKeys.GitHubCodeReview && f.IsEnabled);
 
         return new MyPlanUsageDto(
@@ -66,13 +70,14 @@ public class PlanUsageService : IPlanUsageService
             PlanName: plan.Name,
             Price: plan.Price,
             Currency: plan.Currency,
-            CreditsAllocated: period.CreditsAllocated,
+            CreditsAllocated: unlimited ? int.MaxValue : period.CreditsAllocated,
             CreditsUsed: period.CreditsUsed,
             CreditsRemaining: remaining,
             PeriodStart: period.PeriodStart,
             PeriodEnd: period.PeriodEnd,
             CanUseCodeReview: canReview,
-            Features: features
+            Features: features,
+            UnlimitedCredits: unlimited
         );
     }
 
@@ -141,6 +146,11 @@ public class PlanUsageService : IPlanUsageService
 
     public async Task<bool> HasFeatureAsync(int userId, string featureKey, CancellationToken cancellationToken = default)
     {
+        if (await IsAdminAsync(userId, cancellationToken))
+        {
+            return true;
+        }
+
         var subscription = await GetActiveSubscriptionAsync(userId, cancellationToken);
         return await _db.PlanFeatures.AsNoTracking()
             .AnyAsync(pf =>
@@ -153,6 +163,7 @@ public class PlanUsageService : IPlanUsageService
     public async Task EnsureCreditsAsync(int userId, int amount, CancellationToken cancellationToken = default)
     {
         if (amount <= 0) return;
+        if (await IsAdminAsync(userId, cancellationToken)) return;
 
         var period = await EnsureCurrentPeriodAsync(userId, cancellationToken);
         var remaining = period.CreditsAllocated - period.CreditsUsed + period.CreditsRefunded;
@@ -176,10 +187,20 @@ public class PlanUsageService : IPlanUsageService
     {
         if (amount <= 0) return;
 
-        await EnsureCreditsAsync(userId, amount, cancellationToken);
+        var isAdmin = await IsAdminAsync(userId, cancellationToken);
+        if (!isAdmin)
+        {
+            await EnsureCreditsAsync(userId, amount, cancellationToken);
+        }
+
         var period = await EnsureCurrentPeriodAsync(userId, cancellationToken);
 
-        period.CreditsUsed += amount;
+        // Admins keep unlimited balance; still record usage for audit/AI tracking.
+        if (!isAdmin)
+        {
+            period.CreditsUsed += amount;
+        }
+
         period.RequestCount += 1;
         if (tokensUsed > 0)
         {
@@ -194,7 +215,7 @@ public class PlanUsageService : IPlanUsageService
             if (usageEvent != null)
             {
                 usageEvent.CreditsCharged = (usageEvent.CreditsCharged ?? 0) + amount;
-                usageEvent.CostType = "Credits";
+                usageEvent.CostType = isAdmin ? "AdminUnlimited" : "Credits";
                 if (string.Equals(usageEvent.Status, "Success", StringComparison.OrdinalIgnoreCase)
                     || string.IsNullOrWhiteSpace(usageEvent.Status))
                 {
@@ -208,9 +229,9 @@ public class PlanUsageService : IPlanUsageService
             UserId = userId,
             UsagePeriodId = period.UsagePeriodId,
             AIUsageEventId = aiUsageEventId,
-            EntryType = "CHARGE",
+            EntryType = isAdmin ? "ADMIN_UNLIMITED" : "CHARGE",
             Amount = amount,
-            Reason = Truncate(reason, 255),
+            Reason = Truncate(isAdmin ? $"Admin unlimited: {reason}" : reason, 255),
             ReferenceId = string.IsNullOrWhiteSpace(referenceId) ? null : Truncate(referenceId, 150),
             MetadataJson = metadataJson,
             CreatedAt = DateTime.UtcNow
@@ -233,7 +254,10 @@ public class PlanUsageService : IPlanUsageService
                     ReferenceId = referenceId,
                     AIUsageEventId = aiUsageEventId,
                     TokensUsed = tokensUsed,
-                    RemainingAfter = Math.Max(0, period.CreditsAllocated - period.CreditsUsed + period.CreditsRefunded)
+                    Unlimited = isAdmin,
+                    RemainingAfter = isAdmin
+                        ? (int?)null
+                        : Math.Max(0, period.CreditsAllocated - period.CreditsUsed + period.CreditsRefunded)
                 },
                 userId: userId,
                 cancellationToken: cancellationToken);
@@ -300,6 +324,12 @@ public class PlanUsageService : IPlanUsageService
         }
 
         return await GetMyUsageAsync(userId, cancellationToken);
+    }
+
+    private async Task<bool> IsAdminAsync(int userId, CancellationToken cancellationToken)
+    {
+        return await _db.UserRoles.AsNoTracking()
+            .AnyAsync(ur => ur.UserId == userId && ur.Role.Name == AppRoles.Admin, cancellationToken);
     }
 
     private async Task<UserSubscription> GetActiveSubscriptionAsync(int userId, CancellationToken cancellationToken)

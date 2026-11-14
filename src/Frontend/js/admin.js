@@ -6,9 +6,10 @@
         return;
     }
 
-    if (!window.DevPilotApi.isAdmin()) {
-        window.location.href = "dashboard.html";
-        return;
+    async function ensureAdminAccess() {
+        if (window.DevPilotApi.isAdmin()) return true;
+        await window.DevPilotApi.refreshRolesFromProfile();
+        return window.DevPilotApi.isAdmin();
     }
 
     const alertBox = document.getElementById("admin-alert");
@@ -163,7 +164,7 @@
                     "<tr>" +
                     "<td><strong>" + name + "</strong><div class='text-gray small'>" + email + " · #" + id + "</div></td>" +
                     "<td>" + plan + "</td>" +
-                    "<td>" + (credits == null ? "—" : credits) + "</td>" +
+                    "<td>" + (isAdmin ? "Unlimited" : (credits == null ? "—" : credits)) + "</td>" +
                     "<td>" + roles + "</td>" +
                     "<td>" + (deleted ? '<span class="badge text-bg-danger">Deactivated</span>' : '<span class="badge text-bg-success">Active</span>') + "</td>" +
                     "<td class='text-end admin-actions'>" +
@@ -510,5 +511,13 @@
         }
     });
 
-    loadOverview().catch(onError);
+    ensureAdminAccess().then(function (ok) {
+        if (!ok) {
+            window.location.href = "dashboard.html";
+            return;
+        }
+        loadOverview().catch(onError);
+    }).catch(function () {
+        window.location.href = "dashboard.html";
+    });
 })();

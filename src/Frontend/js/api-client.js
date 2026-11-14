@@ -83,6 +83,12 @@
         setTokens(accessToken, refreshToken) {
             if (accessToken) {
                 safeSetItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken.trim());
+                // Re-read roles from the fresh JWT (important after Admin role assignment).
+                safeRemoveItem("userRoles");
+                const rolesFromToken = this.getRoles();
+                if (rolesFromToken.length) {
+                    this.setRoles(rolesFromToken);
+                }
             }
             if (refreshToken) {
                 safeSetItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken.trim());
@@ -95,6 +101,7 @@
         clearTokens() {
             safeRemoveItem(STORAGE_KEYS.ACCESS_TOKEN);
             safeRemoveItem(STORAGE_KEYS.REFRESH_TOKEN);
+            safeRemoveItem("userRoles");
         },
 
         /**
@@ -127,24 +134,48 @@
          * @returns {string[]}
          */
         getRoles() {
+            const cached = safeGetItem("userRoles");
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed) && parsed.length) {
+                        return parsed.map(function (r) { return String(r); });
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
             const claims = this.getTokenClaims();
             if (!claims) return [];
-            const roleKeys = [
-                "role",
-                "roles",
-                "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
-            ];
             const roles = [];
-            roleKeys.forEach(function (key) {
-                const value = claims[key];
-                if (!value) return;
+            const pushRole = function (value) {
+                if (value == null) return;
                 if (Array.isArray(value)) {
-                    value.forEach(function (r) { if (r) roles.push(String(r)); });
-                } else {
-                    roles.push(String(value));
+                    value.forEach(pushRole);
+                    return;
+                }
+                const text = String(value).trim();
+                if (text) roles.push(text);
+            };
+
+            Object.keys(claims).forEach(function (key) {
+                const lower = key.toLowerCase();
+                if (lower === "role" || lower === "roles" || lower.endsWith("/role") || lower.endsWith("/claims/role")) {
+                    pushRole(claims[key]);
                 }
             });
             return roles;
+        },
+
+        /**
+         * Persist roles from login/profile so the navbar can show Admin immediately.
+         * @param {string[]|null|undefined} roles
+         */
+        setRoles(roles) {
+            if (!roles || !roles.length) {
+                safeRemoveItem("userRoles");
+                return;
+            }
+            safeSetItem("userRoles", JSON.stringify(roles.map(function (r) { return String(r); })));
         },
 
         /**
@@ -154,6 +185,26 @@
             return this.getRoles().some(function (r) {
                 return String(r).toLowerCase() === "admin";
             });
+        },
+
+        /**
+         * Loads roles from /api/Users/me and caches them.
+         * @returns {Promise<string[]>}
+         */
+        async refreshRolesFromProfile() {
+            try {
+                const base = (typeof window !== "undefined" && window.API_BASE) ? window.API_BASE : "";
+                const url = base ? new URL("/api/Users/me", base).href : "/api/Users/me";
+                const res = await this.request(url);
+                if (!res.ok || !res.data) return this.getRoles();
+                const roles = res.data.roles || res.data.Roles || [];
+                if (Array.isArray(roles) && roles.length) {
+                    this.setRoles(roles);
+                }
+                return this.getRoles();
+            } catch (e) {
+                return this.getRoles();
+            }
         },
 
         /**

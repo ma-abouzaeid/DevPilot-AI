@@ -30,7 +30,8 @@ public record MyPlanUsageDto(
     DateTime PeriodStart,
     DateTime PeriodEnd,
     bool CanUseCodeReview,
-    IReadOnlyList<PlanFeatureDto> Features
+    IReadOnlyList<PlanFeatureDto> Features,
+    bool UnlimitedCredits = false
 );
 
 public record ActivatePlanRequestDto(

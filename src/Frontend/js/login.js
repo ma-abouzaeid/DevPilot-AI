@@ -218,6 +218,11 @@ loginForm.addEventListener("submit", async function (e) {
         if (result.data && result.data.accessToken) {
             DevPilotApi.setTokens(result.data.accessToken, result.data.refreshToken);
         }
+        const user = result.data && (result.data.user || result.data.User);
+        const roles = user && (user.roles || user.Roles);
+        if (roles && typeof DevPilotApi.setRoles === "function") {
+            DevPilotApi.setRoles(roles);
+        }
         window.location.href = getNextPage();
         return;
     }
