@@ -30,6 +30,9 @@ public static class SystemAuditEventTypes
     public const string UserDeactivated = "USER_DEACTIVATED";
     public const string UserRestored = "USER_RESTORED";
     public const string UserPlanAssigned = "USER_PLAN_ASSIGNED";
+    public const string UserCreatedByAdmin = "USER_CREATED_BY_ADMIN";
+    public const string UserUpdatedByAdmin = "USER_UPDATED_BY_ADMIN";
+    public const string PlanCreated = "PLAN_CREATED";
     public const string PlanUpdated = "PLAN_UPDATED";
     public const string ArticleUpdated = "ARTICLE_UPDATED";
     public const string ArticlePublished = "ARTICLE_PUBLISHED";

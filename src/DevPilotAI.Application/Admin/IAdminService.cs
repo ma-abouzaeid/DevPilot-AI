@@ -14,12 +14,15 @@ public interface IAdminService
         CancellationToken cancellationToken = default);
 
     Task<AdminUserDetailDto> GetUserAsync(int userId, CancellationToken cancellationToken = default);
+    Task<AdminUserDetailDto> CreateUserAsync(int adminUserId, CreateAdminUserRequestDto request, CancellationToken cancellationToken = default);
+    Task<AdminUserDetailDto> UpdateUserAsync(int adminUserId, int userId, UpdateAdminUserRequestDto request, CancellationToken cancellationToken = default);
     Task DeactivateUserAsync(int adminUserId, int userId, CancellationToken cancellationToken = default);
     Task RestoreUserAsync(int adminUserId, int userId, CancellationToken cancellationToken = default);
     Task AssignUserPlanAsync(int adminUserId, int userId, AssignUserPlanRequestDto request, CancellationToken cancellationToken = default);
     Task SetUserAdminAsync(int adminUserId, int userId, SetUserAdminRequestDto request, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<AdminPlanDto>> ListPlansAsync(CancellationToken cancellationToken = default);
+    Task<AdminPlanDto> CreatePlanAsync(int adminUserId, CreateAdminPlanRequestDto request, CancellationToken cancellationToken = default);
     Task<AdminPlanDto> UpdatePlanAsync(int adminUserId, int planId, UpdateAdminPlanRequestDto request, CancellationToken cancellationToken = default);
 
     Task<PagedResultDto<AdminArticleListItemDto>> ListArticlesAsync(

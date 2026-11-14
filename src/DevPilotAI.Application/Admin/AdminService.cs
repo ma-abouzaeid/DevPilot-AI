@@ -2,8 +2,10 @@ using DevPilotAI.Application.Common;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Application.Common.Models;
+using DevPilotAI.Application.Plans;
 using DevPilotAI.Domain.Entities;
 using DevPilotAI.Domain.Enums;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevPilotAI.Application.Admin;
@@ -12,6 +14,7 @@ public class AdminService : IAdminService
 {
     private readonly IApplicationDbContext _db;
     private readonly IAuditService? _auditService;
+    private readonly PasswordHasher<User> _passwordHasher = new();
 
     public AdminService(IApplicationDbContext db, IAuditService? auditService = null)
     {
@@ -150,6 +153,132 @@ public class AdminService : IAdminService
             remaining,
             period?.PeriodStart,
             period?.PeriodEnd);
+    }
+
+    public async Task<AdminUserDetailDto> CreateUserAsync(
+        int adminUserId,
+        CreateAdminUserRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var email = request.Email.Trim().ToLowerInvariant();
+        var name = request.Name.Trim();
+
+        var exists = await _db.Users.IgnoreQueryFilters()
+            .AnyAsync(u => u.Email.ToLower() == email && !u.IsDeleted, cancellationToken);
+        if (exists)
+        {
+            throw AppError.Conflict("An account with this email already exists.", "EMAIL_ALREADY_EXISTS");
+        }
+
+        var user = new User
+        {
+            Name = name,
+            Email = email,
+            PasswordHash = string.Empty,
+            EmailVerifiedAt = request.MarkEmailVerified ? DateTime.UtcNow : null,
+            IsDeleted = false,
+            CreatedAt = DateTime.UtcNow
+        };
+        user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
+
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        var developerRole = await EnsureRoleAsync(AppRoles.Developer, cancellationToken);
+        _db.UserRoles.Add(new UserRole { UserId = user.UserId, RoleId = developerRole.RoleId });
+
+        if (request.IsAdmin)
+        {
+            var adminRole = await EnsureRoleAsync(AppRoles.Admin, cancellationToken);
+            _db.UserRoles.Add(new UserRole { UserId = user.UserId, RoleId = adminRole.RoleId });
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        var planCode = string.IsNullOrWhiteSpace(request.PlanCode) ? null : request.PlanCode.Trim().ToUpperInvariant();
+        if (!string.IsNullOrWhiteSpace(planCode))
+        {
+            await AssignUserPlanAsync(adminUserId, user.UserId, new AssignUserPlanRequestDto(planCode), cancellationToken);
+        }
+        else
+        {
+            var defaultPlan = await _db.Plans.FirstOrDefaultAsync(p => p.IsDefault && p.Status == "Active", cancellationToken);
+            if (defaultPlan != null)
+            {
+                await AssignUserPlanAsync(adminUserId, user.UserId, new AssignUserPlanRequestDto(defaultPlan.Code), cancellationToken);
+            }
+        }
+
+        await AuditAsync(
+            SystemAuditEventTypes.UserCreatedByAdmin,
+            nameof(User),
+            user.UserId.ToString(),
+            adminUserId,
+            new { user.UserId, user.Email, user.Name, request.IsAdmin, PlanCode = planCode },
+            cancellationToken);
+
+        return await GetUserAsync(user.UserId, cancellationToken);
+    }
+
+    public async Task<AdminUserDetailDto> UpdateUserAsync(
+        int adminUserId,
+        int userId,
+        UpdateAdminUserRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _db.Users.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken)
+            ?? throw AppError.NotFound($"User {userId} was not found.");
+
+        var name = request.Name.Trim();
+        var email = request.Email.Trim().ToLowerInvariant();
+        var old = new { user.Name, user.Email, user.EmailVerifiedAt };
+
+        if (!string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
+        {
+            var taken = await _db.Users.IgnoreQueryFilters()
+                .AnyAsync(u => u.UserId != userId && u.Email.ToLower() == email && !u.IsDeleted, cancellationToken);
+            if (taken)
+            {
+                throw AppError.Conflict("This email is already associated with another account.", "EMAIL_ALREADY_IN_USE");
+            }
+        }
+
+        user.Name = name;
+        user.Email = email;
+
+        if (request.MarkEmailVerified == true && user.EmailVerifiedAt == null)
+        {
+            user.EmailVerifiedAt = DateTime.UtcNow;
+        }
+        else if (request.MarkEmailVerified == false)
+        {
+            user.EmailVerifiedAt = null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
+            var tokens = await _db.RefreshTokens
+                .Where(t => t.UserId == userId && !t.IsRevoked)
+                .ToListAsync(cancellationToken);
+            foreach (var token in tokens)
+            {
+                token.IsRevoked = true;
+                token.RevokedAt = DateTime.UtcNow;
+            }
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+        await AuditAsync(
+            SystemAuditEventTypes.UserUpdatedByAdmin,
+            nameof(User),
+            userId.ToString(),
+            adminUserId,
+            new { Old = old, New = new { user.Name, user.Email, user.EmailVerifiedAt, PasswordChanged = !string.IsNullOrWhiteSpace(request.NewPassword) } },
+            cancellationToken);
+
+        return await GetUserAsync(userId, cancellationToken);
     }
 
     public async Task DeactivateUserAsync(int adminUserId, int userId, CancellationToken cancellationToken = default)
@@ -323,6 +452,53 @@ public class AdminService : IAdminService
         return plans.Select(ToPlanDto).ToList();
     }
 
+    public async Task<AdminPlanDto> CreatePlanAsync(
+        int adminUserId,
+        CreateAdminPlanRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var code = request.Code.Trim().ToUpperInvariant();
+        if (await _db.Plans.AnyAsync(p => p.Code == code, cancellationToken))
+        {
+            throw AppError.Conflict($"Plan code '{code}' already exists.", "PLAN_CODE_EXISTS");
+        }
+
+        if (request.IsDefault)
+        {
+            await ClearDefaultPlansAsync(cancellationToken);
+        }
+
+        var plan = new Plan
+        {
+            Code = code,
+            Name = request.Name.Trim(),
+            Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
+            Status = string.IsNullOrWhiteSpace(request.Status) ? "Active" : request.Status.Trim(),
+            IsPublic = request.IsPublic,
+            IsDefault = request.IsDefault,
+            PeriodType = "Monthly",
+            CreditsPerPeriod = request.CreditsPerPeriod,
+            Price = request.Price,
+            Currency = string.IsNullOrWhiteSpace(request.Currency) ? "USD" : request.Currency.Trim().ToUpperInvariant(),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        _db.Plans.Add(plan);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        await EnsurePlanFeaturesAsync(plan.PlanId, request.CreditsPerPeriod, request.EnableCodeReview, cancellationToken);
+
+        await AuditAsync(
+            SystemAuditEventTypes.PlanCreated,
+            nameof(Plan),
+            plan.PlanId.ToString(),
+            adminUserId,
+            new { plan.Code, plan.Name, plan.CreditsPerPeriod, plan.IsDefault, request.EnableCodeReview },
+            cancellationToken);
+
+        return (await ListPlansAsync(cancellationToken)).First(p => p.PlanId == plan.PlanId);
+    }
+
     public async Task<AdminPlanDto> UpdatePlanAsync(
         int adminUserId,
         int planId,
@@ -335,24 +511,58 @@ public class AdminService : IAdminService
             .FirstOrDefaultAsync(p => p.PlanId == planId, cancellationToken)
             ?? throw AppError.NotFound($"Plan {planId} was not found.");
 
-        var old = new { plan.Name, plan.Description, plan.Status, plan.IsPublic, plan.CreditsPerPeriod, plan.Price, plan.Currency };
+        var old = new { plan.Name, plan.Description, plan.Status, plan.IsPublic, plan.IsDefault, plan.CreditsPerPeriod, plan.Price, plan.Currency };
+
+        if (request.IsDefault && !plan.IsDefault)
+        {
+            await ClearDefaultPlansAsync(cancellationToken);
+        }
 
         plan.Name = request.Name.Trim();
         plan.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
         plan.Status = request.Status.Trim();
         plan.IsPublic = request.IsPublic;
+        plan.IsDefault = request.IsDefault;
         plan.CreditsPerPeriod = request.CreditsPerPeriod;
         plan.Price = request.Price;
         plan.Currency = string.IsNullOrWhiteSpace(request.Currency) ? plan.Currency : request.Currency.Trim().ToUpperInvariant();
         plan.UpdatedAt = DateTime.UtcNow;
 
+        if (request.EnableCodeReview.HasValue)
+        {
+            await EnsurePlanFeaturesAsync(plan.PlanId, request.CreditsPerPeriod, request.EnableCodeReview.Value, cancellationToken);
+        }
+        else
+        {
+            // Keep credit limit feature in sync with allocation.
+            var creditsFeature = await _db.Features.FirstOrDefaultAsync(f => f.Key == PlanFeatureKeys.MonthlyAiCredits, cancellationToken);
+            if (creditsFeature != null)
+            {
+                var pf = await _db.PlanFeatures.FirstOrDefaultAsync(
+                    x => x.PlanId == plan.PlanId && x.FeatureId == creditsFeature.FeatureId,
+                    cancellationToken);
+                if (pf != null)
+                {
+                    pf.LimitValue = request.CreditsPerPeriod;
+                    pf.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
+
+        // Reload features for response.
+        plan = await _db.Plans
+            .Include(p => p.PlanFeatures)
+                .ThenInclude(pf => pf.Feature)
+            .FirstAsync(p => p.PlanId == planId, cancellationToken);
+
         await AuditAsync(
             SystemAuditEventTypes.PlanUpdated,
             nameof(Plan),
             planId.ToString(),
             adminUserId,
-            new { Old = old, New = new { plan.Name, plan.Description, plan.Status, plan.IsPublic, plan.CreditsPerPeriod, plan.Price, plan.Currency } },
+            new { Old = old, New = new { plan.Name, plan.Description, plan.Status, plan.IsPublic, plan.IsDefault, plan.CreditsPerPeriod, plan.Price, plan.Currency, request.EnableCodeReview } },
             cancellationToken);
 
         return ToPlanDto(plan);
@@ -698,6 +908,62 @@ public class AdminService : IAdminService
         _db.Roles.Add(role);
         await _db.SaveChangesAsync(cancellationToken);
         return role;
+    }
+
+    private async Task ClearDefaultPlansAsync(CancellationToken cancellationToken)
+    {
+        var defaults = await _db.Plans.Where(p => p.IsDefault).ToListAsync(cancellationToken);
+        foreach (var p in defaults)
+        {
+            p.IsDefault = false;
+            p.UpdatedAt = DateTime.UtcNow;
+        }
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task EnsurePlanFeaturesAsync(
+        int planId,
+        int creditsPerPeriod,
+        bool enableCodeReview,
+        CancellationToken cancellationToken)
+    {
+        var features = await _db.Features.ToListAsync(cancellationToken);
+        Feature Require(string key) =>
+            features.FirstOrDefault(f => f.Key == key)
+            ?? throw AppError.NotFound($"Feature '{key}' is not configured.");
+
+        var debugging = Require(PlanFeatureKeys.AiDebugging);
+        var credits = Require(PlanFeatureKeys.MonthlyAiCredits);
+        var review = Require(PlanFeatureKeys.GitHubCodeReview);
+
+        async Task Upsert(Feature feature, bool enabled, int? limit)
+        {
+            var existing = await _db.PlanFeatures
+                .FirstOrDefaultAsync(pf => pf.PlanId == planId && pf.FeatureId == feature.FeatureId, cancellationToken);
+            if (existing == null)
+            {
+                _db.PlanFeatures.Add(new PlanFeature
+                {
+                    PlanId = planId,
+                    FeatureId = feature.FeatureId,
+                    IsEnabled = enabled,
+                    LimitValue = limit,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                existing.IsEnabled = enabled;
+                existing.LimitValue = limit;
+                existing.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        await Upsert(debugging, true, null);
+        await Upsert(credits, true, creditsPerPeriod);
+        await Upsert(review, enableCodeReview, null);
+        await _db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<Dictionary<int, (string Code, string Name)>> GetActivePlanCodesAsync(

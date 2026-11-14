@@ -64,6 +64,20 @@ public class AdminController : ControllerBase
         return Ok(ApiResponse<AdminUserDetailDto>.SuccessResult(data, "User loaded.", GetTraceId()));
     }
 
+    [HttpPost("users")]
+    public async Task<IActionResult> CreateUser([FromBody] CreateAdminUserRequestDto request, CancellationToken cancellationToken)
+    {
+        var data = await _adminService.CreateUserAsync(GetRequiredUserId(), request, cancellationToken);
+        return Ok(ApiResponse<AdminUserDetailDto>.SuccessResult(data, "User created.", GetTraceId()));
+    }
+
+    [HttpPut("users/{userId:int}")]
+    public async Task<IActionResult> UpdateUser(int userId, [FromBody] UpdateAdminUserRequestDto request, CancellationToken cancellationToken)
+    {
+        var data = await _adminService.UpdateUserAsync(GetRequiredUserId(), userId, request, cancellationToken);
+        return Ok(ApiResponse<AdminUserDetailDto>.SuccessResult(data, "User updated.", GetTraceId()));
+    }
+
     [HttpPost("users/{userId:int}/deactivate")]
     public async Task<IActionResult> DeactivateUser(int userId, CancellationToken cancellationToken)
     {
@@ -97,6 +111,13 @@ public class AdminController : ControllerBase
     {
         var data = await _adminService.ListPlansAsync(cancellationToken);
         return Ok(ApiResponse<IReadOnlyList<AdminPlanDto>>.SuccessResult(data, "Plans loaded.", GetTraceId()));
+    }
+
+    [HttpPost("plans")]
+    public async Task<IActionResult> CreatePlan([FromBody] CreateAdminPlanRequestDto request, CancellationToken cancellationToken)
+    {
+        var data = await _adminService.CreatePlanAsync(GetRequiredUserId(), request, cancellationToken);
+        return Ok(ApiResponse<AdminPlanDto>.SuccessResult(data, "Plan created.", GetTraceId()));
     }
 
     [HttpPut("plans/{planId:int}")]

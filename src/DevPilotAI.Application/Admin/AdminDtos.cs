@@ -58,6 +58,48 @@ public record SetUserAdminRequestDto(
     bool IsAdmin
 );
 
+public class CreateAdminUserRequestDto
+{
+    [Required]
+    [StringLength(150, MinimumLength = 2)]
+    public string Name { get; set; } = string.Empty;
+
+    [Required]
+    [EmailAddress]
+    [StringLength(255)]
+    public string Email { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(100, MinimumLength = 8)]
+    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*$", ErrorMessage = "Password must contain at least one uppercase letter, one lowercase letter, and one number.")]
+    public string Password { get; set; } = string.Empty;
+
+    [StringLength(50)]
+    public string? PlanCode { get; set; }
+
+    public bool IsAdmin { get; set; }
+
+    public bool MarkEmailVerified { get; set; } = true;
+}
+
+public class UpdateAdminUserRequestDto
+{
+    [Required]
+    [StringLength(150, MinimumLength = 2)]
+    public string Name { get; set; } = string.Empty;
+
+    [Required]
+    [EmailAddress]
+    [StringLength(255)]
+    public string Email { get; set; } = string.Empty;
+
+    [StringLength(100, MinimumLength = 8)]
+    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*$", ErrorMessage = "Password must contain at least one uppercase letter, one lowercase letter, and one number.")]
+    public string? NewPassword { get; set; }
+
+    public bool? MarkEmailVerified { get; set; }
+}
+
 public record AdminPlanDto(
     int PlanId,
     string Code,
@@ -72,6 +114,39 @@ public record AdminPlanDto(
     string? Currency,
     IReadOnlyList<string> Features
 );
+
+public class CreateAdminPlanRequestDto
+{
+    [Required]
+    [StringLength(50, MinimumLength = 2)]
+    public string Code { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(100, MinimumLength = 2)]
+    public string Name { get; set; } = string.Empty;
+
+    [StringLength(1000)]
+    public string? Description { get; set; }
+
+    [Required]
+    [StringLength(30)]
+    public string Status { get; set; } = "Active";
+
+    public bool IsPublic { get; set; } = true;
+
+    public bool IsDefault { get; set; }
+
+    [Range(0, 1_000_000)]
+    public int CreditsPerPeriod { get; set; } = 100;
+
+    [Range(0, 1_000_000)]
+    public decimal? Price { get; set; }
+
+    [StringLength(10)]
+    public string? Currency { get; set; } = "USD";
+
+    public bool EnableCodeReview { get; set; }
+}
 
 public class UpdateAdminPlanRequestDto
 {
@@ -88,6 +163,8 @@ public class UpdateAdminPlanRequestDto
 
     public bool IsPublic { get; set; } = true;
 
+    public bool IsDefault { get; set; }
+
     [Range(0, 1_000_000)]
     public int CreditsPerPeriod { get; set; }
 
@@ -96,6 +173,8 @@ public class UpdateAdminPlanRequestDto
 
     [StringLength(10)]
     public string? Currency { get; set; }
+
+    public bool? EnableCodeReview { get; set; }
 }
 
 public record AdminArticleListItemDto(

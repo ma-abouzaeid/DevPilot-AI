@@ -168,6 +168,7 @@
                     "<td>" + roles + "</td>" +
                     "<td>" + (deleted ? '<span class="badge text-bg-danger">Deactivated</span>' : '<span class="badge text-bg-success">Active</span>') + "</td>" +
                     "<td class='text-end admin-actions'>" +
+                    "<button type='button' class='btn btn-sm btn-outline-card' data-act='edit' data-id='" + id + "'>Edit</button> " +
                     "<button type='button' class='btn btn-sm btn-outline-card' data-act='plan' data-id='" + id + "' data-email='" + email + "'>Plan</button> " +
                     "<button type='button' class='btn btn-sm btn-outline-card' data-act='admin' data-id='" + id + "' data-admin='" + (isAdmin ? "0" : "1") + "'>" +
                     (isAdmin ? "Revoke admin" : "Make admin") + "</button> " +
@@ -188,11 +189,13 @@
     }
 
     async function loadPlans() {
+        state.plans = [];
         var plans = await ensurePlans();
         var box = document.getElementById("plans-list");
         box.innerHTML = plans.map(function (p) {
             var id = val(p, "planId", "PlanId");
-            var features = (val(p, "features", "Features") || []).join(", ");
+            var features = val(p, "features", "Features") || [];
+            var hasReview = features.some(function (f) { return String(f).toLowerCase() === "github_code_review"; });
             return (
                 '<div class="col-lg-6"><div class="surface-card border h-100">' +
                 "<h3 class='h5 mb-1'>" + escapeHtml(val(p, "name", "Name")) +
@@ -211,12 +214,59 @@
                 '<div class="col-md-4 d-flex align-items-end"><div class="form-check mb-2">' +
                 '<input class="form-check-input" type="checkbox" name="isPublic"' + (val(p, "isPublic", "IsPublic") ? " checked" : "") + ">" +
                 '<label class="form-check-label">Public</label></div></div>' +
+                '<div class="col-md-4"><div class="form-check">' +
+                '<input class="form-check-input" type="checkbox" name="isDefault"' + (val(p, "isDefault", "IsDefault") ? " checked" : "") + ">" +
+                '<label class="form-check-label">Default</label></div></div>' +
+                '<div class="col-md-4"><div class="form-check">' +
+                '<input class="form-check-input" type="checkbox" name="enableCodeReview"' + (hasReview ? " checked" : "") + ">" +
+                '<label class="form-check-label">Code Review</label></div></div>' +
                 '<div class="col-12"><label class="form-label">Description</label><textarea class="form-control" name="description" rows="2">' + escapeHtml(val(p, "description", "Description") || "") + "</textarea></div>" +
-                '<div class="col-12"><small class="text-gray">Features: ' + escapeHtml(features || "—") + "</small></div>" +
+                '<div class="col-12"><small class="text-gray">Features: ' + escapeHtml(features.join(", ") || "—") + "</small></div>" +
                 '<div class="col-12"><button type="submit" class="btn btn-primary btn-sm">Save plan</button></div>' +
                 "</div></form></div></div>"
             );
         }).join("");
+    }
+
+    async function fillPlanSelect(selectEl, selected) {
+        await ensurePlans();
+        selectEl.innerHTML = '<option value="">Default plan</option>' + state.plans.map(function (p) {
+            var code = val(p, "code", "Code");
+            return '<option value="' + escapeHtml(code) + '"' + (selected && selected === code ? " selected" : "") + ">" +
+                escapeHtml(val(p, "name", "Name")) + " (" + escapeHtml(code) + ")</option>";
+        }).join("");
+    }
+
+    async function openCreateUserModal() {
+        document.getElementById("user-form-title").textContent = "Add user";
+        document.getElementById("user-form-id").value = "";
+        document.getElementById("user-form-name").value = "";
+        document.getElementById("user-form-email").value = "";
+        document.getElementById("user-form-password").value = "";
+        document.getElementById("user-form-password").required = true;
+        document.getElementById("user-form-password-hint").textContent = "Required. At least 8 chars with upper, lower, and a number.";
+        document.getElementById("user-form-plan-wrap").classList.remove("d-none");
+        document.getElementById("user-form-admin-wrap").classList.remove("d-none");
+        document.getElementById("user-form-admin").checked = false;
+        document.getElementById("user-form-verified").checked = true;
+        await fillPlanSelect(document.getElementById("user-form-plan"));
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("user-form-modal")).show();
+    }
+
+    async function openEditUserModal(userId) {
+        var res = await api("/api/Admin/users/" + userId);
+        var u = res.data || {};
+        document.getElementById("user-form-title").textContent = "Edit user";
+        document.getElementById("user-form-id").value = val(u, "userId", "UserId");
+        document.getElementById("user-form-name").value = val(u, "name", "Name") || "";
+        document.getElementById("user-form-email").value = val(u, "email", "Email") || "";
+        document.getElementById("user-form-password").value = "";
+        document.getElementById("user-form-password").required = false;
+        document.getElementById("user-form-password-hint").textContent = "Leave blank to keep the current password.";
+        document.getElementById("user-form-plan-wrap").classList.add("d-none");
+        document.getElementById("user-form-admin-wrap").classList.add("d-none");
+        document.getElementById("user-form-verified").checked = !!(val(u, "emailVerifiedAt", "EmailVerifiedAt"));
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("user-form-modal")).show();
     }
 
     async function loadArticles() {
@@ -363,6 +413,9 @@
         state.usersPage = 1;
         loadUsers().catch(onError);
     });
+    document.getElementById("users-add").addEventListener("click", function () {
+        openCreateUserModal().catch(onError);
+    });
     document.getElementById("articles-refresh").addEventListener("click", function () {
         state.articlesPage = 1;
         loadArticles().catch(onError);
@@ -383,7 +436,9 @@
         var act = btn.getAttribute("data-act");
         clearAlert();
         try {
-            if (act === "deactivate") {
+            if (act === "edit") {
+                await openEditUserModal(id);
+            } else if (act === "deactivate") {
                 if (!window.confirm("Deactivate this account? They will be signed out.")) return;
                 await api("/api/Admin/users/" + id + "/deactivate", { method: "POST" });
                 showAlert("User deactivated.", "success");
@@ -433,6 +488,78 @@
         }
     });
 
+    document.getElementById("user-form").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        clearAlert();
+        try {
+            var id = document.getElementById("user-form-id").value;
+            var name = document.getElementById("user-form-name").value.trim();
+            var email = document.getElementById("user-form-email").value.trim();
+            var password = document.getElementById("user-form-password").value;
+            var verified = document.getElementById("user-form-verified").checked;
+
+            if (id) {
+                var updateBody = {
+                    name: name,
+                    email: email,
+                    markEmailVerified: verified
+                };
+                if (password) updateBody.newPassword = password;
+                await api("/api/Admin/users/" + id, { method: "PUT", body: JSON.stringify(updateBody) });
+                showAlert("User updated.", "success");
+            } else {
+                if (!password) throw new Error("Password is required for new users.");
+                await api("/api/Admin/users", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        name: name,
+                        email: email,
+                        password: password,
+                        planCode: document.getElementById("user-form-plan").value || null,
+                        isAdmin: document.getElementById("user-form-admin").checked,
+                        markEmailVerified: verified
+                    })
+                });
+                showAlert("User created.", "success");
+            }
+            bootstrap.Modal.getOrCreateInstance(document.getElementById("user-form-modal")).hide();
+            state.usersPage = 1;
+            await loadUsers();
+        } catch (err) {
+            onError(err);
+        }
+    });
+
+    document.getElementById("plan-create-form").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        clearAlert();
+        try {
+            await api("/api/Admin/plans", {
+                method: "POST",
+                body: JSON.stringify({
+                    code: document.getElementById("new-plan-code").value.trim(),
+                    name: document.getElementById("new-plan-name").value.trim(),
+                    description: document.getElementById("new-plan-description").value.trim(),
+                    status: "Active",
+                    isPublic: document.getElementById("new-plan-public").checked,
+                    isDefault: document.getElementById("new-plan-default").checked,
+                    creditsPerPeriod: Number(document.getElementById("new-plan-credits").value),
+                    price: document.getElementById("new-plan-price").value === "" ? null : Number(document.getElementById("new-plan-price").value),
+                    currency: document.getElementById("new-plan-currency").value.trim() || "USD",
+                    enableCodeReview: document.getElementById("new-plan-review").checked
+                })
+            });
+            document.getElementById("plan-create-form").reset();
+            document.getElementById("new-plan-public").checked = true;
+            document.getElementById("new-plan-credits").value = "200";
+            document.getElementById("new-plan-currency").value = "USD";
+            showAlert("Plan created.", "success");
+            await loadPlans();
+        } catch (err) {
+            onError(err);
+        }
+    });
+
     document.getElementById("plans-list").addEventListener("submit", async function (e) {
         var form = e.target.closest(".plan-edit-form");
         if (!form) return;
@@ -445,9 +572,11 @@
                 description: form.description.value.trim(),
                 status: form.status.value,
                 isPublic: form.isPublic.checked,
+                isDefault: form.isDefault.checked,
                 creditsPerPeriod: Number(form.credits.value),
                 price: form.price.value === "" ? null : Number(form.price.value),
-                currency: form.currency.value.trim()
+                currency: form.currency.value.trim(),
+                enableCodeReview: form.enableCodeReview.checked
             };
             await api("/api/Admin/plans/" + id, { method: "PUT", body: JSON.stringify(body) });
             state.plans = [];
