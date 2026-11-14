@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DevPilotAI.API.Controllers;
 
-[Authorize(Roles = AppRoles.Admin)]
+[Authorize(Policy = AppRoles.AdminPolicy)]
 [ApiController]
 [Route("api/[controller]")]
 public class AdminController : ControllerBase
@@ -27,7 +27,10 @@ public class AdminController : ControllerBase
 
     private int GetRequiredUserId()
     {
-        var userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userIdClaim =
+            User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
+            User?.FindFirst("sub")?.Value ??
+            User?.FindFirst("nameid")?.Value;
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId) || userId <= 0)
         {
             throw AppError.Unauthorized("Invalid or missing user identity in access token.");

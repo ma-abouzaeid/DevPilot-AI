@@ -1,10 +1,13 @@
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using DevPilotAI.API.Authorization;
+using DevPilotAI.Application.Common;
 using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Application.Common.Models;
 using DevPilotAI.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -110,6 +113,14 @@ public static class ServiceCollectionExtensions
         var jwtIssuer = JwtSecurityValidator.GetIssuer(configuration);
         var jwtAudience = JwtSecurityValidator.GetAudience(configuration);
 
+        services.AddSingleton<IAuthorizationHandler, AdminRoleHandler>();
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy(AppRoles.AdminPolicy, policy =>
+                policy.RequireAuthenticatedUser()
+                    .AddRequirements(new AdminRoleRequirement()));
+        });
+
         services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -137,7 +148,10 @@ public static class ServiceCollectionExtensions
                 OnTokenValidated = async context =>
                 {
                     var dbContext = context.HttpContext.RequestServices.GetRequiredService<IApplicationDbContext>();
-                    var userIdClaim = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    var userIdClaim =
+                        context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
+                        context.Principal?.FindFirst("sub")?.Value ??
+                        context.Principal?.FindFirst("nameid")?.Value;
                     if (int.TryParse(userIdClaim, out var userId))
                     {
                         var userExists = await dbContext.Users.AnyAsync(u => u.UserId == userId);
