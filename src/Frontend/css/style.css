@@ -1950,7 +1950,18 @@ body.brand-busy-open { overflow: hidden; }
     background: var(--brand-soft);
 }
 .support-detail-card {
-    min-height: 420px;
+    min-height: 520px;
+}
+#tab-tickets .support-ticket-list {
+    max-height: min(70vh, 640px);
+}
+#tab-tickets .support-chat-messages {
+    max-height: min(48vh, 420px);
+}
+@media (max-width: 991.98px) {
+    #tab-tickets .order-lg-2 { order: 1; }
+    #tab-tickets .order-lg-3 { order: 2; }
+    #tab-tickets .order-lg-1 { order: 3; }
 }
 .support-ticket-head {
     display: flex;
