@@ -6,8 +6,12 @@
     if (window.DevPilotTour) return;
 
     function pageName() {
-        const parts = (window.location.pathname || "").split("/");
-        return (parts[parts.length - 1] || "index.html").toLowerCase() || "index.html";
+        // Vercel cleanUrls serves /submit-problem and /github (no .html).
+        let name = (window.location.pathname || "").split("/").pop() || "";
+        name = decodeURIComponent(name).toLowerCase().trim();
+        if (!name || name === "/") return "index.html";
+        if (name.indexOf(".") === -1) name += ".html";
+        return name;
     }
 
     /**
@@ -557,7 +561,14 @@
         buildUi();
         const name = pageName();
         const hasTour = Array.isArray(PAGE_TOURS[name]) && PAGE_TOURS[name].length > 0;
-        ui.btn.classList.toggle("d-none", !hasTour);
+        if (!hasTour) {
+            ui.btn.classList.add("d-none");
+            ui.btn.setAttribute("hidden", "hidden");
+            return;
+        }
+        ui.btn.classList.remove("d-none");
+        ui.btn.removeAttribute("hidden");
+        ui.btn.style.display = "inline-flex";
     }
 
     if (document.readyState === "loading") {
