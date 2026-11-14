@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="images/logo-mark.svg">
+    <title>GitHub - DevPilot AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.0/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/media.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+
+<body>
+    <div id="navbar" data-active="github"></div>
+
+    <section class="page-shell">
+        <div class="container">
+            <span class="page-kicker"><i class="fa-brands fa-github"></i> GitHub Workspace</span>
+            <h1 class="page-title">Review and debug from your <span class="text-primary-brand">repos</span></h1>
+            <p class="page-lead">Connect GitHub, pick a repository and file, then ask AI for a code review or a structured debug — no copy/paste.</p>
+
+            <div id="page-alert" class="alert d-none" role="alert"></div>
+
+            <div class="surface-card mb-4" id="connection-card">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div>
+                        <h2 class="h5 mb-1">Connection</h2>
+                        <p class="text-gray mb-0" id="connection-text">Checking GitHub status…</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-primary" id="btn-connect">
+                            <i class="fa-brands fa-github"></i> Connect GitHub
+                        </button>
+                        <button type="button" class="btn btn-outline-card d-none" id="btn-disconnect" style="width:auto;">
+                            Disconnect
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="workspace" class="d-none">
+                <div class="row g-4">
+                    <div class="col-lg-4">
+                        <div class="surface-card mb-4">
+                            <h2 class="h5 mb-3">Repositories</h2>
+                            <div id="repos-list" class="github-list">
+                                <div class="empty-state">Loading repositories…</div>
+                            </div>
+                        </div>
+                        <div class="surface-card">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h2 class="h5 mb-0">Files</h2>
+                                <span class="text-gray small" id="branch-label"></span>
+                            </div>
+                            <div id="files-list" class="github-list">
+                                <div class="empty-state">Select a repository first.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-8">
+                        <div class="surface-card mb-4">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                <h2 class="h5 mb-0" id="selected-file-title">Selected file</h2>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-card btn-sm" id="tab-debug" style="width:auto;">Debug</button>
+                                    <button type="button" class="btn btn-outline-card btn-sm" id="tab-review" style="width:auto;">Code Review</button>
+                                </div>
+                            </div>
+
+                            <div id="panel-debug">
+                                <p class="text-gray small mb-3">Uses the selected file as source code and runs the same structured debugging loop.</p>
+                                <div class="mb-3">
+                                    <label class="form-label" for="error-message">Error message</label>
+                                    <textarea class="form-control font-monospace" id="error-message" rows="3"
+                                        placeholder="Paste the exact error related to this file"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="debug-notes">Notes <span class="text-muted">(optional)</span></label>
+                                    <textarea class="form-control" id="debug-notes" rows="2"
+                                        placeholder="What were you trying to do?"></textarea>
+                                </div>
+                                <button type="button" class="btn btn-primary" id="btn-debug">
+                                    <i class="fa-solid fa-bug"></i> Analyze file with AI
+                                </button>
+                            </div>
+
+                            <div id="panel-review" class="d-none">
+                                <p class="text-gray small mb-3">Review the selected file, or leave no file selected to auto-pick top source files in the repo.</p>
+                                <button type="button" class="btn btn-primary" id="btn-review">
+                                    <i class="fa-solid fa-magnifying-glass-chart"></i> Run code review
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="surface-card d-none" id="result-card">
+                            <h2 class="h5 mb-3">Result</h2>
+                            <div id="result-body"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="footer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+    <script src="js/config.js"></script>
+    <script src="js/api-client.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/footer.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/github.js"></script>
+</body>
+
+</html>

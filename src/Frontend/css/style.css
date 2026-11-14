@@ -1012,6 +1012,29 @@ a { text-decoration: none; color: inherit; }
     box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.22), 0 16px 36px rgba(11, 31, 51, 0.18);
 }
 
+.github-list {
+    max-height: 360px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.github-item {
+    text-align: left;
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--ink);
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+.github-item:hover,
+.github-item.active {
+    border-color: var(--brand);
+    background: rgba(15, 118, 110, 0.06);
+}
+
 .debug-result .result-block {
     border-top: 1px solid var(--border);
     padding: 1rem 0;

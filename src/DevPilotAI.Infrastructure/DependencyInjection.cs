@@ -2,6 +2,7 @@ using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Infrastructure.AIGateway;
 using DevPilotAI.Infrastructure.Audit;
 using DevPilotAI.Infrastructure.Email;
+using DevPilotAI.Infrastructure.GitHub;
 using DevPilotAI.Infrastructure.Persistence;
 using DevPilotAI.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
@@ -40,11 +41,21 @@ public static class DependencyInjection
         });
 
         services.AddHttpContextAccessor();
+        services.AddDataProtection();
+        services.AddScoped<ITokenProtector, DataProtectionTokenProtector>();
         services.AddScoped<ITurnstileService, TurnstileService>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<IAIGateway, AIGatewayService>();
         services.AddScoped<ISimilarityEngine, SimilarityEngine>();
+
+        services.Configure<GitHubOptions>(configuration.GetSection(GitHubOptions.SectionName));
+        services.AddHttpClient<IGitHubClient, GitHubClient>(client =>
+        {
+            client.BaseAddress = new Uri("https://api.github.com/");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("DevPilot-AI");
+            client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+        });
 
         services.AddDevPilotRateLimiting(configuration);
 
