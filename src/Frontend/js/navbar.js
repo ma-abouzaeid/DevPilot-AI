@@ -41,6 +41,7 @@ if (navbarBox) {
                         <li class="nav-item"><a class="nav-link" data-page="articles" href="articles.html">Articles</a></li>
                         <li class="nav-item"><a class="nav-link" data-page="challenges" href="challenges.html">Challenges</a></li>
                         <li class="nav-item"><a class="nav-link" data-page="plans" href="plans.html">Plans</a></li>
+                        ${isLoggedIn ? `<li class="nav-item"><a class="nav-link" data-page="support" href="support.html">Support</a></li>` : ""}
                         ${adminNavItem}
                         <li class="nav-item"><a class="nav-link" data-page="about" href="about.html">About</a></li>
                         <li class="nav-item"><a class="nav-link" data-page="community" href="community.html">Community</a></li>

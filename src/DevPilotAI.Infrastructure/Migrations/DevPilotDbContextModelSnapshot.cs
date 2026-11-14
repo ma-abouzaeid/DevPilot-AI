@@ -268,6 +268,54 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.ToTable("AIUsageEvents");
                 });
 
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.AdminNotification", b =>
+                {
+                    b.Property<long>("AdminNotificationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AdminNotificationId"));
+
+                    b.Property<int>("AdminUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("SupportTicketId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.HasKey("AdminNotificationId");
+
+                    b.HasIndex("AdminUserId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("SupportTicketId");
+
+                    b.HasIndex("AdminUserId", "IsRead");
+
+                    b.ToTable("AdminNotifications");
+                });
+
             modelBuilder.Entity("DevPilotAI.Domain.Entities.ArticleComment", b =>
                 {
                     b.Property<long>("ArticleCommentId")
@@ -1546,6 +1594,103 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.ToTable("SimilarityMatches");
                 });
 
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.SupportTicket", b =>
+                {
+                    b.Property<int>("SupportTicketId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SupportTicketId"));
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("AssignedAdminUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("ResolutionSummary")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("TicketCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("SupportTicketId");
+
+                    b.HasIndex("AssignedAdminUserId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TicketCode")
+                        .IsUnique();
+
+                    b.ToTable("SupportTickets");
+                });
+
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.SupportTicketMessage", b =>
+                {
+                    b.Property<long>("SupportTicketMessageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("SupportTicketMessageId"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SenderUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SupportTicketId")
+                        .HasColumnType("int");
+
+                    b.HasKey("SupportTicketMessageId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("SenderUserId");
+
+                    b.HasIndex("SupportTicketId");
+
+                    b.ToTable("SupportTicketMessages");
+                });
+
             modelBuilder.Entity("DevPilotAI.Domain.Entities.SystemErrorLog", b =>
                 {
                     b.Property<long>("SystemErrorLogId")
@@ -1944,6 +2089,24 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.AdminNotification", b =>
+                {
+                    b.HasOne("DevPilotAI.Domain.Entities.User", "AdminUser")
+                        .WithMany("AdminNotifications")
+                        .HasForeignKey("AdminUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("DevPilotAI.Domain.Entities.SupportTicket", "SupportTicket")
+                        .WithMany()
+                        .HasForeignKey("SupportTicketId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("AdminUser");
+
+                    b.Navigation("SupportTicket");
+                });
+
             modelBuilder.Entity("DevPilotAI.Domain.Entities.ArticleComment", b =>
                 {
                     b.HasOne("DevPilotAI.Domain.Entities.KnowledgeArticle", "KnowledgeArticle")
@@ -2285,6 +2448,43 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.Navigation("ProblemRequest");
                 });
 
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.SupportTicket", b =>
+                {
+                    b.HasOne("DevPilotAI.Domain.Entities.User", "AssignedAdminUser")
+                        .WithMany("AssignedSupportTickets")
+                        .HasForeignKey("AssignedAdminUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("DevPilotAI.Domain.Entities.User", "CreatedByUser")
+                        .WithMany("CreatedSupportTickets")
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("AssignedAdminUser");
+
+                    b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.SupportTicketMessage", b =>
+                {
+                    b.HasOne("DevPilotAI.Domain.Entities.User", "SenderUser")
+                        .WithMany("SupportTicketMessages")
+                        .HasForeignKey("SenderUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("DevPilotAI.Domain.Entities.SupportTicket", "SupportTicket")
+                        .WithMany("Messages")
+                        .HasForeignKey("SupportTicketId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("SenderUser");
+
+                    b.Navigation("SupportTicket");
+                });
+
             modelBuilder.Entity("DevPilotAI.Domain.Entities.SystemErrorLog", b =>
                 {
                     b.HasOne("DevPilotAI.Domain.Entities.User", "User")
@@ -2503,6 +2703,11 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.Navigation("UserRoles");
                 });
 
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.SupportTicket", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
             modelBuilder.Entity("DevPilotAI.Domain.Entities.UsagePeriod", b =>
                 {
                     b.Navigation("UsageLedgers");
@@ -2512,11 +2717,15 @@ namespace DevPilotAI.Infrastructure.Migrations
                 {
                     b.Navigation("AIUsageEvents");
 
+                    b.Navigation("AdminNotifications");
+
                     b.Navigation("ArticleComments");
 
                     b.Navigation("ArticleLikes");
 
                     b.Navigation("ArticleSaves");
+
+                    b.Navigation("AssignedSupportTickets");
 
                     b.Navigation("AuditLogs");
 
@@ -2524,9 +2733,13 @@ namespace DevPilotAI.Infrastructure.Migrations
 
                     b.Navigation("CodeReviews");
 
+                    b.Navigation("CreatedSupportTickets");
+
                     b.Navigation("GitHubAccounts");
 
                     b.Navigation("Problems");
+
+                    b.Navigation("SupportTicketMessages");
 
                     b.Navigation("UsageLedgers");
 

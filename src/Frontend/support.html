@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="images/logo-mark.svg">
+    <title>Support Tickets - DevPilot AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.0/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/media.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+
+<body>
+    <div id="navbar" data-active="support"></div>
+
+    <section class="page-shell">
+        <div class="container">
+            <span class="page-kicker"><i class="fa-solid fa-life-ring"></i> Support</span>
+            <h1 class="page-title">Support <span class="text-primary-brand">Tickets</span></h1>
+            <p class="page-lead">Open a ticket about a product issue. An admin can accept it and chat with you in real time until it is resolved.</p>
+
+            <div class="alert d-none" id="support-alert" role="alert"></div>
+
+            <div class="row g-4">
+                <div class="col-lg-5">
+                    <div class="surface-card mb-4">
+                        <h2 class="h5 mb-3">Open a ticket</h2>
+                        <form id="ticket-form" novalidate>
+                            <div class="mb-3">
+                                <label class="form-label" for="ticket-title">Title</label>
+                                <input type="text" class="form-control" id="ticket-title" maxlength="200" required
+                                    placeholder="Short summary of the issue">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="ticket-description">Description</label>
+                                <textarea class="form-control" id="ticket-description" rows="5" maxlength="4000" required
+                                    placeholder="What happened? Steps to reproduce? Any error text?"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="btn-create-ticket">
+                                <i class="fa-solid fa-plus"></i> Submit ticket
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="surface-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h2 class="h5 mb-0">My tickets</h2>
+                            <button type="button" class="btn btn-outline-card btn-sm" id="btn-refresh-tickets" style="width:auto;">
+                                <i class="fa-solid fa-rotate"></i> Refresh
+                            </button>
+                        </div>
+                        <div id="tickets-list" class="support-ticket-list">
+                            <div class="empty-state">Loading…</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div class="surface-card support-detail-card" id="ticket-detail">
+                        <div class="empty-state mb-0">Select a ticket to view details and chat.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="footer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js" crossorigin="anonymous"></script>
+    <script src="js/config.js"></script>
+    <script src="js/api-client.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/footer.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/support.js"></script>
+</body>
+
+</html>

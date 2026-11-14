@@ -1,0 +1,12 @@
+namespace DevPilotAI.Domain.Entities;
+
+public class SupportTicketMessage
+{
+    public long SupportTicketMessageId { get; set; }
+    public int SupportTicketId { get; set; }
+    public SupportTicket SupportTicket { get; set; } = null!;
+    public int SenderUserId { get; set; }
+    public User SenderUser { get; set; } = null!;
+    public string Body { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}

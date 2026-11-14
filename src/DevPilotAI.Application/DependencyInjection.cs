@@ -4,6 +4,7 @@ using DevPilotAI.Application.Challenges;
 using DevPilotAI.Application.GitHub;
 using DevPilotAI.Application.Plans;
 using DevPilotAI.Application.Problems;
+using DevPilotAI.Application.Support;
 using DevPilotAI.Application.Users;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<IPlanUsageService, PlanUsageService>();
         services.AddScoped<ICreditCostService, CreditCostService>();
         services.AddScoped<IAdminService, AdminService>();
+        services.AddScoped<ISupportTicketService, SupportTicketService>();
 
         return services;
     }

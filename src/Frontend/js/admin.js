@@ -177,6 +177,7 @@
         if (tab === "ai") loadAi();
         if (tab === "audit") loadAudit();
         if (tab === "errors") loadErrors();
+        if (tab === "tickets") loadTicketsTab();
     }
 
     async function loadCreditCosts() {
@@ -916,12 +917,326 @@
         }
     });
 
+    var ticketsState = {
+        activeId: null,
+        hub: null,
+        joinedId: null
+    };
+
+    function ticketStatusBadge(status) {
+        var s = String(status || "").toLowerCase();
+        if (s === "assigned") return '<span class="badge-soft status-progress">Assigned</span>';
+        if (s === "resolved") return '<span class="badge-soft solved">Resolved</span>';
+        return '<span class="badge-soft open">Open</span>';
+    }
+
+    function formatTicketDate(value) {
+        if (!value) return "";
+        try { return new Date(value).toLocaleString(); } catch (e) { return String(value); }
+    }
+
+    function myAdminUserId() {
+        var claims = window.DevPilotApi.getTokenClaims() || {};
+        return claims.nameid || claims.sub || claims["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || "";
+    }
+
+    async function ensureTicketsHub() {
+        if (ticketsState.hub) return ticketsState.hub;
+        if (!window.signalR) throw new Error("SignalR client failed to load.");
+        var token = window.DevPilotApi.getAccessToken();
+        ticketsState.hub = new signalR.HubConnectionBuilder()
+            .withUrl(new URL("/hubs/support-tickets", API_BASE).href, {
+                accessTokenFactory: function () { return token; }
+            })
+            .withAutomaticReconnect()
+            .build();
+
+        ticketsState.hub.on("adminNotification", function () {
+            refreshTicketNotifications().catch(function () { /* ignore */ });
+        });
+        ticketsState.hub.on("messageReceived", function (msg) {
+            var ticketId = msg.supportTicketId || msg.SupportTicketId;
+            if (Number(ticketId) !== Number(ticketsState.activeId)) return;
+            appendAdminChatMessage(msg);
+        });
+        ticketsState.hub.on("ticketUpdated", function () {
+            if (ticketsState.activeId) openAdminTicket(ticketsState.activeId, false);
+            loadAdminTicketsList().catch(function () { /* ignore */ });
+        });
+        ticketsState.hub.on("ticketResolved", function () {
+            if (ticketsState.activeId) openAdminTicket(ticketsState.activeId, false);
+            loadAdminTicketsList().catch(function () { /* ignore */ });
+        });
+
+        await ticketsState.hub.start();
+        return ticketsState.hub;
+    }
+
+    async function joinAdminTicketRoom(ticketId) {
+        var conn = await ensureTicketsHub();
+        if (ticketsState.joinedId && ticketsState.joinedId !== ticketId) {
+            try { await conn.invoke("LeaveTicket", ticketsState.joinedId); } catch (e) { /* ignore */ }
+        }
+        await conn.invoke("JoinTicket", ticketId);
+        ticketsState.joinedId = ticketId;
+    }
+
+    function appendAdminChatMessage(msg) {
+        var box = document.getElementById("admin-chat-messages");
+        if (!box) return;
+        var empty = box.querySelector(".empty-state");
+        if (empty) empty.remove();
+        var mine = Number(msg.senderUserId || msg.SenderUserId) === Number(myAdminUserId());
+        var row = document.createElement("div");
+        row.className = "support-chat-bubble" + (mine ? " is-mine" : "");
+        row.innerHTML =
+            '<div class="support-chat-meta"><strong>' + escapeHtml(msg.senderName || msg.SenderName || "User") + "</strong>" +
+            '<span class="text-gray">' + escapeHtml(formatTicketDate(msg.createdAt || msg.CreatedAt)) + "</span></div>" +
+            "<p>" + escapeHtml(msg.body || msg.Body || "") + "</p>";
+        box.appendChild(row);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    async function refreshTicketNotifications() {
+        var res = await api("/api/support-tickets/admin/notifications");
+        var data = res.data || {};
+        var items = data.items || data.Items || [];
+        var unread = data.unread ?? data.Unread ?? 0;
+        var badge = document.getElementById("tickets-unread-badge");
+        if (badge) {
+            badge.textContent = String(unread);
+            badge.classList.toggle("d-none", !unread);
+        }
+
+        var host = document.getElementById("tickets-notifications");
+        if (!host) return;
+        if (!items.length) {
+            host.innerHTML = '<div class="empty-state">No notifications yet.</div>';
+            return;
+        }
+        host.innerHTML = items.map(function (n) {
+            var id = n.adminNotificationId || n.AdminNotificationId;
+            var ticketId = n.supportTicketId || n.SupportTicketId;
+            var isRead = !!(n.isRead || n.IsRead);
+            return (
+                '<button type="button" class="support-ticket-item' + (isRead ? "" : " is-unread") + '" data-note-id="' + id + '" data-ticket-id="' + (ticketId || "") + '">' +
+                "<strong>" + escapeHtml(n.title || n.Title || "") + "</strong>" +
+                '<div class="text-gray small mt-1">' + escapeHtml(n.body || n.Body || "") + "</div>" +
+                '<div class="text-gray small">' + escapeHtml(formatTicketDate(n.createdAt || n.CreatedAt)) + "</div>" +
+                "</button>"
+            );
+        }).join("");
+
+        host.querySelectorAll("[data-note-id]").forEach(function (btn) {
+            btn.addEventListener("click", async function () {
+                var noteId = btn.getAttribute("data-note-id");
+                var ticketId = btn.getAttribute("data-ticket-id");
+                try {
+                    await api("/api/support-tickets/admin/notifications/read?id=" + encodeURIComponent(noteId), { method: "POST" });
+                } catch (e) { /* ignore */ }
+                if (ticketId) openAdminTicket(Number(ticketId), true);
+                refreshTicketNotifications().catch(function () { /* ignore */ });
+            });
+        });
+    }
+
+    async function loadAdminTicketsList() {
+        var status = document.getElementById("tickets-status").value;
+        var res = await api("/api/support-tickets", null, status ? { status: status } : null);
+        var items = res.data || [];
+        var host = document.getElementById("admin-tickets-list");
+        if (!items.length) {
+            host.innerHTML = '<div class="empty-state">No tickets for this filter.</div>';
+            return;
+        }
+        host.innerHTML = items.map(function (t) {
+            var id = t.supportTicketId || t.SupportTicketId;
+            return (
+                '<button type="button" class="support-ticket-item' + (Number(id) === Number(ticketsState.activeId) ? " is-active" : "") + '" data-id="' + id + '">' +
+                '<div class="d-flex justify-content-between gap-2"><strong>' + escapeHtml(t.ticketCode || t.TicketCode || "") + "</strong>" +
+                ticketStatusBadge(t.status || t.Status) + "</div>" +
+                '<div class="text-gray small mt-1">' + escapeHtml(t.title || t.Title || "") + "</div>" +
+                '<div class="text-gray small">By ' + escapeHtml(t.createdByName || t.CreatedByName || "") +
+                (t.assignedAdminName || t.AssignedAdminName ? (" · " + escapeHtml(t.assignedAdminName || t.AssignedAdminName)) : "") +
+                "</div></button>"
+            );
+        }).join("");
+
+        host.querySelectorAll("[data-id]").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                openAdminTicket(Number(btn.getAttribute("data-id")), true);
+            });
+        });
+    }
+
+    function renderAdminTicketDetail(ticket, messages) {
+        var id = ticket.supportTicketId || ticket.SupportTicketId;
+        var canAccept = !!(ticket.canAccept || ticket.CanAccept);
+        var canResolve = !!(ticket.canResolve || ticket.CanResolve);
+        var canChat = !!(ticket.canChat || ticket.CanChat);
+        var status = ticket.status || ticket.Status || "";
+        var resolution = ticket.resolutionSummary || ticket.ResolutionSummary || "";
+
+        var actions = "";
+        if (canAccept) {
+            actions += '<button type="button" class="btn btn-primary btn-sm" id="admin-accept-ticket">Accept ticket</button>';
+        }
+        if (canResolve) {
+            actions +=
+                '<form id="admin-resolve-form" class="mt-3">' +
+                '<label class="form-label" for="admin-resolution">How was it resolved?</label>' +
+                '<textarea class="form-control mb-2" id="admin-resolution" rows="3" maxlength="4000" required placeholder="Write the problem outcome and fix summary. Chat history will be deleted."></textarea>' +
+                '<button type="submit" class="btn btn-success btn-sm">Resolve & delete chat</button>' +
+                "</form>";
+        }
+
+        var chatHtml = "";
+        if (String(status).toLowerCase() === "resolved") {
+            chatHtml =
+                '<div class="alert alert-success-soft mt-3"><strong>Resolved</strong><br>' +
+                escapeHtml(resolution || "No notes.") +
+                '</div><p class="text-gray small mb-0">Chat history was hard-deleted.</p>';
+        } else if (canChat) {
+            chatHtml =
+                '<div class="support-chat mt-3" id="admin-chat-panel">' +
+                '<div class="support-chat-messages" id="admin-chat-messages"></div>' +
+                '<form id="admin-chat-form" class="support-chat-form">' +
+                '<input type="text" class="form-control" id="admin-chat-input" maxlength="4000" placeholder="Reply to the user…" required>' +
+                '<button type="submit" class="btn btn-primary">Send</button>' +
+                "</form></div>";
+        } else if (String(status).toLowerCase() === "assigned") {
+            chatHtml = '<div class="alert alert-warning mt-3 mb-0">This ticket is assigned to another admin. Chat is locked to the assignee only.</div>';
+        } else {
+            chatHtml = '<div class="text-gray small mt-3">Accept the ticket to unlock chat with the user.</div>';
+        }
+
+        var detail = document.getElementById("admin-ticket-detail");
+        detail.innerHTML =
+            '<div class="d-flex flex-wrap justify-content-between gap-2 mb-2">' +
+            "<div><h2 class=\"h5 mb-1\">" + escapeHtml(ticket.ticketCode || ticket.TicketCode || "") + "</h2>" +
+            '<p class="text-gray small mb-0">' + escapeHtml(formatTicketDate(ticket.createdAt || ticket.CreatedAt)) + "</p></div>" +
+            ticketStatusBadge(status) + "</div>" +
+            "<h3 class=\"h6\">" + escapeHtml(ticket.title || ticket.Title || "") + "</h3>" +
+            '<p class="text-gray">' + escapeHtml(ticket.description || ticket.Description || "") + "</p>" +
+            '<p class="text-gray small">User: ' + escapeHtml(ticket.createdByName || ticket.CreatedByName || "") +
+            " · Admin: " + escapeHtml(ticket.assignedAdminName || ticket.AssignedAdminName || "—") + "</p>" +
+            '<div class="d-flex flex-wrap gap-2">' + actions + "</div>" + chatHtml;
+
+        var box = document.getElementById("admin-chat-messages");
+        if (box) {
+            if (!messages.length) box.innerHTML = '<div class="empty-state">No messages yet.</div>';
+            else messages.forEach(appendAdminChatMessage);
+        }
+
+        var acceptBtn = document.getElementById("admin-accept-ticket");
+        if (acceptBtn) {
+            acceptBtn.addEventListener("click", async function () {
+                try {
+                    await api("/api/support-tickets/" + id + "/accept", { method: "POST" });
+                    showAlert("Ticket accepted. You can chat now.", "success");
+                    await openAdminTicket(id, true);
+                    await loadAdminTicketsList();
+                } catch (err) { onError(err); }
+            });
+        }
+
+        var resolveForm = document.getElementById("admin-resolve-form");
+        if (resolveForm) {
+            resolveForm.addEventListener("submit", async function (e) {
+                e.preventDefault();
+                var summary = document.getElementById("admin-resolution").value.trim();
+                try {
+                    await api("/api/support-tickets/" + id + "/resolve", {
+                        method: "POST",
+                        body: JSON.stringify({ resolutionSummary: summary })
+                    });
+                    showAlert("Ticket resolved. Chat history deleted.", "success");
+                    await openAdminTicket(id, false);
+                    await loadAdminTicketsList();
+                } catch (err) { onError(err); }
+            });
+        }
+
+        var chatForm = document.getElementById("admin-chat-form");
+        if (chatForm) {
+            chatForm.addEventListener("submit", async function (e) {
+                e.preventDefault();
+                var input = document.getElementById("admin-chat-input");
+                var body = (input.value || "").trim();
+                if (!body) return;
+                chatForm.querySelector("button").disabled = true;
+                try {
+                    var conn = await ensureTicketsHub();
+                    await conn.invoke("SendMessage", id, body);
+                    input.value = "";
+                } catch (err) {
+                    onError(err);
+                } finally {
+                    chatForm.querySelector("button").disabled = false;
+                }
+            });
+        }
+    }
+
+    async function openAdminTicket(ticketId, joinChat) {
+        ticketsState.activeId = ticketId;
+        var detail = document.getElementById("admin-ticket-detail");
+        detail.innerHTML = '<div class="empty-state">Loading ticket…</div>';
+        try {
+            var detailRes = await api("/api/support-tickets/" + ticketId);
+            var ticket = detailRes.data;
+            var messages = [];
+            var canChat = !!(ticket.canChat || ticket.CanChat);
+            if (canChat) {
+                var msgRes = await api("/api/support-tickets/" + ticketId + "/messages");
+                messages = msgRes.data || [];
+                if (joinChat) await joinAdminTicketRoom(ticketId);
+            }
+            renderAdminTicketDetail(ticket, messages);
+            await loadAdminTicketsList();
+        } catch (err) {
+            detail.innerHTML = '<div class="empty-state text-danger">' + escapeHtml(err.message || "Failed") + "</div>";
+        }
+    }
+
+    async function loadTicketsTab() {
+        await Promise.all([
+            refreshTicketNotifications(),
+            loadAdminTicketsList(),
+            ensureTicketsHub().catch(function () { /* notifications still work via refresh */ })
+        ]);
+    }
+
+    var ticketsRefresh = document.getElementById("tickets-refresh");
+    if (ticketsRefresh) {
+        ticketsRefresh.addEventListener("click", function () {
+            loadTicketsTab().catch(onError);
+        });
+    }
+    var ticketsStatus = document.getElementById("tickets-status");
+    if (ticketsStatus) {
+        ticketsStatus.addEventListener("change", function () {
+            loadAdminTicketsList().catch(onError);
+        });
+    }
+    var markReadBtn = document.getElementById("tickets-mark-read");
+    if (markReadBtn) {
+        markReadBtn.addEventListener("click", async function () {
+            try {
+                await api("/api/support-tickets/admin/notifications/read", { method: "POST" });
+                await refreshTicketNotifications();
+            } catch (err) { onError(err); }
+        });
+    }
+
     ensureAdminAccess().then(function (ok) {
         if (!ok) {
             window.location.href = "dashboard.html";
             return;
         }
         loadOverview().catch(onError);
+        refreshTicketNotifications().catch(function () { /* ignore */ });
+        ensureTicketsHub().catch(function () { /* ignore until tickets tab */ });
     }).catch(function () {
         window.location.href = "dashboard.html";
     });

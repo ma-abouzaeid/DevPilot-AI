@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using DevPilotAI.API.Authorization;
+using DevPilotAI.API.Services;
 using DevPilotAI.Application.Common;
 using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Application.Common.Models;
@@ -60,6 +61,8 @@ public static class ServiceCollectionExtensions
         services.AddSwaggerDocumentation();
         services.AddJwtAuthentication(configuration, environment);
         services.AddCorsPolicy(configuration);
+        services.AddSignalR();
+        services.AddSingleton<ISupportTicketRealtime, SupportTicketRealtime>();
 
         services.Configure<ForwardedHeadersOptions>(options =>
         {
@@ -145,6 +148,19 @@ public static class ServiceCollectionExtensions
             };
             options.Events = new JwtBearerEvents
             {
+                OnMessageReceived = context =>
+                {
+                    // SignalR JS client sends JWT as ?access_token= on the WebSocket negotiate/connect.
+                    var accessToken = context.Request.Query["access_token"];
+                    var path = context.HttpContext.Request.Path;
+                    if (!string.IsNullOrWhiteSpace(accessToken) &&
+                        path.StartsWithSegments("/hubs/support-tickets"))
+                    {
+                        context.Token = accessToken;
+                    }
+
+                    return Task.CompletedTask;
+                },
                 OnTokenValidated = async context =>
                 {
                     var dbContext = context.HttpContext.RequestServices.GetRequiredService<IApplicationDbContext>();

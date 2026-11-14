@@ -26,4 +26,8 @@ public class User : ISoftDeletable
     public ICollection<ArticleLike> ArticleLikes { get; set; } = new List<ArticleLike>();
     public ICollection<ArticleSave> ArticleSaves { get; set; } = new List<ArticleSave>();
     public ICollection<ArticleComment> ArticleComments { get; set; } = new List<ArticleComment>();
+    public ICollection<SupportTicket> CreatedSupportTickets { get; set; } = new List<SupportTicket>();
+    public ICollection<SupportTicket> AssignedSupportTickets { get; set; } = new List<SupportTicket>();
+    public ICollection<SupportTicketMessage> SupportTicketMessages { get; set; } = new List<SupportTicketMessage>();
+    public ICollection<AdminNotification> AdminNotifications { get; set; } = new List<AdminNotification>();
 }

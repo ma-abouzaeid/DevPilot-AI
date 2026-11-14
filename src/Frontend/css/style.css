@@ -1920,6 +1920,82 @@ body.brand-busy-open { overflow: hidden; }
 .tour-launch-btn[hidden] {
     display: none !important;
 }
+
+/* Support tickets */
+.support-ticket-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    max-height: 520px;
+    overflow: auto;
+}
+.support-ticket-item {
+    text-align: left;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 0.75rem 0.85rem;
+    color: var(--ink);
+    font-family: var(--font-body);
+}
+.support-ticket-item:hover,
+.support-ticket-item.is-active {
+    border-color: var(--brand);
+}
+.support-ticket-item.is-unread {
+    background: var(--brand-soft);
+}
+.support-detail-card {
+    min-height: 420px;
+}
+.support-chat {
+    border-top: 1px solid var(--border);
+    padding-top: 0.85rem;
+}
+.support-chat-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    max-height: 320px;
+    overflow: auto;
+    margin-bottom: 0.75rem;
+    padding-right: 0.25rem;
+}
+.support-chat-bubble {
+    max-width: 85%;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.65rem 0.8rem;
+    background: var(--surface-muted);
+}
+.support-chat-bubble.is-mine {
+    align-self: flex-end;
+    background: var(--brand-soft);
+    border-color: rgba(15, 118, 110, 0.25);
+}
+.support-chat-bubble p {
+    margin: 0;
+    white-space: pre-wrap;
+}
+.support-chat-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.8rem;
+}
+.support-chat-form {
+    display: flex;
+    gap: 0.5rem;
+}
+.support-chat-form .btn {
+    width: auto;
+    white-space: nowrap;
+}
+#tickets-unread-badge {
+    margin-left: 0.25rem;
+    vertical-align: middle;
+}
 .tour-root {
     position: fixed;
     inset: 0;

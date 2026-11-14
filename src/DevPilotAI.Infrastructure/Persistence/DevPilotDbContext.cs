@@ -57,6 +57,10 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
     public DbSet<UsageLedger> UsageLedgers => Set<UsageLedger>();
     public DbSet<CreditActionCost> CreditActionCosts => Set<CreditActionCost>();
 
+    public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
+    public DbSet<SupportTicketMessage> SupportTicketMessages => Set<SupportTicketMessage>();
+    public DbSet<AdminNotification> AdminNotifications => Set<AdminNotification>();
+
     public void SoftDelete<TEntity>(TEntity entity) where TEntity : class, ISoftDeletable
     {
         entity.IsDeleted = true;
@@ -185,6 +189,63 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
             b.HasOne(x => x.User)
                 .WithMany(u => u.ArticleComments)
                 .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<SupportTicket>(b =>
+        {
+            b.HasKey(x => x.SupportTicketId);
+            b.Property(x => x.TicketCode).HasMaxLength(40).IsRequired();
+            b.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            b.Property(x => x.Description).HasMaxLength(4000).IsRequired();
+            b.Property(x => x.ResolutionSummary).HasMaxLength(4000);
+            b.HasIndex(x => x.TicketCode).IsUnique();
+            b.HasIndex(x => x.Status);
+            b.HasIndex(x => x.CreatedAt);
+            b.HasIndex(x => x.CreatedByUserId);
+            b.HasIndex(x => x.AssignedAdminUserId);
+            b.HasOne(x => x.CreatedByUser)
+                .WithMany(u => u.CreatedSupportTickets)
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(x => x.AssignedAdminUser)
+                .WithMany(u => u.AssignedSupportTickets)
+                .HasForeignKey(x => x.AssignedAdminUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<SupportTicketMessage>(b =>
+        {
+            b.HasKey(x => x.SupportTicketMessageId);
+            b.Property(x => x.Body).HasMaxLength(4000).IsRequired();
+            b.HasIndex(x => x.SupportTicketId);
+            b.HasIndex(x => x.CreatedAt);
+            b.HasOne(x => x.SupportTicket)
+                .WithMany(t => t.Messages)
+                .HasForeignKey(x => x.SupportTicketId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(x => x.SenderUser)
+                .WithMany(u => u.SupportTicketMessages)
+                .HasForeignKey(x => x.SenderUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<AdminNotification>(b =>
+        {
+            b.HasKey(x => x.AdminNotificationId);
+            b.Property(x => x.Type).HasMaxLength(80).IsRequired();
+            b.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            b.Property(x => x.Body).HasMaxLength(1000).IsRequired();
+            b.HasIndex(x => x.AdminUserId);
+            b.HasIndex(x => x.CreatedAt);
+            b.HasIndex(x => new { x.AdminUserId, x.IsRead });
+            b.HasOne(x => x.AdminUser)
+                .WithMany(u => u.AdminNotifications)
+                .HasForeignKey(x => x.AdminUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(x => x.SupportTicket)
+                .WithMany()
+                .HasForeignKey(x => x.SupportTicketId)
                 .OnDelete(DeleteBehavior.NoAction);
         });
 

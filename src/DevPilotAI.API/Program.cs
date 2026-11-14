@@ -1,4 +1,5 @@
 using DevPilotAI.API.Extensions;
+using DevPilotAI.API.Hubs;
 using DevPilotAI.API.Middleware;
 using DevPilotAI.Application;
 using DevPilotAI.Infrastructure;
@@ -57,6 +58,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 app.MapControllers();
+app.MapHub<SupportTicketHub>("/hubs/support-tickets");
 
 app.Run();
 
