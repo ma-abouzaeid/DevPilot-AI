@@ -264,7 +264,11 @@ public class PlanUsageService : IPlanUsageService
         }
     }
 
-    public async Task<MyPlanUsageDto> ActivatePlanAsync(int userId, string planCode, CancellationToken cancellationToken = default)
+    public async Task<MyPlanUsageDto> ActivatePlanAsync(
+        int userId,
+        string planCode,
+        CancellationToken cancellationToken = default,
+        string assignmentSource = "SelfServe")
     {
         var code = (planCode ?? string.Empty).Trim().ToUpperInvariant();
         if (string.IsNullOrWhiteSpace(code))
@@ -272,9 +276,21 @@ public class PlanUsageService : IPlanUsageService
             throw AppError.InvalidRequest("Plan code is required.", "INVALID_REQUEST", nameof(planCode));
         }
 
+        var source = string.IsNullOrWhiteSpace(assignmentSource) ? "SelfServe" : assignmentSource.Trim();
+
         var plan = await _db.Plans
             .FirstOrDefaultAsync(p => p.Code == code && p.Status == "Active" && p.IsPublic, cancellationToken)
             ?? throw AppError.NotFound($"Plan '{code}' was not found.");
+
+        // Paid plans cannot be activated via plain self-serve activate — must go through Paymob.
+        if ((plan.Price ?? 0m) > 0m &&
+            string.Equals(source, "SelfServe", StringComparison.OrdinalIgnoreCase))
+        {
+            throw AppError.InvalidRequest(
+                "Paid plans require Paymob checkout.",
+                "PAYMENT_REQUIRED",
+                nameof(planCode));
+        }
 
         var active = await _db.UserSubscriptions
             .Where(s => s.UserId == userId && s.Status == "Active")
@@ -302,7 +318,7 @@ public class PlanUsageService : IPlanUsageService
             PlanId = plan.PlanId,
             Status = "Active",
             StartDate = DateTime.UtcNow,
-            AssignmentSource = "SelfServe",
+            AssignmentSource = source.Length > 50 ? source[..50] : source,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         });
@@ -318,7 +334,7 @@ public class PlanUsageService : IPlanUsageService
                 nameof(UserSubscription),
                 userId.ToString(),
                 oldValues: null,
-                newValues: new { UserId = userId, PlanCode = plan.Code, PlanId = plan.PlanId, Source = "SelfServe" },
+                newValues: new { UserId = userId, PlanCode = plan.Code, PlanId = plan.PlanId, Source = source },
                 userId: userId,
                 cancellationToken: cancellationToken);
         }

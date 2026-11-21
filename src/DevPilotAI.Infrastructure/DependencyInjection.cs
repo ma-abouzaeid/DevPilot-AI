@@ -3,6 +3,7 @@ using DevPilotAI.Infrastructure.AIGateway;
 using DevPilotAI.Infrastructure.Audit;
 using DevPilotAI.Infrastructure.Email;
 using DevPilotAI.Infrastructure.GitHub;
+using DevPilotAI.Infrastructure.Payments;
 using DevPilotAI.Infrastructure.Persistence;
 using DevPilotAI.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +32,8 @@ public static class DependencyInjection
 
         services.Configure<BrevoOptions>(configuration.GetSection(BrevoOptions.SectionName));
         services.Configure<FrontendOptions>(configuration.GetSection(FrontendOptions.SectionName));
+        services.Configure<PaymobOptions>(configuration.GetSection(PaymobOptions.SectionName));
+        services.AddHttpClient<IPaymobGateway, PaymobGateway>();
 
         services.AddHttpClient<IEmailService, BrevoEmailService>((serviceProvider, client) =>
         {

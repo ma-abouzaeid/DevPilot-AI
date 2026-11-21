@@ -60,6 +60,7 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
     public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
     public DbSet<SupportTicketMessage> SupportTicketMessages => Set<SupportTicketMessage>();
     public DbSet<AdminNotification> AdminNotifications => Set<AdminNotification>();
+    public DbSet<PaymentOrder> PaymentOrders => Set<PaymentOrder>();
 
     public void SoftDelete<TEntity>(TEntity entity) where TEntity : class, ISoftDeletable
     {
@@ -247,6 +248,35 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
             b.HasOne(x => x.SupportTicket)
                 .WithMany()
                 .HasForeignKey(x => x.SupportTicketId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<PaymentOrder>(b =>
+        {
+            b.HasKey(x => x.PaymentOrderId);
+            b.Property(x => x.MerchantOrderId).HasMaxLength(80).IsRequired();
+            b.Property(x => x.Provider).HasMaxLength(40).IsRequired();
+            b.Property(x => x.Status).HasMaxLength(40).IsRequired();
+            b.Property(x => x.Currency).HasMaxLength(10).IsRequired();
+            b.Property(x => x.AmountUsd).HasPrecision(18, 2);
+            b.Property(x => x.AmountEgp).HasPrecision(18, 2);
+            b.Property(x => x.ExchangeRateUsdToEgp).HasPrecision(18, 4);
+            b.Property(x => x.PaymobIntentionId).HasMaxLength(100);
+            b.Property(x => x.PaymobOrderId).HasMaxLength(100);
+            b.Property(x => x.PaymobTransactionId).HasMaxLength(100);
+            b.Property(x => x.CheckoutUrl).HasMaxLength(1000);
+            b.Property(x => x.FailureReason).HasMaxLength(500);
+            b.HasIndex(x => x.MerchantOrderId).IsUnique();
+            b.HasIndex(x => x.UserId);
+            b.HasIndex(x => x.Status);
+            b.HasIndex(x => x.CreatedAt);
+            b.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(x => x.Plan)
+                .WithMany()
+                .HasForeignKey(x => x.PlanId)
                 .OnDelete(DeleteBehavior.NoAction);
         });
 

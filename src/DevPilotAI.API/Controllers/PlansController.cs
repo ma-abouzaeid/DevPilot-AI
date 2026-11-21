@@ -65,7 +65,7 @@ public class PlansController : ControllerBase
     }
 
     /// <summary>
-    /// Self-serve plan activation (no Stripe yet). Use for Pro upgrade / Free downgrade demos.
+    /// Self-serve activation for free plans only. Paid plans must use Paymob checkout.
     /// </summary>
     [HttpPost("activate")]
     [Authorize]

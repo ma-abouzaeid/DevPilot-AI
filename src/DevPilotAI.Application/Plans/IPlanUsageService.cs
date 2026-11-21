@@ -20,5 +20,9 @@ public interface IPlanUsageService
         string? metadataJson = null,
         int tokensUsed = 0,
         CancellationToken cancellationToken = default);
-    Task<MyPlanUsageDto> ActivatePlanAsync(int userId, string planCode, CancellationToken cancellationToken = default);
+    Task<MyPlanUsageDto> ActivatePlanAsync(
+        int userId,
+        string planCode,
+        CancellationToken cancellationToken = default,
+        string assignmentSource = "SelfServe");
 }

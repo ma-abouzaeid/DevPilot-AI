@@ -35,9 +35,10 @@
 
     function priceLabel(plan) {
         const price = plan.price ?? plan.Price;
-        const currency = plan.currency || plan.Currency || "USD";
         if (!price || Number(price) <= 0) return "Free";
-        return "$" + Number(price).toFixed(0) + " / mo";
+        const usd = Number(price);
+        const egp = Math.round(usd * 50);
+        return "$" + usd.toFixed(0) + " / mo · ≈ " + egp + " EGP";
     }
 
     async function loadUsage() {
@@ -67,18 +68,49 @@
             window.location.href = "login.html?returnUrl=" + encodeURIComponent("plans.html");
             return;
         }
+        const code = String(planCode || "").toUpperCase();
         try {
+            // Paid plans go through Paymob checkout (EGP charge at $1 = 50 EGP).
+            if (code === "PRO") {
+                const url = new URL("/api/Payments/paymob/checkout", API_BASE).href;
+                const res = await window.DevPilotApi.request(url, {
+                    method: "POST",
+                    body: JSON.stringify({ planCode: code })
+                });
+                if (!res.ok || !res.data) throw new Error(res.message || "Checkout failed");
+                const checkoutUrl = res.data.checkoutUrl || res.data.CheckoutUrl;
+                if (!checkoutUrl) throw new Error("Paymob checkout URL missing");
+                const egp = res.data.amountEgp ?? res.data.AmountEgp;
+                showAlert("Redirecting to Paymob… Charge ≈ " + egp + " EGP for Pro.", "success");
+                window.location.href = checkoutUrl;
+                return;
+            }
+
             const url = new URL("/api/Plans/activate", API_BASE).href;
             const res = await window.DevPilotApi.request(url, {
                 method: "POST",
-                body: JSON.stringify({ planCode: planCode })
+                body: JSON.stringify({ planCode: code })
             });
             if (!res.ok || !res.data) throw new Error(res.message || "Activation failed");
-            showAlert((res.data.planName || res.data.PlanName || planCode) + " is now active.", "success");
+            showAlert((res.data.planName || res.data.PlanName || code) + " is now active.", "success");
             await loadUsage();
             await loadPlans();
         } catch (err) {
             showAlert(err.message || "Activation failed", "danger");
+        }
+    }
+
+    function handlePaymentReturn() {
+        const params = new URLSearchParams(window.location.search);
+        const payment = (params.get("payment") || "").toLowerCase();
+        if (!payment) return;
+        if (payment === "success") {
+            showAlert("Payment received. Your Pro plan should now be active.", "success");
+        } else if (payment === "failed") {
+            showAlert("Payment was not completed. You can try upgrading again.", "danger");
+        }
+        if (window.history && window.history.replaceState) {
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
     }
 
@@ -156,6 +188,8 @@
             host.innerHTML = '<div class="empty-state">' + escapeHtml(err.message || "Failed to load credit costs") + "</div>";
         }
     }
+
+    handlePaymentReturn();
 
     Promise.resolve()
         .then(function () { return loggedIn ? loadUsage() : null; })

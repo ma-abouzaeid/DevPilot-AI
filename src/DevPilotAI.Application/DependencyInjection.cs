@@ -2,6 +2,7 @@ using DevPilotAI.Application.Admin;
 using DevPilotAI.Application.Authentication;
 using DevPilotAI.Application.Challenges;
 using DevPilotAI.Application.GitHub;
+using DevPilotAI.Application.Payments;
 using DevPilotAI.Application.Plans;
 using DevPilotAI.Application.Problems;
 using DevPilotAI.Application.Support;
@@ -23,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<ICreditCostService, CreditCostService>();
         services.AddScoped<IAdminService, AdminService>();
         services.AddScoped<ISupportTicketService, SupportTicketService>();
+        services.AddScoped<IPaymentService, PaymentService>();
 
         return services;
     }
