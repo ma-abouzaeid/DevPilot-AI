@@ -212,10 +212,19 @@
     handlePaymentReturn();
 
     Promise.resolve()
-        .then(function () { return loggedIn ? loadUsage() : null; })
-        .then(loadPlans)
-        .then(loadCreditCosts)
-        .catch(function (err) {
-            grid.innerHTML = '<div class="col-12"><div class="empty-state">' + escapeHtml(err.message || "Failed to load") + "</div></div>";
-        });
+        .then(function () {
+            if (!loggedIn) return null;
+            return loadUsage().catch(function (err) {
+                showAlert(err.message || "Failed to load usage.", "danger");
+                if (usageText) usageText.textContent = "Could not load usage.";
+                if (creditsEl) creditsEl.textContent = "—";
+            });
+        })
+        .then(function () {
+            return loadPlans().catch(function (err) {
+                grid.innerHTML = '<div class="col-12"><div class="empty-state">' +
+                    escapeHtml(err.message || "Failed to load plans") + "</div></div>";
+            });
+        })
+        .then(loadCreditCosts);
 })();
