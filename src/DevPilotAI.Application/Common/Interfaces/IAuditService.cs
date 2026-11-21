@@ -41,6 +41,8 @@ public static class SystemAuditEventTypes
     public const string ArticleRestored = "ARTICLE_RESTORED";
     public const string AdminRoleGranted = "ADMIN_ROLE_GRANTED";
     public const string AdminRoleRevoked = "ADMIN_ROLE_REVOKED";
+    public const string UnlimitedCreditsGranted = "UNLIMITED_CREDITS_GRANTED";
+    public const string UnlimitedCreditsRevoked = "UNLIMITED_CREDITS_REVOKED";
 }
 
 public class AuditEvent

@@ -9,7 +9,10 @@ public record PlanListItemDto(
     decimal? Price,
     string? Currency,
     bool IsDefault,
-    IReadOnlyList<string> Features
+    IReadOnlyList<string> Features,
+    bool SaleEnabled = false,
+    decimal SaleDiscountPercent = 0,
+    decimal? EffectivePrice = null
 );
 
 public record PlanFeatureDto(

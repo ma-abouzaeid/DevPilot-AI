@@ -36,9 +36,17 @@
     function priceLabel(plan) {
         const price = plan.price ?? plan.Price;
         if (!price || Number(price) <= 0) return "Free";
+        const saleOn = !!(plan.saleEnabled || plan.SaleEnabled);
+        const discount = Number(plan.saleDiscountPercent ?? plan.SaleDiscountPercent ?? 0);
+        const effective = Number(plan.effectivePrice ?? plan.EffectivePrice ?? price);
         const usd = Number(price);
-        const egp = Math.round(usd * 50);
-        return "$" + usd.toFixed(0) + " / mo · ≈ " + egp + " EGP";
+        const egp = Math.round(effective * 50);
+        if (saleOn && discount > 0 && effective < usd) {
+            return '<span class="text-decoration-line-through text-gray me-2">$' + usd.toFixed(0) +
+                '</span><span class="text-accent-brand">$' + effective.toFixed(2) +
+                '</span> / mo · ≈ ' + egp + ' EGP';
+        }
+        return "$" + usd.toFixed(0) + " / mo · ≈ " + Math.round(usd * 50) + " EGP";
     }
 
     async function loadUsage() {
@@ -56,7 +64,7 @@
         const canReview = d.canUseCodeReview || d.CanUseCodeReview;
         creditsEl.textContent = unlimited ? "Unlimited" : String(remaining);
         usageText.textContent = unlimited
-            ? (d.planName || d.PlanName || currentPlanCode) + " · Admin unlimited credits" +
+            ? (d.planName || d.PlanName || currentPlanCode) + " · Unlimited credits" +
               (canReview ? " · Code Review enabled" : "")
             : (d.planName || d.PlanName || currentPlanCode) +
               " · " + used + " / " + allocated + " credits used" +
@@ -131,22 +139,34 @@
             const features = p.features || p.Features || [];
             const isCurrent = loggedIn && currentPlanCode === code;
             const isPro = code === "PRO";
+            const saleOn = !!(p.saleEnabled || p.SaleEnabled);
+            const discount = Number(p.saleDiscountPercent ?? p.SaleDiscountPercent ?? 0);
             const featureHtml = features.map(function (f) {
                 return "<li><i class=\"fa-solid fa-check text-accent-brand me-2\"></i>" + escapeHtml(featureLabel(f)) + "</li>";
             }).join("") || "<li class=\"text-gray\">Core AI debugging</li>";
 
-            const cta = isCurrent
-                ? '<button type="button" class="btn btn-outline-card w-100" disabled>Current plan</button>'
-                : ('<button type="button" class="btn ' + (isPro ? "btn-primary" : "btn-outline-card") +
+            var cta;
+            if (isCurrent) {
+                cta = '<button type="button" class="btn btn-outline-card w-100" disabled>Current plan</button>';
+            } else if (!isPro && currentPlanCode === "PRO") {
+                // Paid Pro must not be cancelled by a one-click Free switch.
+                cta = '<button type="button" class="btn btn-outline-card w-100" disabled>Pro is active — contact Support to cancel</button>';
+            } else {
+                cta = '<button type="button" class="btn ' + (isPro ? "btn-primary" : "btn-outline-card") +
                     ' w-100 btn-activate" data-plan="' + escapeHtml(code) + '">' +
-                    (isPro ? "Upgrade to Pro" : "Switch to Free") + "</button>");
+                    (isPro ? "Upgrade to Pro" : "Switch to Free") + "</button>";
+            }
+
+            var badge = saleOn && discount > 0
+                ? '<span class="badge-soft ai mb-2">Sale −' + Math.round(discount) + '%</span>'
+                : (isPro ? '<span class="badge-soft ai mb-2">Recommended</span>' : '<span class="badge-soft status-progress mb-2">Starter</span>');
 
             return (
                 '<div class="col-md-6">' +
                 '<div class="surface-card h-100 d-flex flex-column">' +
-                (isPro ? '<span class="badge-soft ai mb-2">Recommended</span>' : '<span class="badge-soft status-progress mb-2">Starter</span>') +
+                badge +
                 '<h2 class="h3 mb-1">' + escapeHtml(name) + "</h2>" +
-                '<p class="stat-value mb-2" style="font-size:2rem;">' + escapeHtml(priceLabel(p)) + "</p>" +
+                '<p class="stat-value mb-2" style="font-size:2rem;">' + priceLabel(p) + "</p>" +
                 '<p class="text-gray">' + escapeHtml(description) + "</p>" +
                 '<p class="mb-2"><strong class="text-accent-brand">' + credits + " credits</strong> / month</p>" +
                 '<ul class="list-unstyled flex-grow-1 mb-3">' + featureHtml + "</ul>" +

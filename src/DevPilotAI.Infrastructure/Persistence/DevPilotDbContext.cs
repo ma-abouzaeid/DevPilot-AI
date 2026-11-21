@@ -341,6 +341,7 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
             b.Property(p => p.PeriodType).HasMaxLength(50).IsRequired();
             b.Property(p => p.Price).HasPrecision(18, 2);
             b.Property(p => p.Currency).HasMaxLength(10);
+            b.Property(p => p.SaleDiscountPercent).HasPrecision(5, 2);
         });
 
         modelBuilder.Entity<Feature>(b =>
@@ -559,6 +560,8 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
                 CreditsPerPeriod = 100,
                 Price = 0.00m,
                 Currency = "USD",
+                SaleEnabled = false,
+                SaleDiscountPercent = 0m,
                 CreatedAt = seedAt,
                 UpdatedAt = seedAt
             },
@@ -575,6 +578,8 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
                 CreditsPerPeriod = 1000,
                 Price = 20.00m,
                 Currency = "USD",
+                SaleEnabled = false,
+                SaleDiscountPercent = 0m,
                 CreatedAt = seedAt,
                 UpdatedAt = seedAt
             }

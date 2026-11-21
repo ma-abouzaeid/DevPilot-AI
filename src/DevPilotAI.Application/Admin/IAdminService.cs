@@ -20,6 +20,7 @@ public interface IAdminService
     Task RestoreUserAsync(int adminUserId, int userId, CancellationToken cancellationToken = default);
     Task AssignUserPlanAsync(int adminUserId, int userId, AssignUserPlanRequestDto request, CancellationToken cancellationToken = default);
     Task SetUserAdminAsync(int adminUserId, int userId, SetUserAdminRequestDto request, CancellationToken cancellationToken = default);
+    Task SetUserUnlimitedCreditsAsync(int adminUserId, int userId, SetUserUnlimitedCreditsRequestDto request, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<AdminPlanDto>> ListPlansAsync(CancellationToken cancellationToken = default);
     Task<AdminPlanDto> CreatePlanAsync(int adminUserId, CreateAdminPlanRequestDto request, CancellationToken cancellationToken = default);

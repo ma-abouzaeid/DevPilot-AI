@@ -56,7 +56,14 @@ public class PaymentService : IPaymentService
             ?? throw AppError.Unauthorized("User was not found.");
 
         var rate = GetUsdToEgpRate();
-        var amountUsd = plan.Price ?? 0m;
+        var amountUsd = plan.GetEffectivePriceUsd();
+        if (amountUsd <= 0m)
+        {
+            throw AppError.InvalidRequest(
+                "Sale price is zero. Activate this plan without payment or adjust the sale discount.",
+                "PLAN_FREE");
+        }
+
         var amountEgp = Math.Round(amountUsd * rate, 2, MidpointRounding.AwayFromZero);
         var amountCents = (int)Math.Round(amountEgp * 100m, MidpointRounding.AwayFromZero);
         if (amountCents < 100)

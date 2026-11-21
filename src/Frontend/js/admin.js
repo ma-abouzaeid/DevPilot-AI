@@ -266,16 +266,20 @@
                 var roles = (val(u, "roles", "Roles") || []).map(escapeHtml).join(", ") || "Developer";
                 var deleted = val(u, "isDeleted", "IsDeleted");
                 var isAdmin = (val(u, "roles", "Roles") || []).some(function (r) { return String(r).toLowerCase() === "admin"; });
+                var unlimited = !!(val(u, "hasUnlimitedCredits", "HasUnlimitedCredits")) || isAdmin;
                 return (
                     "<tr>" +
                     "<td><strong>" + name + "</strong><div class='text-gray small'>" + email + " · #" + id + "</div></td>" +
                     "<td>" + plan + "</td>" +
-                    "<td>" + (isAdmin ? "Unlimited" : (credits == null ? "—" : credits)) + "</td>" +
+                    "<td>" + (unlimited ? "Unlimited" : (credits == null ? "—" : credits)) + "</td>" +
                     "<td>" + roles + "</td>" +
                     "<td>" + (deleted ? '<span class="badge text-bg-danger">Deactivated</span>' : '<span class="badge text-bg-success">Active</span>') + "</td>" +
                     "<td class='text-end admin-actions'>" +
                     "<button type='button' class='btn btn-sm btn-outline-card' data-act='edit' data-id='" + id + "'>Edit</button> " +
                     "<button type='button' class='btn btn-sm btn-outline-card' data-act='plan' data-id='" + id + "' data-email='" + email + "'>Plan</button> " +
+                    "<button type='button' class='btn btn-sm btn-outline-card' data-act='unlimited' data-id='" + id + "' data-unlimited='" +
+                    (val(u, "hasUnlimitedCredits", "HasUnlimitedCredits") ? "0" : "1") + "'>" +
+                    (val(u, "hasUnlimitedCredits", "HasUnlimitedCredits") ? "Revoke unlimited" : "Make unlimited") + "</button> " +
                     "<button type='button' class='btn btn-sm btn-outline-card' data-act='admin' data-id='" + id + "' data-admin='" + (isAdmin ? "0" : "1") + "'>" +
                     (isAdmin ? "Revoke admin" : "Make admin") + "</button> " +
                     (deleted
@@ -326,8 +330,18 @@
                 '<div class="col-md-4"><div class="form-check">' +
                 '<input class="form-check-input" type="checkbox" name="enableCodeReview"' + (hasReview ? " checked" : "") + ">" +
                 '<label class="form-check-label">Code Review</label></div></div>' +
+                '<div class="col-md-4"><div class="form-check">' +
+                '<input class="form-check-input" type="checkbox" name="saleEnabled"' + (val(p, "saleEnabled", "SaleEnabled") ? " checked" : "") + ">" +
+                '<label class="form-check-label">Sale</label></div></div>' +
+                '<div class="col-md-4"><label class="form-label">Sale discount %</label>' +
+                '<input class="form-control" type="number" name="saleDiscountPercent" min="0" max="100" step="0.01" value="' +
+                (val(p, "saleDiscountPercent", "SaleDiscountPercent") || 0) + '"></div>' +
                 '<div class="col-12"><label class="form-label">Description</label><textarea class="form-control" name="description" rows="2">' + escapeHtml(val(p, "description", "Description") || "") + "</textarea></div>" +
-                '<div class="col-12"><small class="text-gray">Features: ' + escapeHtml(features.join(", ") || "—") + "</small></div>" +
+                '<div class="col-12"><small class="text-gray">Features: ' + escapeHtml(features.join(", ") || "—") +
+                (val(p, "saleEnabled", "SaleEnabled")
+                    ? " · Sale active → effective $" + Number(val(p, "effectivePrice", "EffectivePrice") || 0).toFixed(2)
+                    : "") +
+                "</small></div>" +
                 '<div class="col-12"><button type="submit" class="btn btn-primary btn-sm">Save plan</button></div>' +
                 "</div></form></div></div>"
             );
@@ -702,6 +716,14 @@
                 await api("/api/Admin/users/" + id + "/restore", { method: "POST" });
                 showAlert("User restored.", "success");
                 await loadUsers();
+            } else if (act === "unlimited") {
+                var makeUnlimited = btn.getAttribute("data-unlimited") === "1";
+                await api("/api/Admin/users/" + id + "/unlimited-credits", {
+                    method: "POST",
+                    body: JSON.stringify({ hasUnlimitedCredits: makeUnlimited })
+                });
+                showAlert(makeUnlimited ? "Unlimited credits granted." : "Unlimited credits revoked.", "success");
+                await loadUsers();
             } else if (act === "admin") {
                 var makeAdmin = btn.getAttribute("data-admin") === "1";
                 await api("/api/Admin/users/" + id + "/admin-role", {
@@ -831,7 +853,9 @@
                 creditsPerPeriod: Number(form.credits.value),
                 price: form.price.value === "" ? null : Number(form.price.value),
                 currency: form.currency.value.trim(),
-                enableCodeReview: form.enableCodeReview.checked
+                enableCodeReview: form.enableCodeReview.checked,
+                saleEnabled: form.saleEnabled.checked,
+                saleDiscountPercent: Number(form.saleDiscountPercent.value || 0)
             };
             await api("/api/Admin/plans/" + id, { method: "PUT", body: JSON.stringify(body) });
             state.plans = [];

@@ -96,15 +96,17 @@ public class AuthService : IAuthService
             .FirstOrDefaultAsync(p => p.IsDefault && p.Status == "Active", cancellationToken);
         if (defaultPlan != null)
         {
+            var start = DateTime.UtcNow;
             _dbContext.UserSubscriptions.Add(new UserSubscription
             {
                 UserId = user.UserId,
                 PlanId = defaultPlan.PlanId,
                 Status = "Active",
-                StartDate = DateTime.UtcNow,
+                StartDate = start,
+                EndDate = defaultPlan.ComputeSubscriptionEndDate(start),
                 AssignmentSource = "Registration",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                CreatedAt = start,
+                UpdatedAt = start
             });
 
             var periodStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);

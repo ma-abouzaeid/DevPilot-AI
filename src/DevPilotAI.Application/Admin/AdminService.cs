@@ -113,7 +113,8 @@ public class AdminService : IAdminService
                 GetRoleNames(u),
                 hasPlan ? plan.Code : null,
                 hasPlan ? plan.Name : null,
-                remaining);
+                remaining,
+                u.HasUnlimitedCredits);
         }).ToList();
 
         return new PagedResultDto<AdminUserListItemDto>(items, total, page, pageSize);
@@ -153,7 +154,8 @@ public class AdminService : IAdminService
             period?.CreditsUsed ?? 0,
             remaining,
             period?.PeriodStart,
-            period?.PeriodEnd);
+            period?.PeriodEnd,
+            user.HasUnlimitedCredits);
     }
 
     public async Task<AdminUserDetailDto> CreateUserAsync(
@@ -355,19 +357,31 @@ public class AdminService : IAdminService
             .Where(s => s.UserId == userId && s.Status == "Active")
             .ToListAsync(cancellationToken);
 
+        var now = DateTime.UtcNow;
         foreach (var sub in active)
         {
             if (sub.PlanId == plan.PlanId)
             {
+                if (sub.EndDate == null)
+                {
+                    var planned = plan.ComputeSubscriptionEndDate(sub.StartDate);
+                    if (planned.HasValue)
+                    {
+                        sub.EndDate = planned;
+                        sub.UpdatedAt = now;
+                        await _db.SaveChangesAsync(cancellationToken);
+                    }
+                }
+
                 await EnsurePeriodForPlanAsync(userId, plan, cancellationToken);
                 return;
             }
 
             sub.Status = "Cancelled";
-            sub.CancelledAt = DateTime.UtcNow;
-            sub.EndDate = DateTime.UtcNow;
+            sub.CancelledAt = now;
+            sub.EndDate = now;
             sub.CancellationReason = $"Admin switched to {plan.Code}";
-            sub.UpdatedAt = DateTime.UtcNow;
+            sub.UpdatedAt = now;
         }
 
         _db.UserSubscriptions.Add(new UserSubscription
@@ -375,11 +389,12 @@ public class AdminService : IAdminService
             UserId = userId,
             PlanId = plan.PlanId,
             Status = "Active",
-            StartDate = DateTime.UtcNow,
+            StartDate = now,
+            EndDate = plan.ComputeSubscriptionEndDate(now),
             AssignedByUserId = adminUserId,
             AssignmentSource = "Admin",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = now,
+            UpdatedAt = now
         });
         await _db.SaveChangesAsync(cancellationToken);
         await EnsurePeriodForPlanAsync(userId, plan, cancellationToken);
@@ -442,6 +457,35 @@ public class AdminService : IAdminService
         }
     }
 
+    public async Task SetUserUnlimitedCreditsAsync(
+        int adminUserId,
+        int userId,
+        SetUserUnlimitedCreditsRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _db.Users.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken)
+            ?? throw AppError.NotFound($"User {userId} was not found.");
+
+        if (user.HasUnlimitedCredits == request.HasUnlimitedCredits)
+        {
+            return;
+        }
+
+        user.HasUnlimitedCredits = request.HasUnlimitedCredits;
+        await _db.SaveChangesAsync(cancellationToken);
+
+        await AuditAsync(
+            request.HasUnlimitedCredits
+                ? SystemAuditEventTypes.UnlimitedCreditsGranted
+                : SystemAuditEventTypes.UnlimitedCreditsRevoked,
+            nameof(User),
+            userId.ToString(),
+            adminUserId,
+            new { TargetUserId = userId, HasUnlimitedCredits = request.HasUnlimitedCredits },
+            cancellationToken);
+    }
+
     public async Task<IReadOnlyList<AdminPlanDto>> ListPlansAsync(CancellationToken cancellationToken = default)
     {
         var plans = await _db.Plans.AsNoTracking()
@@ -481,6 +525,8 @@ public class AdminService : IAdminService
             CreditsPerPeriod = request.CreditsPerPeriod,
             Price = request.Price,
             Currency = string.IsNullOrWhiteSpace(request.Currency) ? "USD" : request.Currency.Trim().ToUpperInvariant(),
+            SaleEnabled = request.SaleEnabled,
+            SaleDiscountPercent = NormalizeSalePercent(request.SaleEnabled, request.SaleDiscountPercent),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -494,7 +540,7 @@ public class AdminService : IAdminService
             nameof(Plan),
             plan.PlanId.ToString(),
             adminUserId,
-            new { plan.Code, plan.Name, plan.CreditsPerPeriod, plan.IsDefault, request.EnableCodeReview },
+            new { plan.Code, plan.Name, plan.CreditsPerPeriod, plan.IsDefault, request.EnableCodeReview, plan.SaleEnabled, plan.SaleDiscountPercent },
             cancellationToken);
 
         return (await ListPlansAsync(cancellationToken)).First(p => p.PlanId == plan.PlanId);
@@ -512,7 +558,7 @@ public class AdminService : IAdminService
             .FirstOrDefaultAsync(p => p.PlanId == planId, cancellationToken)
             ?? throw AppError.NotFound($"Plan {planId} was not found.");
 
-        var old = new { plan.Name, plan.Description, plan.Status, plan.IsPublic, plan.IsDefault, plan.CreditsPerPeriod, plan.Price, plan.Currency };
+        var old = new { plan.Name, plan.Description, plan.Status, plan.IsPublic, plan.IsDefault, plan.CreditsPerPeriod, plan.Price, plan.Currency, plan.SaleEnabled, plan.SaleDiscountPercent };
 
         if (request.IsDefault && !plan.IsDefault)
         {
@@ -527,6 +573,8 @@ public class AdminService : IAdminService
         plan.CreditsPerPeriod = request.CreditsPerPeriod;
         plan.Price = request.Price;
         plan.Currency = string.IsNullOrWhiteSpace(request.Currency) ? plan.Currency : request.Currency.Trim().ToUpperInvariant();
+        plan.SaleEnabled = request.SaleEnabled;
+        plan.SaleDiscountPercent = NormalizeSalePercent(request.SaleEnabled, request.SaleDiscountPercent);
         plan.UpdatedAt = DateTime.UtcNow;
 
         if (request.EnableCodeReview.HasValue)
@@ -563,7 +611,7 @@ public class AdminService : IAdminService
             nameof(Plan),
             planId.ToString(),
             adminUserId,
-            new { Old = old, New = new { plan.Name, plan.Description, plan.Status, plan.IsPublic, plan.IsDefault, plan.CreditsPerPeriod, plan.Price, plan.Currency, request.EnableCodeReview } },
+            new { Old = old, New = new { plan.Name, plan.Description, plan.Status, plan.IsPublic, plan.IsDefault, plan.CreditsPerPeriod, plan.Price, plan.Currency, plan.SaleEnabled, plan.SaleDiscountPercent, request.EnableCodeReview } },
             cancellationToken);
 
         return ToPlanDto(plan);
@@ -1144,14 +1192,29 @@ public class AdminService : IAdminService
                 PeriodStart = start,
                 PeriodEnd = end,
                 CreditsAllocated = plan.CreditsPerPeriod,
+                CreditsUsed = 0,
+                CreditsRefunded = 0,
+                CreditsReserved = 0,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             });
         }
         else
         {
+            var isUpgrade = plan.CreditsPerPeriod > period.CreditsAllocated;
             period.PlanId = plan.PlanId;
             period.CreditsAllocated = plan.CreditsPerPeriod;
+            if (isUpgrade)
+            {
+                period.CreditsUsed = 0;
+                period.CreditsRefunded = 0;
+                period.CreditsReserved = 0;
+            }
+            else if (period.CreditsUsed > period.CreditsAllocated)
+            {
+                period.CreditsUsed = period.CreditsAllocated;
+            }
+
             period.UpdatedAt = DateTime.UtcNow;
         }
 
@@ -1286,6 +1349,14 @@ public class AdminService : IAdminService
             cancellationToken: cancellationToken);
     }
 
+    private static decimal NormalizeSalePercent(bool saleEnabled, decimal percent)
+    {
+        if (!saleEnabled) return 0m;
+        if (percent < 0m) return 0m;
+        if (percent > 100m) return 100m;
+        return Math.Round(percent, 2, MidpointRounding.AwayFromZero);
+    }
+
     private static AdminPlanDto ToPlanDto(Plan plan) =>
         new(
             plan.PlanId,
@@ -1303,7 +1374,10 @@ public class AdminService : IAdminService
                 .Where(pf => pf.IsEnabled)
                 .Select(pf => pf.Feature.Key)
                 .OrderBy(k => k)
-                .ToList());
+                .ToList(),
+            plan.SaleEnabled,
+            plan.SaleDiscountPercent,
+            plan.GetEffectivePriceUsd());
 
     private static IReadOnlyList<string> GetRoleNames(User user) =>
         user.UserRoles

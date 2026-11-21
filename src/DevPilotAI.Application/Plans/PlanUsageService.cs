@@ -41,7 +41,10 @@ public class PlanUsageService : IPlanUsageService
                 .Where(pf => pf.IsEnabled)
                 .Select(pf => pf.Feature.Key)
                 .OrderBy(k => k)
-                .ToList()
+                .ToList(),
+            p.SaleEnabled,
+            p.SaleDiscountPercent,
+            p.GetEffectivePriceUsd()
         )).ToList();
     }
 
@@ -53,7 +56,7 @@ public class PlanUsageService : IPlanUsageService
                 .ThenInclude(pf => pf.Feature)
             .FirstAsync(p => p.PlanId == period.PlanId, cancellationToken);
 
-        var unlimited = await IsAdminAsync(userId, cancellationToken);
+        var unlimited = await HasUnlimitedCreditsAsync(userId, cancellationToken);
         var remaining = unlimited
             ? int.MaxValue
             : Math.Max(0, period.CreditsAllocated - period.CreditsUsed + period.CreditsRefunded);
@@ -62,7 +65,7 @@ public class PlanUsageService : IPlanUsageService
             .OrderBy(f => f.Key)
             .ToList();
 
-        var canReview = unlimited || features.Any(f =>
+        var canReview = await IsAdminAsync(userId, cancellationToken) || features.Any(f =>
             f.Key == PlanFeatureKeys.GitHubCodeReview && f.IsEnabled);
 
         return new MyPlanUsageDto(
@@ -98,11 +101,23 @@ public class PlanUsageService : IPlanUsageService
 
         if (period != null)
         {
-            // If the user upgraded mid-month, bump allocation to the current plan.
-            if (period.PlanId != plan.PlanId || period.CreditsAllocated < plan.CreditsPerPeriod)
+            // Mid-month plan change: upgrading grants a full fresh credit pool.
+            if (period.PlanId != plan.PlanId || period.CreditsAllocated != plan.CreditsPerPeriod)
             {
+                var isUpgrade = plan.CreditsPerPeriod > period.CreditsAllocated;
                 period.PlanId = plan.PlanId;
                 period.CreditsAllocated = plan.CreditsPerPeriod;
+                if (isUpgrade)
+                {
+                    period.CreditsUsed = 0;
+                    period.CreditsRefunded = 0;
+                    period.CreditsReserved = 0;
+                }
+                else if (period.CreditsUsed > period.CreditsAllocated)
+                {
+                    period.CreditsUsed = period.CreditsAllocated;
+                }
+
                 period.UpdatedAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync(cancellationToken);
             }
@@ -163,7 +178,7 @@ public class PlanUsageService : IPlanUsageService
     public async Task EnsureCreditsAsync(int userId, int amount, CancellationToken cancellationToken = default)
     {
         if (amount <= 0) return;
-        if (await IsAdminAsync(userId, cancellationToken)) return;
+        if (await HasUnlimitedCreditsAsync(userId, cancellationToken)) return;
 
         var period = await EnsureCurrentPeriodAsync(userId, cancellationToken);
         var remaining = period.CreditsAllocated - period.CreditsUsed + period.CreditsRefunded;
@@ -187,16 +202,16 @@ public class PlanUsageService : IPlanUsageService
     {
         if (amount <= 0) return;
 
-        var isAdmin = await IsAdminAsync(userId, cancellationToken);
-        if (!isAdmin)
+        var unlimited = await HasUnlimitedCreditsAsync(userId, cancellationToken);
+        if (!unlimited)
         {
             await EnsureCreditsAsync(userId, amount, cancellationToken);
         }
 
         var period = await EnsureCurrentPeriodAsync(userId, cancellationToken);
 
-        // Admins keep unlimited balance; still record usage for audit/AI tracking.
-        if (!isAdmin)
+        // Unlimited accounts keep balance; still record usage for audit/AI tracking.
+        if (!unlimited)
         {
             period.CreditsUsed += amount;
         }
@@ -215,7 +230,7 @@ public class PlanUsageService : IPlanUsageService
             if (usageEvent != null)
             {
                 usageEvent.CreditsCharged = (usageEvent.CreditsCharged ?? 0) + amount;
-                usageEvent.CostType = isAdmin ? "AdminUnlimited" : "Credits";
+                usageEvent.CostType = unlimited ? "Unlimited" : "Credits";
                 if (string.Equals(usageEvent.Status, "Success", StringComparison.OrdinalIgnoreCase)
                     || string.IsNullOrWhiteSpace(usageEvent.Status))
                 {
@@ -229,9 +244,9 @@ public class PlanUsageService : IPlanUsageService
             UserId = userId,
             UsagePeriodId = period.UsagePeriodId,
             AIUsageEventId = aiUsageEventId,
-            EntryType = isAdmin ? "ADMIN_UNLIMITED" : "CHARGE",
+            EntryType = unlimited ? "UNLIMITED" : "CHARGE",
             Amount = amount,
-            Reason = Truncate(isAdmin ? $"Admin unlimited: {reason}" : reason, 255),
+            Reason = Truncate(unlimited ? $"Unlimited: {reason}" : reason, 255),
             ReferenceId = string.IsNullOrWhiteSpace(referenceId) ? null : Truncate(referenceId, 150),
             MetadataJson = metadataJson,
             CreatedAt = DateTime.UtcNow
@@ -254,8 +269,8 @@ public class PlanUsageService : IPlanUsageService
                     ReferenceId = referenceId,
                     AIUsageEventId = aiUsageEventId,
                     TokensUsed = tokensUsed,
-                    Unlimited = isAdmin,
-                    RemainingAfter = isAdmin
+                    Unlimited = unlimited,
+                    RemainingAfter = unlimited
                         ? (int?)null
                         : Math.Max(0, period.CreditsAllocated - period.CreditsUsed + period.CreditsRefunded)
                 },
@@ -297,19 +312,49 @@ public class PlanUsageService : IPlanUsageService
             .OrderByDescending(s => s.StartDate)
             .ToListAsync(cancellationToken);
 
+        // Do not let users cancel a paid plan by switching to Free from the Plans page.
+        if (string.Equals(source, "SelfServe", StringComparison.OrdinalIgnoreCase) &&
+            (plan.Price ?? 0m) <= 0m)
+        {
+            var activePlanIds = active.Select(s => s.PlanId).Distinct().ToList();
+            var hasPaidPlan = await _db.Plans.AsNoTracking()
+                .AnyAsync(p => activePlanIds.Contains(p.PlanId) && (p.Price ?? 0m) > 0m, cancellationToken);
+            if (hasPaidPlan)
+            {
+                throw AppError.InvalidRequest(
+                    "Your Pro subscription stays active. Contact Support to cancel or change it.",
+                    "PAID_PLAN_LOCKED",
+                    nameof(planCode));
+            }
+        }
+
+        var now = DateTime.UtcNow;
         foreach (var sub in active)
         {
             if (sub.PlanId == plan.PlanId)
             {
+                // Keep paid coverage window if missing (older rows).
+                if (sub.EndDate == null)
+                {
+                    var planned = plan.ComputeSubscriptionEndDate(sub.StartDate);
+                    if (planned.HasValue)
+                    {
+                        sub.EndDate = planned;
+                        sub.UpdatedAt = now;
+                        await _db.SaveChangesAsync(cancellationToken);
+                    }
+                }
+
                 await EnsureCurrentPeriodAsync(userId, cancellationToken);
                 return await GetMyUsageAsync(userId, cancellationToken);
             }
 
             sub.Status = "Cancelled";
-            sub.CancelledAt = DateTime.UtcNow;
-            sub.EndDate = DateTime.UtcNow;
+            sub.CancelledAt = now;
+            // Access ended now (may be earlier than a previously scheduled paid EndDate).
+            sub.EndDate = now;
             sub.CancellationReason = $"Switched to {plan.Code}";
-            sub.UpdatedAt = DateTime.UtcNow;
+            sub.UpdatedAt = now;
         }
 
         _db.UserSubscriptions.Add(new UserSubscription
@@ -317,10 +362,11 @@ public class PlanUsageService : IPlanUsageService
             UserId = userId,
             PlanId = plan.PlanId,
             Status = "Active",
-            StartDate = DateTime.UtcNow,
+            StartDate = now,
+            EndDate = plan.ComputeSubscriptionEndDate(now),
             AssignmentSource = source.Length > 50 ? source[..50] : source,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = now,
+            UpdatedAt = now
         });
         await _db.SaveChangesAsync(cancellationToken);
 
@@ -348,14 +394,42 @@ public class PlanUsageService : IPlanUsageService
             .AnyAsync(ur => ur.UserId == userId && ur.Role.Name == AppRoles.Admin, cancellationToken);
     }
 
+    private async Task<bool> HasUnlimitedCreditsAsync(int userId, CancellationToken cancellationToken)
+    {
+        if (await IsAdminAsync(userId, cancellationToken))
+        {
+            return true;
+        }
+
+        return await _db.Users.AsNoTracking()
+            .AnyAsync(u => u.UserId == userId && u.HasUnlimitedCredits, cancellationToken);
+    }
+
     private async Task<UserSubscription> GetActiveSubscriptionAsync(int userId, CancellationToken cancellationToken)
     {
+        var now = DateTime.UtcNow;
         var subscription = await _db.UserSubscriptions
             .Where(s => s.UserId == userId && s.Status == "Active")
             .OrderByDescending(s => s.StartDate)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (subscription != null) return subscription;
+        if (subscription != null)
+        {
+            // Paid period ended → expire and fall through to Free/default.
+            if (subscription.EndDate.HasValue && subscription.EndDate.Value <= now)
+            {
+                subscription.Status = "Expired";
+                subscription.CancelledAt ??= now;
+                subscription.CancellationReason ??= "Subscription period ended";
+                subscription.UpdatedAt = now;
+                await _db.SaveChangesAsync(cancellationToken);
+                subscription = null;
+            }
+            else
+            {
+                return subscription;
+            }
+        }
 
         var defaultPlan = await _db.Plans
             .FirstOrDefaultAsync(p => p.IsDefault && p.Status == "Active", cancellationToken)
@@ -366,10 +440,11 @@ public class PlanUsageService : IPlanUsageService
             UserId = userId,
             PlanId = defaultPlan.PlanId,
             Status = "Active",
-            StartDate = DateTime.UtcNow,
+            StartDate = now,
+            EndDate = defaultPlan.ComputeSubscriptionEndDate(now),
             AssignmentSource = "System",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = now,
+            UpdatedAt = now
         };
         _db.UserSubscriptions.Add(subscription);
         await _db.SaveChangesAsync(cancellationToken);

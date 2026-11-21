@@ -26,7 +26,8 @@ public record AdminUserListItemDto(
     IReadOnlyList<string> Roles,
     string? PlanCode,
     string? PlanName,
-    int CreditsRemaining
+    int CreditsRemaining,
+    bool HasUnlimitedCredits = false
 );
 
 public record AdminUserDetailDto(
@@ -44,7 +45,8 @@ public record AdminUserDetailDto(
     int CreditsUsed,
     int CreditsRemaining,
     DateTime? PeriodStart,
-    DateTime? PeriodEnd
+    DateTime? PeriodEnd,
+    bool HasUnlimitedCredits = false
 );
 
 public record AssignUserPlanRequestDto(
@@ -56,6 +58,11 @@ public record AssignUserPlanRequestDto(
 public record SetUserAdminRequestDto(
     [Required]
     bool IsAdmin
+);
+
+public record SetUserUnlimitedCreditsRequestDto(
+    [Required]
+    bool HasUnlimitedCredits
 );
 
 public class CreateAdminUserRequestDto
@@ -112,7 +119,10 @@ public record AdminPlanDto(
     int CreditsPerPeriod,
     decimal? Price,
     string? Currency,
-    IReadOnlyList<string> Features
+    IReadOnlyList<string> Features,
+    bool SaleEnabled = false,
+    decimal SaleDiscountPercent = 0,
+    decimal? EffectivePrice = null
 );
 
 public class CreateAdminPlanRequestDto
@@ -146,6 +156,11 @@ public class CreateAdminPlanRequestDto
     public string? Currency { get; set; } = "USD";
 
     public bool EnableCodeReview { get; set; }
+
+    public bool SaleEnabled { get; set; }
+
+    [Range(0, 100)]
+    public decimal SaleDiscountPercent { get; set; }
 }
 
 public class UpdateAdminPlanRequestDto
@@ -175,6 +190,11 @@ public class UpdateAdminPlanRequestDto
     public string? Currency { get; set; }
 
     public bool? EnableCodeReview { get; set; }
+
+    public bool SaleEnabled { get; set; }
+
+    [Range(0, 100)]
+    public decimal SaleDiscountPercent { get; set; }
 }
 
 public record AdminArticleListItemDto(

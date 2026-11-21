@@ -110,6 +110,16 @@ public class AdminController : ControllerBase
         return Ok(ApiResponse<object?>.SuccessResult(null, request.IsAdmin ? "Admin role granted." : "Admin role revoked.", GetTraceId()));
     }
 
+    [HttpPost("users/{userId:int}/unlimited-credits")]
+    public async Task<IActionResult> SetUnlimitedCredits(int userId, [FromBody] SetUserUnlimitedCreditsRequestDto request, CancellationToken cancellationToken)
+    {
+        await _adminService.SetUserUnlimitedCreditsAsync(GetRequiredUserId(), userId, request, cancellationToken);
+        return Ok(ApiResponse<object?>.SuccessResult(
+            null,
+            request.HasUnlimitedCredits ? "Unlimited credits granted." : "Unlimited credits revoked.",
+            GetTraceId()));
+    }
+
     [HttpGet("plans")]
     public async Task<IActionResult> ListPlans(CancellationToken cancellationToken)
     {

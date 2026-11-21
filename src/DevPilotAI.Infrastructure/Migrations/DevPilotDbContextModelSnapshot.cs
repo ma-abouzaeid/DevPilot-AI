@@ -1260,6 +1260,13 @@ namespace DevPilotAI.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal>("SaleDiscountPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<bool>("SaleEnabled")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1289,6 +1296,8 @@ namespace DevPilotAI.Infrastructure.Migrations
                             Name = "Free",
                             PeriodType = "Monthly",
                             Price = 0.00m,
+                            SaleDiscountPercent = 0m,
+                            SaleEnabled = false,
                             Status = "Active",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
@@ -1305,6 +1314,8 @@ namespace DevPilotAI.Infrastructure.Migrations
                             Name = "Pro",
                             PeriodType = "Monthly",
                             Price = 20.00m,
+                            SaleDiscountPercent = 0m,
+                            SaleEnabled = false,
                             Status = "Active",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
@@ -2009,6 +2020,9 @@ namespace DevPilotAI.Infrastructure.Migrations
 
                     b.Property<DateTime?>("EmailVerifiedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("HasUnlimitedCredits")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
