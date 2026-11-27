@@ -27,6 +27,16 @@ public sealed class TelegramWebhookHostedService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // IIS/MonsterASP may start the host before the site is fully warm — brief delay avoids racing deploy.
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            return;
+        }
+
         var opts = _options.Value;
         if (string.IsNullOrWhiteSpace(opts.BotToken))
         {
@@ -34,6 +44,11 @@ public sealed class TelegramWebhookHostedService : BackgroundService
                 "Telegram BotToken is empty. Smart Support bot will not reply until Telegram__BotToken is set on the host.");
             return;
         }
+
+        _logger.LogInformation(
+            "Telegram ingress starting. UseLongPolling={UseLongPolling}, PublicApiBaseUrl={BaseUrl}",
+            opts.UseLongPolling,
+            opts.PublicApiBaseUrl);
 
         if (opts.ShouldUseLongPolling())
         {

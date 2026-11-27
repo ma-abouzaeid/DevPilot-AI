@@ -21,16 +21,10 @@ public class TelegramOptions
     public bool AutoSetWebhook { get; set; } = true;
 
     /// <summary>
-    /// Force getUpdates long polling. When null, auto: poll if base URL is not HTTPS.
+    /// Use getUpdates long polling (required when public HTTPS webhook is unavailable).
+    /// Defaults to true so HTTP hosts keep working without a webhook.
     /// </summary>
-    public bool? UseLongPolling { get; set; }
+    public bool UseLongPolling { get; set; } = true;
 
-    public bool ShouldUseLongPolling()
-    {
-        if (UseLongPolling.HasValue)
-            return UseLongPolling.Value;
-
-        var baseUrl = (PublicApiBaseUrl ?? string.Empty).Trim();
-        return !baseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
-    }
+    public bool ShouldUseLongPolling() => UseLongPolling;
 }
