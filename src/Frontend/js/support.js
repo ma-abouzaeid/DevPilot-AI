@@ -139,7 +139,7 @@
         const body = msg.body || msg.Body || "";
         const created = formatDate(msg.createdAt || msg.CreatedAt);
         const row = document.createElement("div");
-        row.className = "support-chat-bubble " + (fromAdmin ? "is-admin" : "is-user is-mine");
+        row.className = "support-chat-bubble " + (fromAdmin ? "is-admin" : "is-mine is-user");
         const role = fromAdmin ? "Admin" : "You";
         row.innerHTML =
             '<div class="support-chat-meta"><span><span class="role-tag">' + role + "</span><strong>" +
