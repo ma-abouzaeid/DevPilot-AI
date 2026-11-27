@@ -45,7 +45,11 @@ public class TelegramBotService : ITelegramBotService
 
     public async Task HandleUpdateAsync(JsonElement update, CancellationToken cancellationToken = default)
     {
-        if (!_bot.IsConfigured) return;
+        if (!_bot.IsConfigured)
+        {
+            _logger.LogWarning("Telegram update ignored because BotToken is not configured.");
+            return;
+        }
 
         try
         {
@@ -145,7 +149,11 @@ public class TelegramBotService : ITelegramBotService
             return;
         }
 
-        if (text == TelegramBotCommands.ChangeEmail || text.Equals("/email", StringComparison.OrdinalIgnoreCase))
+        if (text == TelegramBotCommands.ChangeEmail ||
+            text.Equals("/email", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("غير الايميل", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("تغيير الايميل", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("change email", StringComparison.OrdinalIgnoreCase))
         {
             await SetStateAsync(convo, TelegramBotStates.EmailChangeAwaitAccountEmail, null, ct);
             await _bot.SendMessageAsync(new TelegramOutgoingMessage(chatId,

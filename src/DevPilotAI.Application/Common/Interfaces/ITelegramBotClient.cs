@@ -18,4 +18,9 @@ public interface ITelegramBotClient
     Task SendMessageAsync(TelegramOutgoingMessage message, CancellationToken cancellationToken = default);
     Task AnswerCallbackAsync(string callbackQueryId, string? text = null, CancellationToken cancellationToken = default);
     Task<TelegramDownloadedFile?> DownloadFileAsync(string fileId, CancellationToken cancellationToken = default);
+    Task<(bool Ok, string Detail)> SetWebhookAsync(
+        string webhookUrl,
+        string? secretToken = null,
+        CancellationToken cancellationToken = default);
+    Task<(bool Ok, string Detail)> GetWebhookInfoAsync(CancellationToken cancellationToken = default);
 }

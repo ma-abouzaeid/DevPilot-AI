@@ -1,18 +1,16 @@
 using System.Text.Json;
 using DevPilotAI.Application.Common.Models;
 using DevPilotAI.Application.Telegram;
-using DevPilotAI.Infrastructure.Security;
 using DevPilotAI.Infrastructure.Telegram;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 
 namespace DevPilotAI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[EnableRateLimiting(RateLimitPolicies.General)]
+// Do not rate-limit Telegram webhooks — 429 makes Telegram stop delivering updates.
 public class TelegramController : ControllerBase
 {
     private readonly ITelegramBotService _bot;

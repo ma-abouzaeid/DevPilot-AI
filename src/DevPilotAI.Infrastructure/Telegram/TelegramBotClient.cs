@@ -80,4 +80,49 @@ public class TelegramBotClient : ITelegramBotClient
         var bytes = await fileRes.Content.ReadAsByteArrayAsync(cancellationToken);
         return new TelegramDownloadedFile(bytes, filePath, fileRes.Content.Headers.ContentType?.MediaType);
     }
+
+    public async Task<(bool Ok, string Detail)> SetWebhookAsync(
+        string webhookUrl,
+        string? secretToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsConfigured)
+            return (false, "BotToken is not configured.");
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["url"] = webhookUrl,
+            ["allowed_updates"] = new[] { "message", "callback_query" },
+            ["drop_pending_updates"] = true
+        };
+        if (!string.IsNullOrWhiteSpace(secretToken))
+            payload["secret_token"] = secretToken;
+
+        using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        var response = await _http.PostAsync($"bot{_options.BotToken}/setWebhook", content, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            return (false, body);
+
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            var ok = doc.RootElement.TryGetProperty("ok", out var okEl) && okEl.GetBoolean();
+            return (ok, body);
+        }
+        catch
+        {
+            return (response.IsSuccessStatusCode, body);
+        }
+    }
+
+    public async Task<(bool Ok, string Detail)> GetWebhookInfoAsync(CancellationToken cancellationToken = default)
+    {
+        if (!IsConfigured)
+            return (false, "BotToken is not configured.");
+
+        var response = await _http.GetAsync($"bot{_options.BotToken}/getWebhookInfo", cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        return (response.IsSuccessStatusCode, body);
+    }
 }

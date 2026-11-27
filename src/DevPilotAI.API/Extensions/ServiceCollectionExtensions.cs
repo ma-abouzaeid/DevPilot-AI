@@ -64,6 +64,7 @@ public static class ServiceCollectionExtensions
         services.AddSignalR();
         services.AddSingleton<ISupportTicketRealtime, SupportTicketRealtime>();
         services.AddSingleton<ISupportTicketPresence, SupportTicketPresence>();
+        services.AddHostedService<TelegramWebhookHostedService>();
 
         services.Configure<ForwardedHeadersOptions>(options =>
         {
