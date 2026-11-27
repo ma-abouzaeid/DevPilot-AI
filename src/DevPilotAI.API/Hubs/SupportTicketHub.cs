@@ -4,6 +4,7 @@ using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Application.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 
 namespace DevPilotAI.API.Hubs;
 
@@ -12,11 +13,16 @@ public class SupportTicketHub : Hub
 {
     private readonly ISupportTicketService _tickets;
     private readonly ISupportTicketPresence _presence;
+    private readonly IApplicationDbContext _db;
 
-    public SupportTicketHub(ISupportTicketService tickets, ISupportTicketPresence presence)
+    public SupportTicketHub(
+        ISupportTicketService tickets,
+        ISupportTicketPresence presence,
+        IApplicationDbContext db)
     {
         _tickets = tickets;
         _presence = presence;
+        _db = db;
     }
 
     public static string TicketGroup(int ticketId) => "ticket-" + ticketId;
@@ -29,7 +35,7 @@ public class SupportTicketHub : Hub
         if (userId.HasValue)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, UserGroup(userId.Value));
-            if (IsAdmin(Context.User))
+            if (await IsAdminAsync(userId.Value, Context.User, Context.ConnectionAborted))
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, AdminGroup(userId.Value));
             }
@@ -47,7 +53,7 @@ public class SupportTicketHub : Hub
     public async Task JoinTicket(int ticketId)
     {
         var userId = GetRequiredUserId();
-        var isAdmin = IsAdmin(Context.User);
+        var isAdmin = await IsAdminAsync(userId, Context.User, Context.ConnectionAborted);
         await _tickets.EnsureCanAccessChatAsync(ticketId, userId, isAdmin, Context.ConnectionAborted);
         await Groups.AddToGroupAsync(Context.ConnectionId, TicketGroup(ticketId));
         _presence.JoinTicket(userId, ticketId, Context.ConnectionId);
@@ -64,7 +70,7 @@ public class SupportTicketHub : Hub
     public async Task SendMessage(int ticketId, string body, bool asAdmin = false)
     {
         var userId = GetRequiredUserId();
-        var isAdmin = IsAdmin(Context.User);
+        var isAdmin = await IsAdminAsync(userId, Context.User, Context.ConnectionAborted);
         await _tickets.SendMessageAsync(ticketId, userId, isAdmin, body, Context.ConnectionAborted, asAdmin);
     }
 
@@ -82,7 +88,7 @@ public class SupportTicketHub : Hub
         return int.TryParse(raw, out var id) ? id : null;
     }
 
-    private static bool IsAdmin(ClaimsPrincipal? user)
+    private static bool HasAdminClaim(ClaimsPrincipal? user)
     {
         if (user == null) return false;
         if (user.IsInRole(AppRoles.Admin)) return true;
@@ -91,5 +97,12 @@ public class SupportTicketHub : Hub
              c.Type.EndsWith("/role", StringComparison.OrdinalIgnoreCase) ||
              c.Type.EndsWith("/claims/role", StringComparison.OrdinalIgnoreCase)) &&
             string.Equals(c.Value, AppRoles.Admin, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task<bool> IsAdminAsync(int userId, ClaimsPrincipal? user, CancellationToken cancellationToken)
+    {
+        if (HasAdminClaim(user)) return true;
+        return await _db.UserRoles.AsNoTracking()
+            .AnyAsync(ur => ur.UserId == userId && ur.Role.Name == AppRoles.Admin, cancellationToken);
     }
 }

@@ -251,7 +251,7 @@ if (navbarBox) {
         window.__navNotifPollTimer = setInterval(function () {
             if (document.hidden) return;
             refreshNavNotifications();
-        }, 12000);
+        }, 5000);
     }
 
     async function ensureNavNotificationsHub() {

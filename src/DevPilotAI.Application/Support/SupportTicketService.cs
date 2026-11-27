@@ -296,9 +296,13 @@ public class SupportTicketService : ISupportTicketService
             throw AppError.Conflict("Cannot chat on a resolved ticket.", "TICKET_RESOLVED");
         }
 
+        // JWT role claim can be stale after an Admin grant; always also check UserRoles.
+        var actorIsAdmin = isAdmin || await _db.UserRoles.AsNoTracking()
+            .AnyAsync(ur => ur.UserId == userId && ur.Role.Name == AppRoles.Admin, cancellationToken);
+
         // AsAdmin flag: same login can act as user or admin in tests.
-        var fromAdmin = isAdmin && asAdmin;
-        if (!fromAdmin && isAdmin && userId != ticket.CreatedByUserId)
+        var fromAdmin = actorIsAdmin && asAdmin;
+        if (!fromAdmin && actorIsAdmin && userId != ticket.CreatedByUserId)
         {
             fromAdmin = true;
         }
@@ -331,9 +335,8 @@ public class SupportTicketService : ISupportTicketService
 
         await _realtime.MessageReceivedAsync(ticketId, dto, cancellationToken);
 
-        // Always persist + push notifications. Open-chat suppression is handled on the client
-        // (auto mark-read). Skipping here caused missed bells when LongPolling disconnect lagged.
-        if (!fromAdmin && userId == ticket.CreatedByUserId && ticket.AssignedAdminUserId.HasValue)
+        // Persist + push. Open-chat clients auto mark-read; do not skip creation here.
+        if (!message.IsFromAdmin && userId == ticket.CreatedByUserId && ticket.AssignedAdminUserId.HasValue)
         {
             await NotifyAdminAsync(
                 ticket.AssignedAdminUserId.Value,
@@ -344,7 +347,7 @@ public class SupportTicketService : ISupportTicketService
                 cancellationToken);
         }
 
-        if (fromAdmin && ticket.CreatedByUserId != userId)
+        if (message.IsFromAdmin && ticket.CreatedByUserId != userId)
         {
             await NotifyAdminAsync(
                 ticket.CreatedByUserId,
@@ -628,15 +631,12 @@ public class SupportTicketService : ISupportTicketService
         AdminNotificationDto dto,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            await _realtime.AdminNotificationAsync(userId, dto, cancellationToken);
-            await _realtime.UserNotificationAsync(userId, dto, cancellationToken);
-        }
-        catch
-        {
-            // DB row is enough; push is optional.
-        }
+        // Push separately so a failure on the admin group never blocks regular users.
+        try { await _realtime.UserNotificationAsync(userId, dto, cancellationToken); }
+        catch { /* optional */ }
+
+        try { await _realtime.AdminNotificationAsync(userId, dto, cancellationToken); }
+        catch { /* optional */ }
     }
 
     // Backfill TICKET_OPENED for open tickets created before notify worked.
