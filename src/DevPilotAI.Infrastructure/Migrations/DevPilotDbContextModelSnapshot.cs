@@ -2114,6 +2114,9 @@ namespace DevPilotAI.Infrastructure.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
 
+                    b.Property<byte?>("Rating")
+                        .HasColumnType("tinyint");
+
                     b.Property<DateTime?>("ReviewedAt")
                         .HasColumnType("datetime2");
 

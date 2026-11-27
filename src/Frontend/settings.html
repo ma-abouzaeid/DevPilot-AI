@@ -39,7 +39,7 @@
                         <label class="form-label" for="profile-email-display">Email</label>
                         <input type="email" class="form-control" id="profile-email-display" readonly disabled>
                         <small class="text-gray" id="email-verified-hint">Loading…</small>
-                        <p class="text-gray small mb-2 mt-2" dir="rtl">لتغيير الايميل برجاء التواصل مع الدعم الذكي</p>
+                        <p class="text-gray small mb-2 mt-2">To change your email, please contact Smart Support.</p>
                         <a id="settings-telegram-bot-link" class="btn btn-outline-card btn-sm" style="width:auto;"
                            href="https://t.me/DevPilotSupportBot" target="_blank" rel="noopener">
                             <i class="fa-brands fa-telegram"></i> Open Telegram bot
@@ -80,16 +80,16 @@
             </div>
 
             <div class="surface-card mb-4">
-                <h2 class="h5 mb-3">Feedback</h2>
-                <form id="feedback-form" class="debug-form" novalidate>
-                    <div class="mb-3">
-                        <label class="form-label" for="feedback-message">Suggestion or issue</label>
-                        <textarea class="form-control" id="feedback-message" rows="3" minlength="5" maxlength="4000" required></textarea>
+                <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+                    <div>
+                        <h2 class="h5 mb-1">Feedback</h2>
+                        <p class="text-gray small mb-0">Share a suggestion or issue with a star rating.</p>
                     </div>
-                    <button type="submit" class="btn btn-primary" id="btn-feedback">
-                        <i class="fa-solid fa-paper-plane"></i> Send feedback
+                    <button type="button" class="feedback-icon-btn" id="btn-open-feedback" data-bs-toggle="modal" data-bs-target="#feedback-modal" aria-label="Open feedback form">
+                        <i class="fa-solid fa-comment-dots" aria-hidden="true"></i>
+                        <span>Feedback</span>
                     </button>
-                </form>
+                </div>
             </div>
 
             <div class="surface-card border-danger-subtle">
@@ -101,6 +101,39 @@
             </div>
         </div>
     </section>
+
+    <div class="modal fade" id="feedback-modal" tabindex="-1" aria-labelledby="feedback-modal-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content surface-card border-0">
+                <div class="modal-header border-0 pb-0">
+                    <h2 class="modal-title h5" id="feedback-modal-title">Feedback</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="feedback-form" class="modal-body pt-2" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label" for="feedback-rating">Rating</label>
+                        <div class="star-rating" id="feedback-stars" role="radiogroup" aria-label="Star rating">
+                            <button type="button" class="star-rating-btn" data-star="1" aria-label="1 star">★</button>
+                            <button type="button" class="star-rating-btn" data-star="2" aria-label="2 stars">★</button>
+                            <button type="button" class="star-rating-btn" data-star="3" aria-label="3 stars">★</button>
+                            <button type="button" class="star-rating-btn" data-star="4" aria-label="4 stars">★</button>
+                            <button type="button" class="star-rating-btn" data-star="5" aria-label="5 stars">★</button>
+                        </div>
+                        <input type="hidden" id="feedback-rating" value="" required>
+                        <small class="text-gray">Tap a star from 1 to 5.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="feedback-message">Suggestion or issue</label>
+                        <textarea class="form-control" id="feedback-message" rows="4" minlength="5" maxlength="4000" required
+                            placeholder="Tell us what worked well or what we should improve."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="btn-feedback">
+                        <i class="fa-solid fa-paper-plane"></i> Send feedback
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <div id="footer" data-variant="simple"></div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>

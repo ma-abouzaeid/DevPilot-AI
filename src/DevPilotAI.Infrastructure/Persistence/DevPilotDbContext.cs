@@ -303,6 +303,7 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
             b.Property(x => x.Category).HasMaxLength(80).IsRequired();
             b.Property(x => x.Message).HasMaxLength(4000).IsRequired();
             b.Property(x => x.Status).HasMaxLength(40).IsRequired();
+            b.Property(x => x.Rating).HasColumnType("tinyint");
             b.HasIndex(x => x.CreatedAt);
             b.HasIndex(x => x.Status);
             b.HasOne(x => x.User)

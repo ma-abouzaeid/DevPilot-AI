@@ -21,33 +21,21 @@
 
     <section class="page-shell">
         <div class="container">
-            <span class="page-kicker"><i class="fa-solid fa-life-ring"></i> Support</span>
-            <h1 class="page-title">Support <span class="text-primary-brand">Tickets</span></h1>
-            <p class="page-lead">Open a ticket about a product issue. An admin can accept it and chat with you in real time until it is resolved.</p>
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-2">
+                <div>
+                    <span class="page-kicker"><i class="fa-solid fa-life-ring"></i> Support</span>
+                    <h1 class="page-title mb-2">Support <span class="text-primary-brand">Tickets</span></h1>
+                    <p class="page-lead mb-0">Open a ticket about a product issue. An admin can accept it and chat with you in real time until it is resolved.</p>
+                </div>
+                <button type="button" class="btn btn-primary" id="btn-open-ticket" data-bs-toggle="modal" data-bs-target="#ticket-modal" style="width:auto;">
+                    <i class="fa-solid fa-plus"></i> Open a ticket
+                </button>
+            </div>
 
             <div class="alert d-none" id="support-alert" role="alert"></div>
 
             <div class="row g-4">
                 <div class="col-lg-5">
-                    <div class="surface-card mb-4">
-                        <h2 class="h5 mb-3">Open a ticket</h2>
-                        <form id="ticket-form" novalidate>
-                            <div class="mb-3">
-                                <label class="form-label" for="ticket-title">Title</label>
-                                <input type="text" class="form-control" id="ticket-title" maxlength="200" required
-                                    placeholder="Short summary of the issue">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label" for="ticket-description">Description</label>
-                                <textarea class="form-control" id="ticket-description" rows="5" maxlength="4000" required
-                                    placeholder="What happened? Steps to reproduce? Any error text?"></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary" id="btn-create-ticket">
-                                <i class="fa-solid fa-plus"></i> Submit ticket
-                            </button>
-                        </form>
-                    </div>
-
                     <div class="surface-card">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h2 class="h5 mb-0">My tickets</h2>
@@ -69,6 +57,32 @@
             </div>
         </div>
     </section>
+
+    <div class="modal fade" id="ticket-modal" tabindex="-1" aria-labelledby="ticket-modal-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content surface-card border-0">
+                <div class="modal-header border-0 pb-0">
+                    <h2 class="modal-title h5" id="ticket-modal-title">Open a ticket</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="ticket-form" class="modal-body pt-2" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label" for="ticket-title">Title</label>
+                        <input type="text" class="form-control" id="ticket-title" maxlength="200" required
+                            placeholder="Short summary of the issue">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="ticket-description">Description</label>
+                        <textarea class="form-control" id="ticket-description" rows="5" maxlength="4000" required
+                            placeholder="What happened? Steps to reproduce? Any error text?"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="btn-create-ticket">
+                        <i class="fa-solid fa-plus"></i> Submit ticket
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <div id="footer"></div>
 

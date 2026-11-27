@@ -2529,3 +2529,47 @@ body.brand-busy-open { overflow: hidden; }
         display: none;
     }
 }
+
+/* ---------- Feedback icon + star rating ---------- */
+.feedback-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.65rem 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface-muted);
+    color: var(--ink);
+    font-weight: 600;
+}
+.feedback-icon-btn i {
+    font-size: 1.15rem;
+    color: var(--brand, #0e8f86);
+}
+.feedback-icon-btn:hover {
+    background: var(--surface);
+}
+.star-rating {
+    display: flex;
+    gap: 0.2rem;
+}
+.star-rating-btn {
+    border: 0;
+    background: transparent;
+    padding: 0.1rem 0.15rem;
+    font-size: 1.55rem;
+    line-height: 1;
+    color: #cbd5e1;
+    cursor: pointer;
+}
+.star-rating-btn.is-hover,
+.star-rating-btn.is-active {
+    color: #eab308;
+}
+.feedback-stars-read {
+    color: #eab308;
+    letter-spacing: 0.05em;
+}
+.feedback-stars-empty {
+    color: #cbd5e1;
+}

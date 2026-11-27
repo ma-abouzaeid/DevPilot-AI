@@ -1503,13 +1503,19 @@
         host.innerHTML = items.map(function (f) {
             var id = val(f, "userFeedbackId", "UserFeedbackId");
             var status = val(f, "status", "Status");
+            var rating = Number(val(f, "rating", "Rating") || 0);
+            var stars = rating > 0
+                ? "<span class='feedback-stars-read' aria-label='" + rating + " of 5 stars'>" +
+                    "★★★★★".slice(0, rating) + "<span class='feedback-stars-empty'>" + "★★★★★".slice(rating) + "</span></span>"
+                : "<span class='small text-gray'>No rating</span>";
             return '<div class="border-bottom py-3">' +
                 "<div class='d-flex justify-content-between gap-2'><strong>" +
                 escapeHtml(val(f, "category", "Category") || "General") +
                 "</strong><span class='badge-soft'>" + escapeHtml(status) + "</span></div>" +
                 "<div class='small text-gray mb-1'>" + escapeHtml(val(f, "userEmail", "UserEmail") || "Anonymous") +
                 " · " + escapeHtml(val(f, "source", "Source")) +
-                " · " + new Date(val(f, "createdAt", "CreatedAt")).toLocaleString() + "</div>" +
+                " · " + new Date(val(f, "createdAt", "CreatedAt")).toLocaleString() +
+                " · " + stars + "</div>" +
                 "<p class='mb-2'>" + escapeHtml(val(f, "message", "Message")) + "</p>" +
                 (String(status).toLowerCase() === "open"
                     ? "<button type='button' class='btn btn-sm btn-outline-card' data-act='review-feedback' data-id='" + id + "'>Mark reviewed</button>"

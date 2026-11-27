@@ -9,6 +9,8 @@ public class UserFeedback
     public string Source { get; set; } = "Web";
     public string Category { get; set; } = "General";
     public string Message { get; set; } = string.Empty;
+    /// <summary>Optional 1–5 star rating from the web feedback form.</summary>
+    public byte? Rating { get; set; }
     public string Status { get; set; } = "Open";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ReviewedAt { get; set; }

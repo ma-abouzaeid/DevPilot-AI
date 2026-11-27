@@ -302,6 +302,8 @@
         }
     }
 
+    var ticketModal = document.getElementById("ticket-modal");
+
     document.getElementById("ticket-form").addEventListener("submit", async function (e) {
         e.preventDefault();
         clearAlert();
@@ -315,6 +317,9 @@
                 body: JSON.stringify({ title: title, description: description })
             });
             document.getElementById("ticket-form").reset();
+            if (window.bootstrap && ticketModal) {
+                bootstrap.Modal.getOrCreateInstance(ticketModal).hide();
+            }
             showAlert("success", "Ticket submitted. An admin will accept it soon.");
             await loadTickets();
             const id = res.data.supportTicketId || res.data.SupportTicketId;

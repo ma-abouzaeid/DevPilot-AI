@@ -10,6 +10,9 @@ public class CreateFeedbackRequestDto
 
     [StringLength(80)]
     public string Category { get; set; } = "General";
+
+    [Range(1, 5)]
+    public byte? Rating { get; set; }
 }
 
 public record FeedbackListItemDto(
@@ -19,6 +22,7 @@ public record FeedbackListItemDto(
     string Source,
     string Category,
     string Message,
+    byte? Rating,
     string Status,
     DateTime CreatedAt
 );

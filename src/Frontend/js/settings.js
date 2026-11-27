@@ -157,12 +157,62 @@
         }
     }
 
+    var feedbackRating = 0;
+    var feedbackStars = document.getElementById("feedback-stars");
+    var feedbackRatingInput = document.getElementById("feedback-rating");
+
+    function paintFeedbackStars(value) {
+        feedbackRating = Number(value) || 0;
+        if (feedbackRatingInput) feedbackRatingInput.value = feedbackRating > 0 ? String(feedbackRating) : "";
+        if (!feedbackStars) return;
+        feedbackStars.querySelectorAll(".star-rating-btn").forEach(function (btn) {
+            var star = Number(btn.getAttribute("data-star")) || 0;
+            btn.classList.toggle("is-active", star <= feedbackRating && feedbackRating > 0);
+            btn.setAttribute("aria-checked", star === feedbackRating ? "true" : "false");
+        });
+    }
+
+    if (feedbackStars) {
+        feedbackStars.addEventListener("click", function (e) {
+            var btn = e.target.closest(".star-rating-btn");
+            if (!btn) return;
+            paintFeedbackStars(btn.getAttribute("data-star"));
+        });
+        feedbackStars.addEventListener("mouseover", function (e) {
+            var btn = e.target.closest(".star-rating-btn");
+            if (!btn) return;
+            var hover = Number(btn.getAttribute("data-star")) || 0;
+            feedbackStars.querySelectorAll(".star-rating-btn").forEach(function (el) {
+                var star = Number(el.getAttribute("data-star")) || 0;
+                el.classList.toggle("is-hover", star <= hover);
+            });
+        });
+        feedbackStars.addEventListener("mouseleave", function () {
+            feedbackStars.querySelectorAll(".star-rating-btn").forEach(function (el) {
+                el.classList.remove("is-hover");
+            });
+        });
+    }
+
+    var feedbackModal = document.getElementById("feedback-modal");
+    if (feedbackModal) {
+        feedbackModal.addEventListener("hidden.bs.modal", function () {
+            var form = document.getElementById("feedback-form");
+            if (form) form.reset();
+            paintFeedbackStars(0);
+        });
+    }
+
     var feedbackForm = document.getElementById("feedback-form");
     if (feedbackForm) {
         feedbackForm.addEventListener("submit", async function (e) {
             e.preventDefault();
             clearAlert();
             var msg = (document.getElementById("feedback-message").value || "").trim();
+            if (feedbackRating < 1 || feedbackRating > 5) {
+                showAlert("Please choose a star rating.", "danger");
+                return;
+            }
             if (msg.length < 5) {
                 showAlert("Please write a bit more feedback.", "danger");
                 return;
@@ -173,10 +223,18 @@
                 var url = new URL("/api/Feedback", API_BASE).href;
                 var res = await window.DevPilotApi.request(url, {
                     method: "POST",
-                    body: JSON.stringify({ message: msg, category: "General" })
+                    body: JSON.stringify({
+                        message: msg,
+                        category: "General",
+                        rating: feedbackRating
+                    })
                 });
                 if (!res.ok) throw new Error(res.message || "Could not send feedback");
                 document.getElementById("feedback-message").value = "";
+                paintFeedbackStars(0);
+                if (window.bootstrap && feedbackModal) {
+                    bootstrap.Modal.getOrCreateInstance(feedbackModal).hide();
+                }
                 showAlert("Thanks — feedback sent.", "success");
             } catch (err) {
                 showAlert(err.message || "Could not send feedback", "danger");
