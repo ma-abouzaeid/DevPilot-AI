@@ -153,7 +153,7 @@ public class SupportTicketsController : ControllerBase
     public async Task<IActionResult> UserNotifications(CancellationToken cancellationToken)
     {
         var userId = GetRequiredUserId();
-        var items = await _tickets.ListAdminNotificationsAsync(userId, 40, cancellationToken);
+        var items = await _tickets.ListAdminNotificationsAsync(userId, 40, cancellationToken, backfillOpenTickets: false);
         var unread = await _tickets.CountUnreadAdminNotificationsAsync(userId, cancellationToken);
         return Ok(ApiResponse<object>.SuccessResult(new { items, unread }, "Notifications loaded.", GetTraceId()));
     }

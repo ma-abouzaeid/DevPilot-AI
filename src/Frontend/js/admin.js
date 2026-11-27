@@ -1244,40 +1244,11 @@
     async function refreshTicketNotifications() {
         var res = await api("/api/support-tickets/admin/notifications");
         var data = res.data || {};
-        var items = data.items || data.Items || [];
         var unread = data.unread ?? data.Unread ?? 0;
         setTicketsUnreadBadge(unread);
-
-        var host = document.getElementById("tickets-notifications");
-        if (!host) return;
-        if (!items.length) {
-            host.innerHTML = '<div class="empty-state">No notifications yet.</div>';
-            return;
+        if (window.DevPilotNotifications && typeof window.DevPilotNotifications.refresh === "function") {
+            window.DevPilotNotifications.refresh();
         }
-        host.innerHTML = items.map(function (n) {
-            var id = n.adminNotificationId || n.AdminNotificationId;
-            var ticketId = n.supportTicketId || n.SupportTicketId;
-            var isRead = !!(n.isRead || n.IsRead);
-            return (
-                '<button type="button" class="support-ticket-item' + (isRead ? "" : " is-unread") + '" data-note-id="' + id + '" data-ticket-id="' + (ticketId || "") + '">' +
-                "<strong>" + escapeHtml(n.title || n.Title || "") + "</strong>" +
-                '<div class="text-gray small mt-1">' + escapeHtml(n.body || n.Body || "") + "</div>" +
-                '<div class="text-gray small">' + escapeHtml(formatTicketDate(n.createdAt || n.CreatedAt)) + "</div>" +
-                "</button>"
-            );
-        }).join("");
-
-        host.querySelectorAll("[data-note-id]").forEach(function (btn) {
-            btn.addEventListener("click", async function () {
-                var noteId = btn.getAttribute("data-note-id");
-                var ticketId = btn.getAttribute("data-ticket-id");
-                try {
-                    await api("/api/support-tickets/admin/notifications/read?id=" + encodeURIComponent(noteId), { method: "POST" });
-                } catch (e) { /* ignore */ }
-                if (ticketId) openAdminTicket(Number(ticketId), true);
-                refreshTicketNotifications().catch(function () { /* ignore */ });
-            });
-        });
     }
 
     async function loadAdminTicketsList() {
@@ -1559,16 +1530,6 @@
             loadAdminTicketsList().catch(onError);
         });
     }
-    var markReadBtn = document.getElementById("tickets-mark-read");
-    if (markReadBtn) {
-        markReadBtn.addEventListener("click", async function () {
-            try {
-                await api("/api/support-tickets/admin/notifications/read", { method: "POST" });
-                await refreshTicketNotifications();
-            } catch (err) { onError(err); }
-        });
-    }
-
     var paymentsRefresh = document.getElementById("payments-refresh");
     if (paymentsRefresh) {
         paymentsRefresh.addEventListener("click", function () {
@@ -1619,6 +1580,18 @@
         loadOverview().catch(onError);
         refreshTicketNotifications().catch(function () { /* ignore */ });
         ensureTicketsHub().catch(function () { /* ignore until tickets tab */ });
+
+        var params = new URLSearchParams(window.location.search);
+        var tab = (params.get("tab") || "").toLowerCase();
+        var ticketParam = params.get("ticket");
+        if (tab === "tickets" || ticketParam) {
+            switchTab("tickets");
+            loadTicketsTab().then(function () {
+                if (ticketParam) {
+                    return openAdminTicket(Number(ticketParam), true);
+                }
+            }).catch(onError);
+        }
     }).catch(function () {
         window.location.href = "dashboard.html";
     });

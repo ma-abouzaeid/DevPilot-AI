@@ -157,33 +157,6 @@
         }
     }
 
-    async function loadNotifications() {
-        var host = document.getElementById("user-notifications");
-        if (!host) return;
-        try {
-            var url = new URL("/api/support-tickets/notifications", API_BASE).href;
-            var res = await window.DevPilotApi.request(url);
-            var data = res.data || {};
-            var items = data.items || data.Items || [];
-            if (!items.length) {
-                host.innerHTML = '<p class="mb-0 text-gray">No notifications yet.</p>';
-                return;
-            }
-            host.innerHTML = items.map(function (n) {
-                var title = n.title || n.Title || "Notification";
-                var body = n.body || n.Body || "";
-                var read = n.isRead || n.IsRead;
-                return '<div class="mb-2' + (read ? "" : " fw-semibold") + '"><div>' + title +
-                    '</div><div class="small text-gray">' + body + "</div></div>";
-            }).join("");
-            await window.DevPilotApi.request(new URL("/api/support-tickets/notifications/read", API_BASE).href, {
-                method: "POST"
-            });
-        } catch (err) {
-            host.textContent = err.message || "Could not load notifications.";
-        }
-    }
-
     var feedbackForm = document.getElementById("feedback-form");
     if (feedbackForm) {
         feedbackForm.addEventListener("submit", async function (e) {
@@ -217,5 +190,4 @@
         showAlert(err.message || "Failed to load profile", "danger");
     });
     loadPayments();
-    loadNotifications();
 })();

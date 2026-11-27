@@ -212,6 +212,101 @@ html {
     flex-shrink: 0;
 }
 
+/* ---------- Nav notifications bell ---------- */
+.nav-notif {
+    position: relative;
+}
+.nav-notif-btn {
+    position: relative;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.nav-notif-btn:hover {
+    background: var(--surface-muted);
+}
+.nav-notif-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #c0392b;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+}
+.nav-notif-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: min(360px, calc(100vw - 24px));
+    max-height: min(70vh, 420px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
+    z-index: 1060;
+}
+.nav-notif-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--border);
+}
+.nav-notif-list {
+    overflow-y: auto;
+    max-height: 340px;
+}
+.nav-notif-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    padding: 0.85rem 1rem;
+    color: var(--ink);
+}
+.nav-notif-item:hover {
+    background: var(--surface-muted);
+}
+.nav-notif-item.is-unread {
+    background: rgba(14, 165, 164, 0.08);
+}
+.nav-notif-item.is-unread .nav-notif-title {
+    font-weight: 700;
+}
+.nav-notif-title {
+    font-size: 0.95rem;
+    margin-bottom: 0.2rem;
+}
+.nav-notif-body,
+.nav-notif-time,
+.nav-notif-empty {
+    color: var(--gray);
+    font-size: 0.82rem;
+}
+.nav-notif-empty {
+    padding: 1.25rem 1rem;
+    text-align: center;
+}
+
 .nav-dark .nav-link,
 .nav-brand .nav-link {
     color: var(--gray) !important;

@@ -7,7 +7,6 @@ if (navbarBox) {
         : Boolean(localStorage.getItem("accessToken"));
 
     const activePage = navbarBox.dataset.active || "";
-
     function linkClass(page) {
         return ' class="nav-link' + (activePage === page ? " active" : "") + '" data-page="' + page + '"' +
             (activePage === page ? ' aria-current="page"' : "");
@@ -42,9 +41,202 @@ if (navbarBox) {
         else openSidebar();
     }
 
+    function escapeHtml(value) {
+        return String(value == null ? "" : value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    function isAdminAccount() {
+        return !!(window.DevPilotApi && typeof window.DevPilotApi.isAdmin === "function" && window.DevPilotApi.isAdmin());
+    }
+
+    function notificationsListUrl() {
+        return isAdminAccount()
+            ? "/api/support-tickets/admin/notifications"
+            : "/api/support-tickets/notifications";
+    }
+
+    function notificationsReadUrl(id) {
+        var path = isAdminAccount()
+            ? "/api/support-tickets/admin/notifications/read"
+            : "/api/support-tickets/notifications/read";
+        if (id != null && id !== "") path += "?id=" + encodeURIComponent(id);
+        return path;
+    }
+
+    function fmtNoteDate(value) {
+        if (!value) return "";
+        try { return new Date(value).toLocaleString(); } catch (e) { return String(value); }
+    }
+
+    function setBellUnread(count) {
+        var badge = document.getElementById("nav-notif-badge");
+        if (!badge) return;
+        var n = Number(count) || 0;
+        badge.textContent = n > 99 ? "99+" : String(n);
+        badge.classList.toggle("d-none", n < 1);
+        badge.setAttribute("aria-hidden", n < 1 ? "true" : "false");
+    }
+
+    function closeNotifDropdown() {
+        var menu = document.getElementById("nav-notif-menu");
+        var btn = document.getElementById("nav-notif-btn");
+        if (menu) menu.classList.add("d-none");
+        if (btn) btn.setAttribute("aria-expanded", "false");
+    }
+
+    function toggleNotifDropdown() {
+        var menu = document.getElementById("nav-notif-menu");
+        var btn = document.getElementById("nav-notif-btn");
+        if (!menu || !btn) return;
+        var open = menu.classList.contains("d-none");
+        menu.classList.toggle("d-none", !open);
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+        if (open) refreshNavNotifications();
+    }
+
+    function ticketTargetUrl(ticketId) {
+        if (isAdminAccount()) {
+            return "admin.html?tab=tickets&ticket=" + encodeURIComponent(ticketId);
+        }
+        return "support.html?ticket=" + encodeURIComponent(ticketId);
+    }
+
+    async function openNotification(noteId, ticketId) {
+        try {
+            var base = (typeof window !== "undefined" && window.API_BASE) ? window.API_BASE : "";
+            var url = new URL(notificationsReadUrl(noteId), base || window.location.origin).href;
+            await window.DevPilotApi.request(url, { method: "POST" });
+        } catch (e) { /* still navigate */ }
+
+        closeNotifDropdown();
+        refreshNavNotifications();
+
+        if (!ticketId) return;
+
+        var path = (window.location.pathname || "").toLowerCase();
+        if (isAdminAccount() && path.indexOf("admin") >= 0) {
+            window.location.href = ticketTargetUrl(ticketId);
+            return;
+        }
+        if (!isAdminAccount() && path.indexOf("support") >= 0) {
+            window.location.href = ticketTargetUrl(ticketId);
+            return;
+        }
+        window.location.href = ticketTargetUrl(ticketId);
+    }
+
+    async function refreshNavNotifications() {
+        var list = document.getElementById("nav-notif-list");
+        if (!list || !window.DevPilotApi) return;
+        try {
+            var base = (typeof window !== "undefined" && window.API_BASE) ? window.API_BASE : "";
+            var url = new URL(notificationsListUrl(), base || window.location.origin).href;
+            var res = await window.DevPilotApi.request(url);
+            if (!res.ok) throw new Error(res.message || "Failed");
+            var data = res.data || {};
+            var items = data.items || data.Items || [];
+            var unread = data.unread ?? data.Unread ?? 0;
+            setBellUnread(unread);
+
+            if (!items.length) {
+                list.innerHTML = '<div class="nav-notif-empty">No notifications yet.</div>';
+                return;
+            }
+
+            list.innerHTML = items.slice(0, 20).map(function (n) {
+                var id = n.adminNotificationId || n.AdminNotificationId;
+                var ticketId = n.supportTicketId || n.SupportTicketId || "";
+                var read = !!(n.isRead || n.IsRead);
+                var title = n.title || n.Title || "Notification";
+                var body = n.body || n.Body || "";
+                var when = fmtNoteDate(n.createdAt || n.CreatedAt);
+                return (
+                    '<button type="button" class="nav-notif-item' + (read ? "" : " is-unread") + '" data-note-id="' +
+                    escapeHtml(String(id)) + '" data-ticket-id="' + escapeHtml(String(ticketId)) + '">' +
+                    '<div class="nav-notif-title">' + escapeHtml(title) + "</div>" +
+                    '<div class="nav-notif-body">' + escapeHtml(body) + "</div>" +
+                    (when ? '<div class="nav-notif-time">' + escapeHtml(when) + "</div>" : "") +
+                    "</button>"
+                );
+            }).join("");
+        } catch (err) {
+            list.innerHTML = '<div class="nav-notif-empty">Could not load notifications.</div>';
+        }
+    }
+
+    function bindNotificationsUi() {
+        var btn = document.getElementById("nav-notif-btn");
+        var menu = document.getElementById("nav-notif-menu");
+        var list = document.getElementById("nav-notif-list");
+        var markAll = document.getElementById("nav-notif-mark-all");
+        if (!btn || !menu || !list) return;
+
+        btn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            toggleNotifDropdown();
+        });
+
+        menu.addEventListener("click", function (e) {
+            e.stopPropagation();
+        });
+
+        list.addEventListener("click", function (e) {
+            var item = e.target.closest("[data-note-id]");
+            if (!item) return;
+            openNotification(item.getAttribute("data-note-id"), item.getAttribute("data-ticket-id"));
+        });
+
+        if (markAll) {
+            markAll.addEventListener("click", async function () {
+                try {
+                    var base = (typeof window !== "undefined" && window.API_BASE) ? window.API_BASE : "";
+                    var url = new URL(notificationsReadUrl(), base || window.location.origin).href;
+                    await window.DevPilotApi.request(url, { method: "POST" });
+                    await refreshNavNotifications();
+                } catch (err) { /* ignore */ }
+            });
+        }
+
+        if (!window.__navNotifDocBound) {
+            document.addEventListener("click", function () {
+                closeNotifDropdown();
+            });
+            window.__navNotifDocBound = true;
+        }
+
+        window.DevPilotNotifications = {
+            refresh: function () { return refreshNavNotifications(); }
+        };
+
+        refreshNavNotifications();
+    }
+
     function renderNavbar(isAdmin) {
+        const notifHtml = isLoggedIn
+            ? `<div class="nav-notif dropdown">
+                 <button type="button" class="nav-notif-btn" id="nav-notif-btn" aria-label="Notifications" aria-expanded="false" aria-haspopup="true">
+                   <i class="fa-solid fa-bell" aria-hidden="true"></i>
+                   <span class="nav-notif-badge d-none" id="nav-notif-badge" aria-hidden="true">0</span>
+                 </button>
+                 <div class="nav-notif-menu d-none" id="nav-notif-menu" role="menu">
+                   <div class="nav-notif-head">
+                     <strong>Notifications</strong>
+                     <button type="button" class="btn btn-outline-card btn-sm" id="nav-notif-mark-all" style="width:auto;">Mark all read</button>
+                   </div>
+                   <div class="nav-notif-list" id="nav-notif-list">
+                     <div class="nav-notif-empty">Loading…</div>
+                   </div>
+                 </div>
+               </div>`
+            : "";
+
         const authButtonsHtml = isLoggedIn
-            ? `<div class="nav-auth-actions d-flex flex-wrap gap-2">
+            ? `<div class="nav-auth-actions d-flex flex-wrap align-items-center gap-2">
+                 ${notifHtml}
                  <a class="btn btn-outline-light" href="dashboard.html">Dashboard</a>
                  <a class="btn btn-outline-light" href="settings.html">Settings</a>
                  <button type="button" class="btn btn-danger" id="nav-logout-btn">Log Out</button>
@@ -154,10 +346,17 @@ if (navbarBox) {
                 }
             });
         }
+
+        if (isLoggedIn) {
+            bindNotificationsUi();
+        }
     }
 
     document.addEventListener("keydown", function (e) {
-        if (e.key === "Escape") closeSidebar();
+        if (e.key === "Escape") {
+            closeSidebar();
+            closeNotifDropdown();
+        }
     });
 
     const initialAdmin = isLoggedIn

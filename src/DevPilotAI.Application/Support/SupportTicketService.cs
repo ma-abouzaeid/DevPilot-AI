@@ -421,10 +421,12 @@ public class SupportTicketService : ISupportTicketService
     public async Task<IReadOnlyList<AdminNotificationDto>> ListAdminNotificationsAsync(
         int adminUserId,
         int take = 30,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool backfillOpenTickets = true)
     {
         if (take < 1 || take > 100) take = 30;
-        await BackfillOpenTicketNotificationsAsync(adminUserId, cancellationToken);
+        if (backfillOpenTickets)
+            await BackfillOpenTicketNotificationsAsync(adminUserId, cancellationToken);
 
         return await _db.AdminNotifications.AsNoTracking()
             .Where(n => n.AdminUserId == adminUserId)

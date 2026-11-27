@@ -39,6 +39,11 @@
                         <label class="form-label" for="profile-email-display">Email</label>
                         <input type="email" class="form-control" id="profile-email-display" readonly disabled>
                         <small class="text-gray" id="email-verified-hint">Loading…</small>
+                        <p class="text-gray small mb-2 mt-2" dir="rtl">لتغيير الايميل برجاء التواصل مع الدعم الذكي</p>
+                        <a id="settings-telegram-bot-link" class="btn btn-outline-card btn-sm" style="width:auto;"
+                           href="https://t.me/DevPilotSupportBot" target="_blank" rel="noopener">
+                            <i class="fa-brands fa-telegram"></i> Open Telegram bot
+                        </a>
                     </div>
                     <button type="submit" class="btn btn-primary" id="btn-save-profile">
                         <i class="fa-solid fa-floppy-disk"></i> Save name
@@ -85,11 +90,6 @@
                         <i class="fa-solid fa-paper-plane"></i> Send feedback
                     </button>
                 </form>
-            </div>
-
-            <div class="surface-card mb-4">
-                <h2 class="h5 mb-3">Notifications</h2>
-                <div id="user-notifications" class="text-gray">Loading…</div>
             </div>
 
             <div class="surface-card border-danger-subtle">

@@ -80,6 +80,12 @@
             appendMessage(msg);
         });
 
+        hubConnection.on("userNotification", function () {
+            if (window.DevPilotNotifications && typeof window.DevPilotNotifications.refresh === "function") {
+                window.DevPilotNotifications.refresh();
+            }
+        });
+
         hubConnection.on("ticketUpdated", function () {
             if (activeTicketId) openTicket(activeTicketId, false);
             loadTickets();
@@ -322,5 +328,13 @@
 
     document.getElementById("btn-refresh-tickets").addEventListener("click", loadTickets);
 
-    loadTickets();
+    ensureHub().catch(function () { /* bell still loads via REST */ });
+
+    loadTickets().then(function () {
+        var params = new URLSearchParams(window.location.search);
+        var ticketParam = params.get("ticket");
+        if (ticketParam) {
+            openTicket(Number(ticketParam), true).catch(function () { /* ignore */ });
+        }
+    }).catch(function () { /* ignore */ });
 })();

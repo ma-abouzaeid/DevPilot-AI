@@ -19,7 +19,11 @@ public interface ISupportTicketService
         CancellationToken cancellationToken = default,
         bool asAdmin = false);
     Task EnsureCanAccessChatAsync(int ticketId, int userId, bool isAdmin, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<AdminNotificationDto>> ListAdminNotificationsAsync(int adminUserId, int take = 30, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AdminNotificationDto>> ListAdminNotificationsAsync(
+        int adminUserId,
+        int take = 30,
+        CancellationToken cancellationToken = default,
+        bool backfillOpenTickets = true);
     Task<int> CountUnreadAdminNotificationsAsync(int adminUserId, CancellationToken cancellationToken = default);
     Task MarkAdminNotificationsReadAsync(int adminUserId, long? notificationId = null, CancellationToken cancellationToken = default);
 }
