@@ -230,7 +230,7 @@
         if (tab === "errors") loadErrors();
         if (tab === "tickets") loadTicketsTab();
         if (tab === "payments") loadPaymentsAdmin();
-        if (tab === "feedback") loadFeedbackAdmin();
+        if (tab === "feedback") loadFeedbackAdmin().catch(onError);
     }
 
     async function loadCreditCosts() {
@@ -1494,7 +1494,15 @@
     async function loadFeedbackAdmin() {
         var host = document.getElementById("feedback-list");
         if (!host) return;
-        var res = await api("/api/Feedback");
+        host.innerHTML = '<div class="text-gray">Loading…</div>';
+        var res;
+        try {
+            res = await api("/api/Feedback");
+        } catch (err) {
+            host.innerHTML = '<div class="empty-state text-danger">' +
+                escapeHtml(err.message || "Could not load feedback.") + "</div>";
+            throw err;
+        }
         var items = res.data || [];
         if (!items.length) {
             host.innerHTML = '<div class="empty-state">No feedback yet.</div>';

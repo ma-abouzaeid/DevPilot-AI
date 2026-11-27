@@ -126,9 +126,21 @@ public class BrevoEmailService : IEmailService
     {
         if (templateFileName.Contains("PasswordReset", StringComparison.OrdinalIgnoreCase))
         {
-            return "<html><body style='font-family:sans-serif;'><h2>Reset your DevPilot AI password</h2><p>Hello {{RecipientName}},</p><p>Please reset your password using the link below:</p><p><a href='{{ResetUrl}}'>Reset Password</a></p><p>This link will expire in 30 minutes.</p></body></html>";
+            return "<html><body style=\"margin:0;background:#F4F6F8;font-family:sans-serif;color:#0B1F33;\">" +
+                   "<div style=\"max-width:560px;margin:32px auto;background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:28px;\">" +
+                   "<h2 style=\"color:#0F766E;margin:0 0 12px;\">DevPilot AI</h2>" +
+                   "<h3 style=\"margin:0 0 12px;\">Reset your password</h3>" +
+                   "<p>Hello {{RecipientName}},</p>" +
+                   "<p><a href=\"{{ResetUrl}}\" style=\"display:inline-block;background:#0F766E;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;\">Reset Password</a></p>" +
+                   "<p style=\"color:#64748B;\">This link expires in 30 minutes.</p></div></body></html>";
         }
 
-        return "<html><body style='font-family:sans-serif;'><h2>Verify your DevPilot AI account</h2><p>Hello {{RecipientName}},</p><p>Your verification code is: <strong>{{OtpCode}}</strong></p><p>This code will expire in 15 minutes.</p></body></html>";
+        return "<html><body style=\"margin:0;background:#F4F6F8;font-family:sans-serif;color:#0B1F33;\">" +
+               "<div style=\"max-width:560px;margin:32px auto;background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:28px;\">" +
+               "<h2 style=\"color:#0F766E;margin:0 0 12px;\">DevPilot AI</h2>" +
+               "<h3 style=\"margin:0 0 12px;\">Verify your email</h3>" +
+               "<p>Hello {{RecipientName}},</p>" +
+               "<p style=\"font-size:28px;letter-spacing:0.25em;color:#0F766E;font-weight:700;\">{{OtpCode}}</p>" +
+               "<p style=\"color:#64748B;\">This code expires in 15 minutes.</p></div></body></html>";
     }
 }

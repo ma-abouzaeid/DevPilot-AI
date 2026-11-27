@@ -10,7 +10,9 @@
     const alertBox = document.getElementById("page-alert");
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
-    const viewMode = (params.get("mode") || "").toLowerCase() === "view";
+    const modeParam = (params.get("mode") || "").toLowerCase();
+    const viewMode = modeParam === "view";
+    const retryMode = modeParam === "retry" || params.get("retry") === "1";
 
     function escapeHtml(value) {
         return String(value || "")
@@ -136,7 +138,8 @@
                 : "") +
             '<div class="challenge-feedback-actions">' +
             '<a class="btn btn-outline-card" style="width:auto;" href="challenges.html">Back to challenges</a>' +
-            '<a class="btn btn-primary" style="width:auto;" href="challenge-details.html?id=' + encodeURIComponent(id) + '">Retry challenge</a>' +
+            '<a class="btn btn-primary" style="width:auto;" href="challenge-details.html?id=' + encodeURIComponent(id) + '&mode=retry">' +
+            '<i class="fa-solid fa-rotate"></i> Retry challenge</a>' +
             "</div></div>"
         );
     }
@@ -196,10 +199,12 @@
         const solved = !!(c.solvedByCurrentUser || c.SolvedByCurrentUser);
         const best = c.bestPointsForCurrentUser ?? c.BestPointsForCurrentUser;
         const latestAttempt = normalizeAttempt(c.latestAttempt || c.LatestAttempt, maxPoints);
-        const showReview = viewMode || (solved && latestAttempt);
+        const showReview = viewMode || (!retryMode && solved && latestAttempt);
         const editorCode = showReview && latestAttempt && latestAttempt.submittedCode
             ? latestAttempt.submittedCode
-            : starter;
+            : (retryMode && latestAttempt && latestAttempt.submittedCode
+                ? latestAttempt.submittedCode
+                : starter);
 
         root.innerHTML =
             '<div class="row g-4">' +
@@ -237,7 +242,7 @@
             "</div></div>" +
             (showReview
                 ? '<div class="d-flex flex-wrap gap-2 mt-3">' +
-                  '<a class="btn btn-primary" style="width:auto;" href="challenge-details.html?id=' + encodeURIComponent(id) + '">' +
+                  '<a class="btn btn-primary" style="width:auto;" href="challenge-details.html?id=' + encodeURIComponent(id) + '&mode=retry">' +
                   '<i class="fa-solid fa-rotate"></i> Retry challenge</a>' +
                   '<a class="btn btn-outline-card" style="width:auto;" href="challenges.html">Back to list</a>' +
                   "</div>"

@@ -205,15 +205,24 @@ public class ExceptionHandlingMiddleware
             return ((int)HttpStatusCode.Conflict, "RESOURCE_CONFLICT", "A resource with these details already exists.", new List<ValidationErrorDetail>());
         }
 
+        if (innerMsg.Contains("Invalid column name", StringComparison.OrdinalIgnoreCase) ||
+            innerMsg.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase))
+        {
+            return ((int)HttpStatusCode.InternalServerError, "DATABASE_SCHEMA_MISMATCH",
+                "The database schema is out of date. Apply pending SQL scripts/migrations and try again.",
+                new List<ValidationErrorDetail>());
+        }
+
         return ((int)HttpStatusCode.InternalServerError, "INTERNAL_SERVER_ERROR", "An unexpected database error occurred while persisting changes.", new List<ValidationErrorDetail>());
     }
 
     private static (int StatusCode, string ErrorCode, string Message, List<ValidationErrorDetail> Errors) HandleSqlException(SqlException sqlEx)
     {
-        if (sqlEx.Number == 208)
+        // 207 = invalid column, 208 = invalid object
+        if (sqlEx.Number == 207 || sqlEx.Number == 208)
         {
             return ((int)HttpStatusCode.InternalServerError, "DATABASE_SCHEMA_MISMATCH",
-                "The database schema is missing a required object. Apply pending migrations and try again.",
+                "The database schema is out of date. Apply pending SQL scripts/migrations and try again.",
                 new List<ValidationErrorDetail>());
         }
 

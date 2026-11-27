@@ -104,7 +104,7 @@
                     ? '<a class="btn btn-outline-card" style="width:auto;" href="challenge-details.html?id=' +
                       encodeURIComponent(id) + '&mode=view">View</a>' +
                       '<a class="btn btn-primary" style="width:auto;" href="challenge-details.html?id=' +
-                      encodeURIComponent(id) + '">Retry</a>'
+                      encodeURIComponent(id) + '&mode=retry">Retry</a>'
                     : '<a class="btn btn-primary" href="challenge-details.html?id=' + encodeURIComponent(id) + '">Solve</a>') +
                 "</div></div></article>"
             );

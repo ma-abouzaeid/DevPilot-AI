@@ -607,7 +607,9 @@ public class AuthService : IAuthService
             var verification = new EmailVerification
             {
                 UserId = user.UserId,
+                CodeHash = string.Empty,
                 TokenHash = resetTokenHash,
+                PendingEmail = null,
                 Method = "ResetLink",
                 ExpiresAt = DateTime.UtcNow.AddMinutes(30),
                 Attempts = 0,
