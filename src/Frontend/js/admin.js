@@ -1220,6 +1220,13 @@
         ticketsState.joinedId = ticketId;
     }
 
+    window.addEventListener("pagehide", function () {
+        if (ticketsState.hub && ticketsState.joinedId) {
+            try { ticketsState.hub.invoke("LeaveTicket", ticketsState.joinedId); } catch (e) { /* ignore */ }
+            ticketsState.joinedId = null;
+        }
+    });
+
     function appendAdminChatMessage(msg) {
         var box = document.getElementById("admin-chat-messages");
         if (!box) return;

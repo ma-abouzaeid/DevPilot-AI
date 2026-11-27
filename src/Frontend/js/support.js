@@ -134,6 +134,14 @@
         joinedTicketId = null;
     }
 
+    // Clear ticket room ASAP on navigation so presence does not linger on LongPolling.
+    window.addEventListener("pagehide", function () {
+        if (hubConnection && joinedTicketId) {
+            try { hubConnection.invoke("LeaveTicket", joinedTicketId); } catch (e) { /* ignore */ }
+            joinedTicketId = null;
+        }
+    });
+
     function appendMessage(msg) {
         const box = document.getElementById("chat-messages");
         if (!box) return;

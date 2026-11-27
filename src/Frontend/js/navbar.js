@@ -246,9 +246,20 @@ if (navbarBox) {
         }, 250);
     }
 
+    function startNavNotifPolling() {
+        if (window.__navNotifPollTimer || !isLoggedIn) return;
+        window.__navNotifPollTimer = setInterval(function () {
+            if (document.hidden) return;
+            refreshNavNotifications();
+        }, 12000);
+    }
+
     async function ensureNavNotificationsHub() {
         if (!isLoggedIn || !window.DevPilotApi) return;
-        if (window.__navNotifHubConnecting || window.__navNotifHub) return;
+        startNavNotifPolling();
+        if (window.__navNotifHubConnecting) return;
+        // 1 === HubConnectionState.Connected
+        if (window.__navNotifHub && window.__navNotifHub.state === 1) return;
         window.__navNotifHubConnecting = true;
         try {
             await loadSignalRScript();
@@ -264,6 +275,11 @@ if (navbarBox) {
             }
 
             var base = (typeof window !== "undefined" && window.API_BASE) ? window.API_BASE : "";
+            if (window.__navNotifHub) {
+                try { await window.__navNotifHub.stop(); } catch (e) { /* ignore */ }
+                window.__navNotifHub = null;
+            }
+
             var hub = new signalR.HubConnectionBuilder()
                 .withUrl(new URL("/hubs/support-tickets", base || window.location.origin).href, hubOptions)
                 .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
@@ -272,6 +288,11 @@ if (navbarBox) {
             hub.on("userNotification", function () { scheduleNavNotifRefresh(); });
             hub.on("adminNotification", function () { scheduleNavNotifRefresh(); });
             hub.onreconnected(function () { scheduleNavNotifRefresh(); });
+            hub.onclose(function () {
+                window.__navNotifHub = null;
+                // Retry shortly so Home/other pages stay live after drops.
+                setTimeout(function () { ensureNavNotificationsHub(); }, 3000);
+            });
 
             await hub.start();
             window.__navNotifHub = hub;
@@ -279,13 +300,20 @@ if (navbarBox) {
 
             if (!window.__navNotifVisibilityBound) {
                 document.addEventListener("visibilitychange", function () {
-                    if (!document.hidden) scheduleNavNotifRefresh();
+                    if (!document.hidden) {
+                        scheduleNavNotifRefresh();
+                        ensureNavNotificationsHub();
+                    }
                 });
-                window.addEventListener("focus", function () { scheduleNavNotifRefresh(); });
+                window.addEventListener("focus", function () {
+                    scheduleNavNotifRefresh();
+                    ensureNavNotificationsHub();
+                });
                 window.__navNotifVisibilityBound = true;
             }
         } catch (err) {
             window.__navNotifHub = null;
+            setTimeout(function () { ensureNavNotificationsHub(); }, 5000);
         } finally {
             window.__navNotifHubConnecting = false;
         }

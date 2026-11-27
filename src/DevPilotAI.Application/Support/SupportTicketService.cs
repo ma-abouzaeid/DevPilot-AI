@@ -12,16 +12,13 @@ public class SupportTicketService : ISupportTicketService
 {
     private readonly IApplicationDbContext _db;
     private readonly ISupportTicketRealtime _realtime;
-    private readonly ISupportTicketPresence _presence;
 
     public SupportTicketService(
         IApplicationDbContext db,
-        ISupportTicketRealtime realtime,
-        ISupportTicketPresence presence)
+        ISupportTicketRealtime realtime)
     {
         _db = db;
         _realtime = realtime;
-        _presence = presence;
     }
 
     public async Task<SupportTicketDetailsDto> CreateAsync(
@@ -334,37 +331,28 @@ public class SupportTicketService : ISupportTicketService
 
         await _realtime.MessageReceivedAsync(ticketId, dto, cancellationToken);
 
-        // Notify assigned admin when the user sends a message — skip if admin has that chat open.
+        // Always persist + push notifications. Open-chat suppression is handled on the client
+        // (auto mark-read). Skipping here caused missed bells when LongPolling disconnect lagged.
         if (!fromAdmin && userId == ticket.CreatedByUserId && ticket.AssignedAdminUserId.HasValue)
         {
-            var adminId = ticket.AssignedAdminUserId.Value;
-            if (!_presence.IsViewingTicket(adminId, ticketId))
-            {
-                await NotifyAdminAsync(
-                    adminId,
-                    ticketId,
-                    "TICKET_MESSAGE",
-                    "New ticket message",
-                    $"{senderName} replied on {ticket.TicketCode}",
-                    cancellationToken);
-            }
+            await NotifyAdminAsync(
+                ticket.AssignedAdminUserId.Value,
+                ticketId,
+                "TICKET_MESSAGE",
+                "New ticket message",
+                $"{senderName} replied on {ticket.TicketCode}",
+                cancellationToken);
         }
 
-        // Notify the ticket owner when an admin replies — skip if the user has that chat open.
         if (fromAdmin && ticket.CreatedByUserId != userId)
         {
-            var ownerId = ticket.CreatedByUserId;
-            if (!_presence.IsViewingTicket(ownerId, ticketId))
-            {
-                // NotifyAdminAsync also pushes userNotification for the nav bell.
-                await NotifyAdminAsync(
-                    ownerId,
-                    ticketId,
-                    "TICKET_ADMIN_REPLY",
-                    "Support replied",
-                    $"Admin replied on {ticket.TicketCode}",
-                    cancellationToken);
-            }
+            await NotifyAdminAsync(
+                ticket.CreatedByUserId,
+                ticketId,
+                "TICKET_ADMIN_REPLY",
+                "Support replied",
+                $"Admin replied on {ticket.TicketCode}",
+                cancellationToken);
         }
 
         return dto;
@@ -587,14 +575,27 @@ public class SupportTicketService : ISupportTicketService
         string body,
         CancellationToken cancellationToken)
     {
-        var alreadyExists = await _db.AdminNotifications.AsNoTracking()
-            .AnyAsync(n =>
-                n.AdminUserId == adminUserId &&
-                n.SupportTicketId == ticketId &&
-                n.Type == type &&
-                !n.IsRead,
-                cancellationToken);
-        if (alreadyExists) return;
+        // Chat replies: always create a fresh unread row so the bell count moves.
+        // Other types (opened/accepted): keep dedupe of unread duplicates.
+        var isChatReply = type is "TICKET_MESSAGE" or "TICKET_ADMIN_REPLY";
+        if (!isChatReply)
+        {
+            var alreadyExists = await _db.AdminNotifications.AsNoTracking()
+                .AnyAsync(n =>
+                    n.AdminUserId == adminUserId &&
+                    n.SupportTicketId == ticketId &&
+                    n.Type == type &&
+                    !n.IsRead,
+                    cancellationToken);
+            if (alreadyExists)
+            {
+                await PushNotificationAsync(
+                    adminUserId,
+                    new AdminNotificationDto(0, ticketId, type, title, body, false, DateTime.UtcNow),
+                    cancellationToken);
+                return;
+            }
+        }
 
         var notification = new AdminNotification
         {
@@ -609,20 +610,28 @@ public class SupportTicketService : ISupportTicketService
         _db.AdminNotifications.Add(notification);
         await _db.SaveChangesAsync(cancellationToken);
 
-        var dto = new AdminNotificationDto(
-            notification.AdminNotificationId,
-            ticketId,
-            notification.Type,
-            notification.Title,
-            notification.Body,
-            false,
-            notification.CreatedAt);
+        await PushNotificationAsync(
+            adminUserId,
+            new AdminNotificationDto(
+                notification.AdminNotificationId,
+                ticketId,
+                notification.Type,
+                notification.Title,
+                notification.Body,
+                false,
+                notification.CreatedAt),
+            cancellationToken);
+    }
 
+    private async Task PushNotificationAsync(
+        int userId,
+        AdminNotificationDto dto,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            // Admin group (admins) + user group (everyone) so the nav bell updates live.
-            await _realtime.AdminNotificationAsync(adminUserId, dto, cancellationToken);
-            await _realtime.UserNotificationAsync(adminUserId, dto, cancellationToken);
+            await _realtime.AdminNotificationAsync(userId, dto, cancellationToken);
+            await _realtime.UserNotificationAsync(userId, dto, cancellationToken);
         }
         catch
         {
