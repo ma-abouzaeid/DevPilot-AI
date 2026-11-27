@@ -1152,6 +1152,143 @@ public class AdminService : IAdminService
         return new PagedResultDto<AdminSystemErrorDto>(items, total, page, pageSize);
     }
 
+    public async Task<AdminAiUsageCapacityDto> GetAiUsageCapacityAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var events = await _db.AIUsageEvents.AsNoTracking()
+            .OrderByDescending(e => e.CreatedAt)
+            .Take(2000)
+            .Select(e => new
+            {
+                e.OperationType,
+                e.Status,
+                e.TotalTokens,
+                e.CreditsCharged,
+                e.DurationMs,
+                e.ErrorCode,
+                e.ProviderId,
+                e.ModelId,
+                e.AIRequestId
+            })
+            .ToListAsync(cancellationToken);
+
+        var requestIds = events.Select(e => e.AIRequestId).Distinct().ToList();
+        var requestErrors = await _db.AIRequests.AsNoTracking()
+            .Where(r => requestIds.Contains(r.AIRequestId))
+            .ToDictionaryAsync(r => r.AIRequestId, r => r.ErrorMessage, cancellationToken);
+
+        var providerIds = events.Select(e => e.ProviderId).Where(id => id > 0).Distinct().ToList();
+        var modelIds = events.Where(e => e.ModelId.HasValue).Select(e => e.ModelId!.Value).Distinct().ToList();
+        var providers = await _db.AIProviders.IgnoreQueryFilters().AsNoTracking()
+            .Where(p => providerIds.Contains(p.AIProviderId))
+            .ToDictionaryAsync(p => p.AIProviderId, p => p.Name, cancellationToken);
+        var models = await _db.AIModels.IgnoreQueryFilters().AsNoTracking()
+            .Where(m => modelIds.Contains(m.AIModelId))
+            .ToDictionaryAsync(m => m.AIModelId, m => m.ModelName, cancellationToken);
+
+        var charged = events.Where(e =>
+            string.Equals(e.Status, "Charged", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(e.Status, "Success", StringComparison.OrdinalIgnoreCase)).ToList();
+        var failed = events.Where(e => string.Equals(e.Status, "Failed", StringComparison.OrdinalIgnoreCase)).ToList();
+
+        var opStats = events
+            .GroupBy(e => string.IsNullOrWhiteSpace(e.OperationType) ? "Unknown" : e.OperationType)
+            .Select(g =>
+            {
+                var ok = g.Where(e =>
+                    string.Equals(e.Status, "Charged", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(e.Status, "Success", StringComparison.OrdinalIgnoreCase)).ToList();
+                var bad = g.Where(e => string.Equals(e.Status, "Failed", StringComparison.OrdinalIgnoreCase)).ToList();
+                return new AdminAiOpStatsDto(
+                    g.Key,
+                    ok.Count,
+                    bad.Count,
+                    ok.Count == 0 ? 0 : ok.Average(e => e.TotalTokens ?? 0),
+                    ok.Count == 0 ? 0 : ok.Average(e => e.CreditsCharged ?? 0),
+                    ok.Count == 0 ? 0 : ok.Average(e => e.DurationMs ?? 0)
+                );
+            })
+            .OrderByDescending(o => o.ChargedCount + o.FailedCount)
+            .ToList();
+
+        var providerStats = events
+            .GroupBy(e =>
+            {
+                if (e.ProviderId > 0 && providers.TryGetValue(e.ProviderId, out var name)) return name;
+                return "Unknown";
+            })
+            .Select(g =>
+            {
+                var ok = g.Where(e =>
+                    string.Equals(e.Status, "Charged", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(e.Status, "Success", StringComparison.OrdinalIgnoreCase)).ToList();
+                var bad = g.Where(e => string.Equals(e.Status, "Failed", StringComparison.OrdinalIgnoreCase)).ToList();
+                var modelId = g.Select(e => e.ModelId).FirstOrDefault(id => id.HasValue);
+                string? modelName = null;
+                if (modelId is int mid) models.TryGetValue(mid, out modelName);
+                var lastErr = bad
+                    .Select(e =>
+                        requestErrors.TryGetValue(e.AIRequestId, out var msg) && !string.IsNullOrWhiteSpace(msg)
+                            ? msg
+                            : e.ErrorCode)
+                    .FirstOrDefault(m => !string.IsNullOrWhiteSpace(m));
+                return new AdminAiProviderStatsDto(
+                    g.Key,
+                    modelName,
+                    ok.Count,
+                    bad.Count,
+                    ok.Count == 0 ? 0 : ok.Average(e => e.TotalTokens ?? 0),
+                    lastErr is null ? null : Truncate(lastErr, 180)
+                );
+            })
+            .OrderByDescending(p => p.FailCount + p.SuccessCount)
+            .ToList();
+
+        List<AdminAiCreditCostDto> costDtos;
+        try
+        {
+            var costRows = await _db.CreditActionCosts.AsNoTracking()
+                .OrderBy(c => c.SortOrder)
+                .ThenBy(c => c.ActionKey)
+                .ToListAsync(cancellationToken);
+            costDtos = costRows.Count > 0
+                ? costRows.Select(c => new AdminAiCreditCostDto(c.ActionKey, c.DisplayName, c.Credits)).ToList()
+                : DefaultCreditCostRows();
+        }
+        catch
+        {
+            costDtos = DefaultCreditCostRows();
+        }
+
+        var plans = await _db.Plans.AsNoTracking().ToListAsync(cancellationToken);
+        var freeCredits = plans.FirstOrDefault(p => p.Code == "FREE")?.CreditsPerPeriod ?? 100;
+        var proCredits = plans.FirstOrDefault(p => p.Code == "PRO")?.CreditsPerPeriod ?? 1000;
+
+        var totalCredits = charged.Sum(e => e.CreditsCharged ?? 0);
+        var totalTokens = charged.Sum(e => e.TotalTokens ?? 0);
+        var avgTokensPerCredit = totalCredits <= 0 ? 0 : (double)totalTokens / totalCredits;
+
+        return new AdminAiUsageCapacityDto(
+            opStats,
+            providerStats,
+            costDtos,
+            freeCredits,
+            proCredits,
+            avgTokensPerCredit,
+            charged.Count,
+            failed.Count
+        );
+    }
+
+    private static List<AdminAiCreditCostDto> DefaultCreditCostRows() =>
+    [
+        new("Debugging", "AI Debug", CreditCosts.Debugging),
+        new("KnowledgeAdaptation", "Knowledge reuse", CreditCosts.KnowledgeAdaptation),
+        new("ChallengeEvaluation", "Challenge evaluate", CreditCosts.ChallengeEvaluation),
+        new("CodeReview", "Code Review", CreditCosts.CodeReview),
+        new("ChallengeGeneration", "Challenge generation", CreditCosts.ChallengeGeneration)
+    ];
+
     public async Task<byte[]> ExportAiUsageExcelAsync(
         int? userId,
         string? status,

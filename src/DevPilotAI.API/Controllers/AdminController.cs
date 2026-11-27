@@ -224,6 +224,13 @@ public class AdminController : ControllerBase
         return Ok(ApiResponse<PagedResultDto<AdminAuditLogDto>>.SuccessResult(data, "Audit logs loaded.", GetTraceId()));
     }
 
+    [HttpGet("ai-usage/capacity")]
+    public async Task<IActionResult> AiUsageCapacity(CancellationToken cancellationToken = default)
+    {
+        var data = await _adminService.GetAiUsageCapacityAsync(cancellationToken);
+        return Ok(ApiResponse<AdminAiUsageCapacityDto>.SuccessResult(data, "AI usage capacity loaded.", GetTraceId()));
+    }
+
     [HttpGet("ai-usage")]
     public async Task<IActionResult> ListAiUsage(
         [FromQuery] int? userId,

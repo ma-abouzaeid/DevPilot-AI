@@ -305,3 +305,38 @@ public record AdminSystemErrorDto(
     DateTime CreatedAt,
     string DetailsJson
 );
+
+public record AdminAiUsageCapacityDto(
+    IReadOnlyList<AdminAiOpStatsDto> Operations,
+    IReadOnlyList<AdminAiProviderStatsDto> Providers,
+    IReadOnlyList<AdminAiCreditCostDto> CreditCosts,
+    int FreePlanCredits,
+    int ProPlanCredits,
+    double AvgTokensPerChargedCredit,
+    int ChargedEventCount,
+    int FailedEventCount
+);
+
+public record AdminAiOpStatsDto(
+    string Operation,
+    int ChargedCount,
+    int FailedCount,
+    double AvgTotalTokens,
+    double AvgCredits,
+    double AvgDurationMs
+);
+
+public record AdminAiProviderStatsDto(
+    string Provider,
+    string? Model,
+    int SuccessCount,
+    int FailCount,
+    double AvgTotalTokensOnSuccess,
+    string? LastError
+);
+
+public record AdminAiCreditCostDto(
+    string ActionKey,
+    string DisplayName,
+    int Credits
+);

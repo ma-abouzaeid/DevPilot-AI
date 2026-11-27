@@ -58,6 +58,9 @@ public interface IAdminService
         int pageSize,
         CancellationToken cancellationToken = default);
 
+    Task<AdminAiUsageCapacityDto> GetAiUsageCapacityAsync(
+        CancellationToken cancellationToken = default);
+
     Task<PagedResultDto<AdminSystemErrorDto>> ListSystemErrorsAsync(
         int? userId,
         string? pathContains,

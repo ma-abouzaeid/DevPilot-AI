@@ -20,7 +20,8 @@
         auditPage: 1,
         errorsPage: 1,
         plans: [],
-        detailsCache: {}
+        detailsCache: {},
+        aiCapacity: null
     };
 
     function prettyJson(raw) {
@@ -221,7 +222,10 @@
         if (tab === "plans") loadPlans();
         if (tab === "credits") loadCreditCosts();
         if (tab === "articles") loadArticles();
-        if (tab === "ai") loadAi();
+        if (tab === "ai") {
+            loadAiCapacity().catch(onError);
+            loadAi().catch(onError);
+        }
         if (tab === "audit") loadAudit();
         if (tab === "errors") loadErrors();
         if (tab === "tickets") loadTicketsTab();
@@ -497,6 +501,143 @@
         document.getElementById("article-reason").value = "";
     }
 
+    function round1(n) {
+        return Math.round((Number(n) || 0) * 10) / 10;
+    }
+
+    function formatInt(n) {
+        var v = Math.round(Number(n) || 0);
+        return v.toLocaleString();
+    }
+
+    function renderAiCapacityCards() {
+        var host = document.getElementById("ai-capacity-cards");
+        if (!host || !state.aiCapacity) return;
+        var d = state.aiCapacity;
+        var ops = val(d, "operations", "Operations") || [];
+        var providers = val(d, "providers", "Providers") || [];
+        var costs = val(d, "creditCosts", "CreditCosts") || [];
+        var freeCredits = Number(val(d, "freePlanCredits", "FreePlanCredits") || 100);
+        var proCredits = Number(val(d, "proPlanCredits", "ProPlanCredits") || 1000);
+        var avgTokPerCredit = Number(val(d, "avgTokensPerChargedCredit", "AvgTokensPerChargedCredit") || 0);
+        var chargedCount = Number(val(d, "chargedEventCount", "ChargedEventCount") || 0);
+        var failedCount = Number(val(d, "failedEventCount", "FailedEventCount") || 0);
+
+        var budgetEl = document.getElementById("ai-token-budget");
+        var creditsEl = document.getElementById("ai-credits-per-user");
+        if (creditsEl && !creditsEl.dataset.touched) {
+            creditsEl.value = String(freeCredits);
+        }
+        var budget = Number(budgetEl && budgetEl.value ? budgetEl.value : 0);
+        var creditsPerUser = Number(creditsEl && creditsEl.value ? creditsEl.value : freeCredits) || freeCredits;
+        var tokensPerUser = avgTokPerCredit > 0 ? avgTokPerCredit * creditsPerUser : 0;
+        var usersSupported = budget > 0 && tokensPerUser > 0 ? Math.floor(budget / tokensPerUser) : null;
+
+        var costCards = costs.map(function (c) {
+            var key = val(c, "actionKey", "ActionKey") || "";
+            var name = val(c, "displayName", "DisplayName") || key;
+            var credits = Number(val(c, "credits", "Credits") || 0);
+            var op = ops.find(function (o) {
+                return String(val(o, "operation", "Operation") || "").toLowerCase() === String(key).toLowerCase();
+            });
+            var avgTokens = op ? Number(val(op, "avgTotalTokens", "AvgTotalTokens") || 0) : (avgTokPerCredit * credits);
+            return (
+                '<div class="col-6 col-lg-3"><div class="surface-card stat-card h-100">' +
+                '<div class="stat-label">' + escapeHtml(name) + "</div>" +
+                '<p class="stat-value">' + credits + " cr</p>" +
+                '<div class="small text-gray">~' + formatInt(avgTokens) + " tokens / call</div>" +
+                "</div></div>"
+            );
+        }).join("");
+
+        var providerCards = providers.map(function (p) {
+            var name = val(p, "provider", "Provider") || "—";
+            var model = val(p, "model", "Model") || "";
+            var ok = Number(val(p, "successCount", "SuccessCount") || 0);
+            var bad = Number(val(p, "failCount", "FailCount") || 0);
+            var total = ok + bad;
+            var rate = total ? Math.round((ok / total) * 100) : 0;
+            var err = val(p, "lastError", "LastError") || "";
+            return (
+                '<div class="col-6 col-lg-3"><div class="surface-card stat-card h-100">' +
+                '<div class="stat-label">' + escapeHtml(name) + (model ? (" · " + escapeHtml(model)) : "") + "</div>" +
+                '<p class="stat-value">' + rate + "%</p>" +
+                '<div class="small text-gray">' + ok + " ok / " + bad + " fail</div>" +
+                (err ? '<div class="small text-danger mt-1">' + escapeHtml(String(err).slice(0, 90)) + "</div>" : "") +
+                "</div></div>"
+            );
+        }).join("");
+
+        var capacityCard =
+            '<div class="col-6 col-lg-3"><div class="surface-card stat-card h-100">' +
+            '<div class="stat-label">Tokens / credit (avg)</div>' +
+            '<p class="stat-value">' + formatInt(avgTokPerCredit) + "</p>" +
+            '<div class="small text-gray">From ' + chargedCount + " charged / " + failedCount + " failed</div>" +
+            "</div></div>" +
+            '<div class="col-6 col-lg-3"><div class="surface-card stat-card h-100">' +
+            '<div class="stat-label">Tokens / user / month</div>' +
+            '<p class="stat-value">' + (tokensPerUser ? formatInt(tokensPerUser) : "—") + "</p>" +
+            '<div class="small text-gray">' + creditsPerUser + " credits × avg tokens</div>" +
+            "</div></div>" +
+            '<div class="col-6 col-lg-3"><div class="surface-card stat-card h-100">' +
+            '<div class="stat-label">Users site can carry</div>' +
+            '<p class="stat-value">' + (usersSupported == null ? "—" : formatInt(usersSupported)) + "</p>" +
+            '<div class="small text-gray">' + (budget ? ("Budget " + formatInt(budget) + " tokens") : "Set monthly token budget") + "</div>" +
+            "</div></div>" +
+            '<div class="col-6 col-lg-3"><div class="surface-card stat-card h-100">' +
+            '<div class="stat-label">Plan credits</div>' +
+            '<p class="stat-value">F ' + freeCredits + " / P " + proCredits + "</p>" +
+            '<div class="small text-gray">Free / Pro per period</div>" +
+            "</div></div>";
+
+        var opRows = ops.map(function (o) {
+            return (
+                '<div class="col-6 col-lg-3"><div class="surface-card stat-card h-100">' +
+                '<div class="stat-label">' + escapeHtml(val(o, "operation", "Operation") || "—") + "</div>" +
+                '<p class="stat-value">' + formatInt(val(o, "avgTotalTokens", "AvgTotalTokens")) + "</p>" +
+                '<div class="small text-gray">avg tokens · ' +
+                round1(val(o, "avgCredits", "AvgCredits")) + " cr · " +
+                Number(val(o, "chargedCount", "ChargedCount") || 0) + " ok / " +
+                Number(val(o, "failedCount", "FailedCount") || 0) + " fail</div>" +
+                "</div></div>"
+            );
+        }).join("");
+
+        host.innerHTML =
+            capacityCard +
+            '<div class="col-12"><h3 class="h6 mb-0 mt-1">Credit costs vs observed tokens</h3></div>' +
+            costCards +
+            '<div class="col-12"><h3 class="h6 mb-0 mt-1">Provider health</h3></div>' +
+            (providerCards || '<div class="col-12 text-gray small">No provider stats yet.</div>') +
+            '<div class="col-12"><h3 class="h6 mb-0 mt-1">Per operation (charged)</h3></div>' +
+            (opRows || '<div class="col-12 text-gray small">No usage yet.</div>');
+
+        var hint = document.getElementById("ai-capacity-hint");
+        if (hint) {
+            if (usersSupported != null) {
+                hint.textContent =
+                    "At " + formatInt(budget) + " tokens/month and " + creditsPerUser +
+                    " credits/user (~" + formatInt(tokensPerUser) + " tokens), about " +
+                    formatInt(usersSupported) + " users can burn a full allowance.";
+            } else if (avgTokPerCredit > 0) {
+                hint.textContent =
+                    "Observed ~" + formatInt(avgTokPerCredit) +
+                    " tokens per credit. Enter your monthly token quota to estimate capacity.";
+            }
+        }
+    }
+
+    async function loadAiCapacity() {
+        var res = await api("/api/Admin/ai-usage/capacity");
+        state.aiCapacity = res.data || {};
+        try {
+            var saved = localStorage.getItem("adminAiTokenBudget");
+            var budgetEl = document.getElementById("ai-token-budget");
+            if (budgetEl && saved && !budgetEl.value) budgetEl.value = saved;
+        } catch (e) { /* ignore */ }
+        renderAiCapacityCards();
+    }
+
     async function loadAi() {
         var tbody = document.getElementById("ai-tbody");
         tbody.innerHTML = '<tr><td colspan="8" class="text-gray">Loading…</td></tr>';
@@ -684,7 +825,19 @@
     });
     document.getElementById("ai-refresh").addEventListener("click", function () {
         state.aiPage = 1;
+        loadAiCapacity().catch(onError);
         loadAi().catch(onError);
+    });
+    ["ai-token-budget", "ai-credits-per-user"].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener("input", function () {
+            if (id === "ai-credits-per-user") el.dataset.touched = "1";
+            if (id === "ai-token-budget") {
+                try { localStorage.setItem("adminAiTokenBudget", el.value || ""); } catch (e) { /* ignore */ }
+            }
+            renderAiCapacityCards();
+        });
     });
     document.getElementById("ai-export").addEventListener("click", function () {
         clearAlert();
@@ -1222,7 +1375,7 @@
             actions +=
                 '<form id="admin-resolve-form" class="support-resolve-box w-100">' +
                 '<label class="form-label" for="admin-resolution">How was it resolved?</label>' +
-                '<textarea class="form-control mb-2" id="admin-resolution" rows="3" minlength="2" maxlength="4000" required placeholder="مثال: اتحل — تم تفعيل الباقة / Fixed CORS config"></textarea>' +
+                '<textarea class="form-control mb-2" id="admin-resolution" rows="3" minlength="2" maxlength="4000" required placeholder="e.g. Fixed CORS config or plan activated"></textarea>' +
                 '<button type="submit" class="btn btn-success btn-sm" id="admin-resolve-btn">Resolve ticket</button>' +
                 "</form>";
         }

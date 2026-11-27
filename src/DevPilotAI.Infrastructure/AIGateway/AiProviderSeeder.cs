@@ -11,7 +11,8 @@ public static class AiProviderSeeder
 {
     private static readonly (string Name, string BaseUrl, string ApiKeyConfigName, int Priority, string Model, int Context)[] Providers =
     [
-        ("Gemini", "https://generativelanguage.googleapis.com/v1beta", "AIGateway:GeminiApiKey", 1, "gemini-flash-latest", 1_000_000),
+        // Stable flash model — "gemini-flash-latest" was timing out / returning 503 a lot.
+        ("Gemini", "https://generativelanguage.googleapis.com/v1beta", "AIGateway:GeminiApiKey", 1, "gemini-2.0-flash", 1_000_000),
         ("Groq", "https://api.groq.com/openai/v1", "AIGateway:GroqApiKey", 2, "openai/gpt-oss-120b", 131_072),
         ("NVIDIA", "https://integrate.api.nvidia.com/v1", "AIGateway:NvidiaApiKey", 3, "nvidia/nemotron-3.5-lightning-30b-a3b", 262_144),
         ("OpenRouter", "https://openrouter.ai/api/v1", "AIGateway:OpenRouterApiKey", 4, "qwen/qwen3-coder:free", 262_144)

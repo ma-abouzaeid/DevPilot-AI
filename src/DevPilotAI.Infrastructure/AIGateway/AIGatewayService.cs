@@ -153,13 +153,26 @@ public class AIGatewayService : IAIGateway
             catch (Exception ex)
             {
                 sw.Stop();
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+
                 retrySequence++;
                 _logger.LogError(ex, "AI Provider {ProviderName} failed for task {TaskType}", provider.Name, request.TaskType);
 
-                var isRateLimited = ex.Message.Contains("429", StringComparison.Ordinal)
-                                    || ex.Message.Contains("rate", StringComparison.OrdinalIgnoreCase)
-                                    || ex.Message.Contains("RESOURCE_EXHAUSTED", StringComparison.OrdinalIgnoreCase);
+                var msg = ex.Message ?? string.Empty;
+                var timedOut = ex is TaskCanceledException
+                               || msg.Contains("Timeout", StringComparison.OrdinalIgnoreCase);
+                var isRateLimited = timedOut
+                                    || msg.Contains("429", StringComparison.Ordinal)
+                                    || msg.Contains("503", StringComparison.Ordinal)
+                                    || msg.Contains("UNAVAILABLE", StringComparison.OrdinalIgnoreCase)
+                                    || msg.Contains("high demand", StringComparison.OrdinalIgnoreCase)
+                                    || msg.Contains("RESOURCE_EXHAUSTED", StringComparison.OrdinalIgnoreCase)
+                                    || msg.Contains("rate", StringComparison.OrdinalIgnoreCase);
 
+                // Skip a bad provider for a bit so Groq can answer instead of waiting again.
                 provider.Status = isRateLimited ? ProviderStatus.RateLimited : ProviderStatus.Active;
                 provider.RateLimitedUntil = isRateLimited ? DateTime.UtcNow.AddMinutes(5) : null;
                 provider.LastError = Truncate(ex.Message, 1000);
@@ -416,6 +429,7 @@ public class AIGatewayService : IAIGateway
         CancellationToken cancellationToken)
     {
         var client = _httpClientFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(45);
         var baseUrl = provider.BaseUrl.TrimEnd('/');
         var url = $"{baseUrl}/models/{model.ModelName}:generateContent";
 
@@ -479,6 +493,7 @@ public class AIGatewayService : IAIGateway
         CancellationToken cancellationToken)
     {
         var client = _httpClientFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(45);
         var endpoint = provider.BaseUrl.TrimEnd('/') + "/chat/completions";
 
         var payload = new Dictionary<string, object?>
