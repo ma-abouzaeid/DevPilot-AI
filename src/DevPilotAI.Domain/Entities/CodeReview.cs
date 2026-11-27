@@ -11,6 +11,9 @@ public class CodeReview : ISoftDeletable
     public int? GitHubRepositoryId { get; set; }
     public GitHubRepository? GitHubRepository { get; set; }
 
+    // Kept after disconnect so saved reviews still show the repo name.
+    public string RepositoryFullName { get; set; } = string.Empty;
+
     public string BranchName { get; set; } = "main";
     public string TargetTargetRef { get; set; } = string.Empty;
     public string ReviewSummary { get; set; } = string.Empty;

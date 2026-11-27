@@ -671,6 +671,10 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<string>("RepositoryFullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ReviewSummary")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");

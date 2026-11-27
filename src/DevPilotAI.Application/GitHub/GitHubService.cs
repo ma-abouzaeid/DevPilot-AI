@@ -182,19 +182,32 @@ public class GitHubService : IGitHubService
     public async Task<IReadOnlyList<GitHubRepoDto>> ListRepositoriesAsync(int userId, CancellationToken cancellationToken = default)
     {
         var (account, accessToken) = await GetConnectedAccountAsync(userId, cancellationToken);
+
+        // Prove the token still works before listing — public fallback made the UI look
+        // connected while tree/file calls failed until reconnect.
+        try
+        {
+            await _gitHub.GetAuthenticatedUserAsync(accessToken, cancellationToken);
+        }
+        catch (Exception ex) when (IsGitHubAuthFailure(ex))
+        {
+            await RemoveGitHubAccountAsync(account, cancellationToken);
+            throw AppError.InvalidRequest(
+                "GitHub connection expired. Click Connect GitHub again.",
+                "GITHUB_NOT_CONNECTED");
+        }
+
         IReadOnlyList<GitHubRepoInfo> repos;
         try
         {
             repos = await _gitHub.ListRepositoriesAsync(accessToken, cancellationToken);
         }
-        catch (Exception)
+        catch (Exception ex) when (IsGitHubAuthFailure(ex))
         {
-            // Bad token? list public repos so the page isn't empty.
-            repos = await _gitHub.ListPublicRepositoriesAsync(account.GitHubUsername, cancellationToken);
-            if (repos.Count == 0)
-            {
-                throw;
-            }
+            await RemoveGitHubAccountAsync(account, cancellationToken);
+            throw AppError.InvalidRequest(
+                "GitHub connection expired. Click Connect GitHub again.",
+                "GITHUB_NOT_CONNECTED");
         }
 
         if (repos.Count == 0 && !string.IsNullOrWhiteSpace(account.GitHubUsername))
@@ -232,18 +245,28 @@ public class GitHubService : IGitHubService
         string? branch = null,
         CancellationToken cancellationToken = default)
     {
-        var (_, accessToken) = await GetConnectedAccountAsync(userId, cancellationToken);
+        var (account, accessToken) = await GetConnectedAccountAsync(userId, cancellationToken);
         var (owner, repo) = SplitFullName(fullName);
         var resolvedBranch = string.IsNullOrWhiteSpace(branch) ? "main" : branch.Trim();
 
         IReadOnlyList<GitHubTreeItem> tree;
         try
         {
-            tree = await _gitHub.GetRepositoryTreeAsync(accessToken, owner, repo, resolvedBranch, cancellationToken);
+            try
+            {
+                tree = await _gitHub.GetRepositoryTreeAsync(accessToken, owner, repo, resolvedBranch, cancellationToken);
+            }
+            catch when (resolvedBranch == "main")
+            {
+                tree = await _gitHub.GetRepositoryTreeAsync(accessToken, owner, repo, "master", cancellationToken);
+            }
         }
-        catch when (resolvedBranch == "main")
+        catch (Exception ex) when (IsGitHubAuthFailure(ex))
         {
-            tree = await _gitHub.GetRepositoryTreeAsync(accessToken, owner, repo, "master", cancellationToken);
+            await RemoveGitHubAccountAsync(account, cancellationToken);
+            throw AppError.InvalidRequest(
+                "GitHub connection expired. Click Connect GitHub again.",
+                "GITHUB_NOT_CONNECTED");
         }
 
         return tree
@@ -262,9 +285,21 @@ public class GitHubService : IGitHubService
         string? branch = null,
         CancellationToken cancellationToken = default)
     {
-        var (_, accessToken) = await GetConnectedAccountAsync(userId, cancellationToken);
+        var (account, accessToken) = await GetConnectedAccountAsync(userId, cancellationToken);
         var (owner, repo) = SplitFullName(fullName);
-        var file = await _gitHub.GetFileContentAsync(accessToken, owner, repo, path, branch, cancellationToken);
+        GitHubFileContent file;
+        try
+        {
+            file = await _gitHub.GetFileContentAsync(accessToken, owner, repo, path, branch, cancellationToken);
+        }
+        catch (Exception ex) when (IsGitHubAuthFailure(ex))
+        {
+            await RemoveGitHubAccountAsync(account, cancellationToken);
+            throw AppError.InvalidRequest(
+                "GitHub connection expired. Click Connect GitHub again.",
+                "GITHUB_NOT_CONNECTED");
+        }
+
         if (string.IsNullOrWhiteSpace(file.Content))
         {
             throw AppError.InvalidRequest("File content is empty or binary and cannot be used.", "GITHUB_EMPTY_FILE");
@@ -434,6 +469,7 @@ public class GitHubService : IGitHubService
         {
             UserId = userId,
             GitHubRepositoryId = repoEntity.GitHubRepositoryId,
+            RepositoryFullName = dto.FullName,
             BranchName = branch,
             TargetTargetRef = string.Join(", ", bundles.Select(b => b.Path)),
             ReviewSummary = parsed.Summary,
@@ -520,12 +556,7 @@ public class GitHubService : IGitHubService
 
         var items = rows.Select(r =>
         {
-            var repoName = r.GitHubRepository?.FullName;
-            if (string.IsNullOrWhiteSpace(repoName))
-            {
-                repoName = "Repository unavailable";
-            }
-
+            var repoName = ResolveReviewRepoName(r);
             var summary = r.ReviewSummary ?? string.Empty;
             if (summary.Length > 160) summary = summary[..160] + "…";
 
@@ -560,7 +591,7 @@ public class GitHubService : IGitHubService
 
         return new GitHubCodeReviewResultDto(
             review.CodeReviewId,
-            review.GitHubRepository?.FullName ?? "Repository unavailable",
+            ResolveReviewRepoName(review),
             review.BranchName,
             review.ReviewSummary,
             paths,
@@ -655,12 +686,20 @@ public class GitHubService : IGitHubService
         if (repos.Count > 0)
         {
             var repoIds = repos.Select(r => r.GitHubRepositoryId).ToList();
+            var repoNames = repos.ToDictionary(r => r.GitHubRepositoryId, r => r.FullName);
             var reviews = await _db.CodeReviews
                 .IgnoreQueryFilters()
                 .Where(r => r.GitHubRepositoryId != null && repoIds.Contains(r.GitHubRepositoryId.Value))
                 .ToListAsync(cancellationToken);
             foreach (var review in reviews)
             {
+                if (string.IsNullOrWhiteSpace(review.RepositoryFullName)
+                    && review.GitHubRepositoryId is int rid
+                    && repoNames.TryGetValue(rid, out var fullName))
+                {
+                    review.RepositoryFullName = fullName;
+                }
+
                 review.GitHubRepositoryId = null;
             }
 
@@ -669,6 +708,43 @@ public class GitHubService : IGitHubService
 
         _db.GitHubAccounts.Remove(account);
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static string ResolveReviewRepoName(CodeReview review)
+    {
+        if (!string.IsNullOrWhiteSpace(review.RepositoryFullName))
+        {
+            return review.RepositoryFullName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(review.GitHubRepository?.FullName))
+        {
+            return review.GitHubRepository.FullName;
+        }
+
+        return "Unknown repository";
+    }
+
+    private static bool IsGitHubAuthFailure(Exception ex)
+    {
+        if (ex.Data["ErrorCode"] is string code
+            && (code.Contains("UNAUTHORIZED", StringComparison.OrdinalIgnoreCase)
+                || code.Contains("GITHUB_NOT_CONNECTED", StringComparison.OrdinalIgnoreCase)
+                || code.Contains("FORBIDDEN", StringComparison.OrdinalIgnoreCase)
+                || code.Contains("GITHUB_FORBIDDEN", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        if (ex is UnauthorizedAccessException)
+        {
+            return true;
+        }
+
+        var msg = ex.Message ?? string.Empty;
+        return msg.Contains("invalid or expired", StringComparison.OrdinalIgnoreCase)
+               || msg.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase)
+               || msg.Contains("401", StringComparison.Ordinal);
     }
 
     private async Task<GitHubRepository> UpsertRepositoryAsync(GitHubAccount account, GitHubRepoInfo repo, CancellationToken cancellationToken)

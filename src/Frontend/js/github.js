@@ -242,8 +242,11 @@
             try {
                 await loadRepos();
             } catch (err) {
-                // Stay connected in UI; repos panel shows the error.
-                showAlert(err.message || "Failed to load repositories", "danger");
+                const msg = err && err.message ? String(err.message) : "";
+                if (/expired|not connected|reconnect/i.test(msg)) {
+                    renderDisconnectedUi();
+                }
+                showAlert(msg || "Failed to load repositories", "danger");
             }
         } else {
             renderDisconnectedUi();
@@ -340,7 +343,26 @@
         const url = new URL("/api/GitHub/repos/" + encodeURIComponent(parts[0]) + "/" + encodeURIComponent(parts[1]) + "/tree", API_BASE);
         if (branch) url.searchParams.set("branch", branch);
         const res = await window.DevPilotApi.request(url.href);
-        const items = res.data || [];
+        if (!res.ok) {
+            const needsReconnect = /reconnect|expired|invalid|unauthorized|not connected|GITHUB_/i.test(
+                (res.message || "") + " " + (res.errorCode || "")
+            );
+            filesList.innerHTML =
+                '<div class="empty-state">' +
+                escapeHtml(res.message || "Failed to load files.") +
+                '<div class="mt-2"><button type="button" class="btn btn-outline-card btn-sm" style="width:auto;" id="btn-reconnect-files">' +
+                (needsReconnect ? "Clear & reconnect GitHub" : "Try reconnect") +
+                "</button></div>" +
+                "</div>";
+            bindReconnectButton("btn-reconnect-files");
+            if (needsReconnect) {
+                btnConnect.classList.remove("d-none");
+                connectionText.textContent = "GitHub connection expired. Reconnect to browse files.";
+            }
+            throw new Error(res.message || "Failed to load files");
+        }
+
+        const items = Array.isArray(res.data) ? res.data : [];
         if (!items.length) {
             filesList.innerHTML = '<div class="empty-state">No files found.</div>';
             return;
