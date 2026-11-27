@@ -1177,14 +1177,13 @@ public class AdminService : IAdminService
             .Where(r => requestIds.Contains(r.AIRequestId))
             .ToDictionaryAsync(r => r.AIRequestId, r => r.ErrorMessage, cancellationToken);
 
-        var providerIds = events.Select(e => e.ProviderId).Where(id => id > 0).Distinct().ToList();
-        var modelIds = events.Where(e => e.ModelId.HasValue).Select(e => e.ModelId!.Value).Distinct().ToList();
-        var providers = await _db.AIProviders.IgnoreQueryFilters().AsNoTracking()
-            .Where(p => providerIds.Contains(p.AIProviderId))
-            .ToDictionaryAsync(p => p.AIProviderId, p => p.Name, cancellationToken);
-        var models = await _db.AIModels.IgnoreQueryFilters().AsNoTracking()
-            .Where(m => modelIds.Contains(m.AIModelId))
-            .ToDictionaryAsync(m => m.AIModelId, m => m.ModelName, cancellationToken);
+        var configuredProviders = await _db.AIProviders.AsNoTracking()
+            .Include(p => p.Models)
+            .OrderBy(p => p.Priority)
+            .ThenBy(p => p.Name)
+            .ToListAsync(cancellationToken);
+
+        var providerNameById = configuredProviders.ToDictionary(p => p.AIProviderId, p => p.Name);
 
         var charged = events.Where(e =>
             string.Equals(e.Status, "Charged", StringComparison.OrdinalIgnoreCase)
@@ -1211,38 +1210,65 @@ public class AdminService : IAdminService
             .OrderByDescending(o => o.ChargedCount + o.FailedCount)
             .ToList();
 
-        var providerStats = events
-            .GroupBy(e =>
-            {
-                if (e.ProviderId > 0 && providers.TryGetValue(e.ProviderId, out var name)) return name;
-                return "Unknown";
-            })
-            .Select(g =>
-            {
-                var ok = g.Where(e =>
-                    string.Equals(e.Status, "Charged", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(e.Status, "Success", StringComparison.OrdinalIgnoreCase)).ToList();
-                var bad = g.Where(e => string.Equals(e.Status, "Failed", StringComparison.OrdinalIgnoreCase)).ToList();
-                var modelId = g.Select(e => e.ModelId).FirstOrDefault(id => id.HasValue);
-                string? modelName = null;
-                if (modelId is int mid) models.TryGetValue(mid, out modelName);
-                var lastErr = bad
-                    .Select(e =>
-                        requestErrors.TryGetValue(e.AIRequestId, out var msg) && !string.IsNullOrWhiteSpace(msg)
-                            ? msg
-                            : e.ErrorCode)
-                    .FirstOrDefault(m => !string.IsNullOrWhiteSpace(m));
-                return new AdminAiProviderStatsDto(
-                    g.Key,
-                    modelName,
-                    ok.Count,
-                    bad.Count,
-                    ok.Count == 0 ? 0 : ok.Average(e => e.TotalTokens ?? 0),
-                    lastErr is null ? null : Truncate(lastErr, 180)
-                );
-            })
-            .OrderByDescending(p => p.FailCount + p.SuccessCount)
-            .ToList();
+        var usageByProviderId = events
+            .Where(e => e.ProviderId > 0)
+            .GroupBy(e => e.ProviderId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var providerStats = configuredProviders.Select(p =>
+        {
+            usageByProviderId.TryGetValue(p.AIProviderId, out var rows);
+            rows ??= [];
+            var ok = rows.Where(e =>
+                string.Equals(e.Status, "Charged", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(e.Status, "Success", StringComparison.OrdinalIgnoreCase)).ToList();
+            var bad = rows.Where(e => string.Equals(e.Status, "Failed", StringComparison.OrdinalIgnoreCase)).ToList();
+            var activeModel = p.Models.FirstOrDefault(m => m.IsActive) ?? p.Models.FirstOrDefault();
+            var lastErr = bad
+                .Select(e =>
+                    requestErrors.TryGetValue(e.AIRequestId, out var msg) && !string.IsNullOrWhiteSpace(msg)
+                        ? msg
+                        : e.ErrorCode)
+                .FirstOrDefault(m => !string.IsNullOrWhiteSpace(m))
+                ?? p.LastError;
+            var status = p.Status == ProviderStatus.RateLimited
+                         && p.RateLimitedUntil.HasValue
+                         && p.RateLimitedUntil > DateTime.UtcNow
+                ? "RateLimited"
+                : p.Status.ToString();
+            return new AdminAiProviderStatsDto(
+                p.Name,
+                activeModel?.ModelName,
+                ok.Count,
+                bad.Count,
+                ok.Count == 0 ? 0 : ok.Average(e => e.TotalTokens ?? 0),
+                lastErr is null ? null : Truncate(lastErr, 180),
+                status,
+                p.Priority,
+                !string.IsNullOrWhiteSpace(p.ApiKeyConfigName)
+            );
+        }).ToList();
+
+        // Keep any orphan usage rows whose provider id is gone from config.
+        foreach (var orphan in events.Where(e => e.ProviderId > 0 && !providerNameById.ContainsKey(e.ProviderId))
+                     .GroupBy(e => e.ProviderId))
+        {
+            var ok = orphan.Where(e =>
+                string.Equals(e.Status, "Charged", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(e.Status, "Success", StringComparison.OrdinalIgnoreCase)).ToList();
+            var bad = orphan.Where(e => string.Equals(e.Status, "Failed", StringComparison.OrdinalIgnoreCase)).ToList();
+            providerStats.Add(new AdminAiProviderStatsDto(
+                $"Provider #{orphan.Key}",
+                null,
+                ok.Count,
+                bad.Count,
+                ok.Count == 0 ? 0 : ok.Average(e => e.TotalTokens ?? 0),
+                null,
+                "Unknown",
+                99,
+                false
+            ));
+        }
 
         List<AdminAiCreditCostDto> costDtos;
         try

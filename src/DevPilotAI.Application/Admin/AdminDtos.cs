@@ -332,7 +332,10 @@ public record AdminAiProviderStatsDto(
     int SuccessCount,
     int FailCount,
     double AvgTotalTokensOnSuccess,
-    string? LastError
+    string? LastError,
+    string Status = "Active",
+    int Priority = 0,
+    bool HasApiKeyConfigured = false
 );
 
 public record AdminAiCreditCostDto(
