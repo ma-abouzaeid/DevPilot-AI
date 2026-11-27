@@ -215,6 +215,158 @@ if (navbarBox) {
         refreshNavNotifications();
     }
 
+    var feedbackRating = 0;
+
+    function paintFeedbackStars(value) {
+        feedbackRating = Number(value) || 0;
+        var ratingInput = document.getElementById("feedback-rating");
+        var stars = document.getElementById("feedback-stars");
+        if (ratingInput) ratingInput.value = feedbackRating > 0 ? String(feedbackRating) : "";
+        if (!stars) return;
+        stars.querySelectorAll(".star-rating-btn").forEach(function (btn) {
+            var star = Number(btn.getAttribute("data-star")) || 0;
+            btn.classList.toggle("is-active", star <= feedbackRating && feedbackRating > 0);
+            btn.setAttribute("aria-checked", star === feedbackRating ? "true" : "false");
+        });
+    }
+
+    function showFeedbackModalAlert(message, type) {
+        var box = document.getElementById("feedback-modal-alert");
+        if (!box) return;
+        box.textContent = message || "";
+        box.className = "alert alert-" + (type || "danger") + (message ? "" : " d-none");
+        if (!message) box.classList.add("d-none");
+    }
+
+    function ensureFeedbackModal() {
+        if (document.getElementById("feedback-modal")) return;
+
+        var wrap = document.createElement("div");
+        wrap.innerHTML =
+            '<div class="modal fade" id="feedback-modal" tabindex="-1" aria-labelledby="feedback-modal-title" aria-hidden="true">' +
+            '<div class="modal-dialog modal-dialog-centered">' +
+            '<div class="modal-content surface-card border-0">' +
+            '<div class="modal-header border-0 pb-0">' +
+            '<h2 class="modal-title h5" id="feedback-modal-title">Feedback</h2>' +
+            '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+            "</div>" +
+            '<form id="feedback-form" class="modal-body pt-2" novalidate>' +
+            '<div class="alert d-none" id="feedback-modal-alert" role="alert"></div>' +
+            '<div class="mb-3">' +
+            '<label class="form-label" for="feedback-rating">Rating</label>' +
+            '<div class="star-rating" id="feedback-stars" role="radiogroup" aria-label="Star rating">' +
+            '<button type="button" class="star-rating-btn" data-star="1" aria-label="1 star">★</button>' +
+            '<button type="button" class="star-rating-btn" data-star="2" aria-label="2 stars">★</button>' +
+            '<button type="button" class="star-rating-btn" data-star="3" aria-label="3 stars">★</button>' +
+            '<button type="button" class="star-rating-btn" data-star="4" aria-label="4 stars">★</button>' +
+            '<button type="button" class="star-rating-btn" data-star="5" aria-label="5 stars">★</button>' +
+            "</div>" +
+            '<input type="hidden" id="feedback-rating" value="" required>' +
+            '<small class="text-gray">Tap a star from 1 to 5.</small>' +
+            "</div>" +
+            '<div class="mb-3">' +
+            '<label class="form-label" for="feedback-message">Suggestion or issue</label>' +
+            '<textarea class="form-control" id="feedback-message" rows="4" minlength="5" maxlength="4000" required ' +
+            'placeholder="Tell us what worked well or what we should improve."></textarea>' +
+            "</div>" +
+            '<button type="submit" class="btn btn-primary" id="btn-feedback">' +
+            '<i class="fa-solid fa-paper-plane"></i> Send feedback' +
+            "</button>" +
+            "</form>" +
+            "</div></div></div>";
+        document.body.appendChild(wrap.firstChild);
+
+        var stars = document.getElementById("feedback-stars");
+        if (stars) {
+            stars.addEventListener("click", function (e) {
+                var btn = e.target.closest(".star-rating-btn");
+                if (!btn) return;
+                paintFeedbackStars(btn.getAttribute("data-star"));
+            });
+            stars.addEventListener("mouseover", function (e) {
+                var btn = e.target.closest(".star-rating-btn");
+                if (!btn) return;
+                var hover = Number(btn.getAttribute("data-star")) || 0;
+                stars.querySelectorAll(".star-rating-btn").forEach(function (el) {
+                    var star = Number(el.getAttribute("data-star")) || 0;
+                    el.classList.toggle("is-hover", star <= hover);
+                });
+            });
+            stars.addEventListener("mouseleave", function () {
+                stars.querySelectorAll(".star-rating-btn").forEach(function (el) {
+                    el.classList.remove("is-hover");
+                });
+            });
+        }
+
+        var modal = document.getElementById("feedback-modal");
+        if (modal) {
+            modal.addEventListener("hidden.bs.modal", function () {
+                var form = document.getElementById("feedback-form");
+                if (form) form.reset();
+                paintFeedbackStars(0);
+                showFeedbackModalAlert("", "danger");
+            });
+        }
+
+        var form = document.getElementById("feedback-form");
+        if (form) {
+            form.addEventListener("submit", async function (e) {
+                e.preventDefault();
+                showFeedbackModalAlert("", "danger");
+                var msg = (document.getElementById("feedback-message").value || "").trim();
+                if (feedbackRating < 1 || feedbackRating > 5) {
+                    showFeedbackModalAlert("Please choose a star rating.", "danger");
+                    return;
+                }
+                if (msg.length < 5) {
+                    showFeedbackModalAlert("Please write a bit more feedback.", "danger");
+                    return;
+                }
+                var btn = document.getElementById("btn-feedback");
+                btn.disabled = true;
+                try {
+                    var base = (typeof window !== "undefined" && window.API_BASE) ? window.API_BASE : "";
+                    var url = new URL("/api/Feedback", base || window.location.origin).href;
+                    var res = await window.DevPilotApi.request(url, {
+                        method: "POST",
+                        body: JSON.stringify({
+                            message: msg,
+                            category: "General",
+                            rating: feedbackRating
+                        })
+                    });
+                    if (!res.ok) throw new Error(res.message || "Could not send feedback");
+                    document.getElementById("feedback-message").value = "";
+                    paintFeedbackStars(0);
+                    if (window.bootstrap && modal) {
+                        bootstrap.Modal.getOrCreateInstance(modal).hide();
+                    }
+                } catch (err) {
+                    showFeedbackModalAlert(err.message || "Could not send feedback", "danger");
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        }
+    }
+
+    function bindFeedbackUi() {
+        ensureFeedbackModal();
+        var btn = document.getElementById("nav-feedback-btn");
+        var modal = document.getElementById("feedback-modal");
+        if (!btn || !modal) return;
+        btn.addEventListener("click", function () {
+            showFeedbackModalAlert("", "danger");
+            if (window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modal).show();
+            } else {
+                modal.classList.add("show");
+                modal.style.display = "block";
+            }
+        });
+    }
+
     function renderNavbar(isAdmin) {
         const notifHtml = isLoggedIn
             ? `<div class="nav-notif dropdown">
@@ -234,8 +386,15 @@ if (navbarBox) {
                </div>`
             : "";
 
+        const feedbackHtml = isLoggedIn
+            ? `<button type="button" class="nav-notif-btn" id="nav-feedback-btn" aria-label="Feedback" title="Feedback">
+                 <i class="fa-solid fa-comment-dots" aria-hidden="true"></i>
+               </button>`
+            : "";
+
         const authButtonsHtml = isLoggedIn
             ? `<div class="nav-auth-actions d-flex flex-wrap align-items-center gap-2">
+                 ${feedbackHtml}
                  ${notifHtml}
                  <a class="btn btn-outline-light" href="dashboard.html">Dashboard</a>
                  <a class="btn btn-outline-light" href="settings.html">Settings</a>
@@ -349,6 +508,7 @@ if (navbarBox) {
 
         if (isLoggedIn) {
             bindNotificationsUi();
+            bindFeedbackUi();
         }
     }
 
