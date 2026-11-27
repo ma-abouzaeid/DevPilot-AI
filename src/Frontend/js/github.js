@@ -624,7 +624,12 @@
         const url = new URL("/api/GitHub/reviews/" + encodeURIComponent(reviewId), API_BASE).href;
         const res = await window.DevPilotApi.request(url);
         if (!res.ok || !res.data) throw new Error(res.message || "Failed to open review");
-        setMode("review");
+        if (reviewsHistoryList) {
+            Array.prototype.forEach.call(reviewsHistoryList.querySelectorAll("[data-review-id]"), function (el) {
+                el.classList.toggle("active", String(el.getAttribute("data-review-id")) === String(reviewId));
+            });
+        }
+        // Result card lives outside #workspace so it still opens when disconnected.
         renderReviewResult(res.data, { fromHistory: true });
         resultCard.scrollIntoView({ behavior: "smooth", block: "start" });
     }
