@@ -116,6 +116,23 @@ public class TelegramBotClient : ITelegramBotClient
         }
     }
 
+    public async Task<(bool Ok, string Detail)> DeleteWebhookAsync(
+        bool dropPendingUpdates = true,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsConfigured)
+            return (false, "BotToken is not configured.");
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["drop_pending_updates"] = dropPendingUpdates
+        };
+        using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        var response = await _http.PostAsync($"bot{_options.BotToken}/deleteWebhook", content, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        return (response.IsSuccessStatusCode, body);
+    }
+
     public async Task<(bool Ok, string Detail)> GetWebhookInfoAsync(CancellationToken cancellationToken = default)
     {
         if (!IsConfigured)
@@ -124,5 +141,47 @@ public class TelegramBotClient : ITelegramBotClient
         var response = await _http.GetAsync($"bot{_options.BotToken}/getWebhookInfo", cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         return (response.IsSuccessStatusCode, body);
+    }
+
+    public async Task<(bool Ok, IReadOnlyList<JsonElement> Updates, string Detail)> GetUpdatesAsync(
+        long offset,
+        int timeoutSeconds = 50,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsConfigured)
+            return (false, Array.Empty<JsonElement>(), "BotToken is not configured.");
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["offset"] = offset,
+            ["timeout"] = Math.Clamp(timeoutSeconds, 0, 50),
+            ["allowed_updates"] = new[] { "message", "callback_query" }
+        };
+
+        using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        var response = await _http.PostAsync($"bot{_options.BotToken}/getUpdates", content, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            return (false, Array.Empty<JsonElement>(), body);
+
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            var root = doc.RootElement;
+            var ok = root.TryGetProperty("ok", out var okEl) && okEl.GetBoolean();
+            if (!ok || !root.TryGetProperty("result", out var result) || result.ValueKind != JsonValueKind.Array)
+                return (false, Array.Empty<JsonElement>(), body);
+
+            var updates = new List<JsonElement>(result.GetArrayLength());
+            foreach (var item in result.EnumerateArray())
+                updates.Add(item.Clone());
+
+            return (true, updates, body);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse Telegram getUpdates response.");
+            return (false, Array.Empty<JsonElement>(), body);
+        }
     }
 }

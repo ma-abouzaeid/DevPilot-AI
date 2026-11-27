@@ -22,5 +22,12 @@ public interface ITelegramBotClient
         string webhookUrl,
         string? secretToken = null,
         CancellationToken cancellationToken = default);
+    Task<(bool Ok, string Detail)> DeleteWebhookAsync(
+        bool dropPendingUpdates = true,
+        CancellationToken cancellationToken = default);
     Task<(bool Ok, string Detail)> GetWebhookInfoAsync(CancellationToken cancellationToken = default);
+    Task<(bool Ok, IReadOnlyList<System.Text.Json.JsonElement> Updates, string Detail)> GetUpdatesAsync(
+        long offset,
+        int timeoutSeconds = 50,
+        CancellationToken cancellationToken = default);
 }
