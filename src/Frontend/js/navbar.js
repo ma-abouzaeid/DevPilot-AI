@@ -213,6 +213,82 @@ if (navbarBox) {
         };
 
         refreshNavNotifications();
+        ensureNavNotificationsHub();
+    }
+
+    function loadSignalRScript() {
+        return new Promise(function (resolve, reject) {
+            if (window.signalR) {
+                resolve();
+                return;
+            }
+            if (window.__navSignalRLoading) {
+                window.__navSignalRLoading.then(resolve).catch(reject);
+                return;
+            }
+            window.__navSignalRLoading = new Promise(function (res, rej) {
+                var script = document.createElement("script");
+                script.src = "https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js";
+                script.crossOrigin = "anonymous";
+                script.onload = function () { res(); };
+                script.onerror = function () { rej(new Error("SignalR failed to load")); };
+                document.head.appendChild(script);
+            });
+            window.__navSignalRLoading.then(resolve).catch(reject);
+        });
+    }
+
+    function scheduleNavNotifRefresh() {
+        if (window.__navNotifRefreshTimer) return;
+        window.__navNotifRefreshTimer = setTimeout(function () {
+            window.__navNotifRefreshTimer = null;
+            refreshNavNotifications();
+        }, 250);
+    }
+
+    async function ensureNavNotificationsHub() {
+        if (!isLoggedIn || !window.DevPilotApi) return;
+        if (window.__navNotifHubConnecting || window.__navNotifHub) return;
+        window.__navNotifHubConnecting = true;
+        try {
+            await loadSignalRScript();
+            if (!window.signalR) return;
+
+            var hubOptions = {
+                accessTokenFactory: function () {
+                    return window.DevPilotApi.getAccessToken();
+                }
+            };
+            if (window.DEVPILOT_SIGNALR_LONG_POLLING) {
+                hubOptions.transport = signalR.HttpTransportType.LongPolling;
+            }
+
+            var base = (typeof window !== "undefined" && window.API_BASE) ? window.API_BASE : "";
+            var hub = new signalR.HubConnectionBuilder()
+                .withUrl(new URL("/hubs/support-tickets", base || window.location.origin).href, hubOptions)
+                .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+                .build();
+
+            hub.on("userNotification", function () { scheduleNavNotifRefresh(); });
+            hub.on("adminNotification", function () { scheduleNavNotifRefresh(); });
+            hub.onreconnected(function () { scheduleNavNotifRefresh(); });
+
+            await hub.start();
+            window.__navNotifHub = hub;
+            scheduleNavNotifRefresh();
+
+            if (!window.__navNotifVisibilityBound) {
+                document.addEventListener("visibilitychange", function () {
+                    if (!document.hidden) scheduleNavNotifRefresh();
+                });
+                window.addEventListener("focus", function () { scheduleNavNotifRefresh(); });
+                window.__navNotifVisibilityBound = true;
+            }
+        } catch (err) {
+            window.__navNotifHub = null;
+        } finally {
+            window.__navNotifHubConnecting = false;
+        }
     }
 
     var feedbackRating = 0;

@@ -25,5 +25,9 @@ public interface ISupportTicketService
         CancellationToken cancellationToken = default,
         bool backfillOpenTickets = true);
     Task<int> CountUnreadAdminNotificationsAsync(int adminUserId, CancellationToken cancellationToken = default);
-    Task MarkAdminNotificationsReadAsync(int adminUserId, long? notificationId = null, CancellationToken cancellationToken = default);
+    Task MarkAdminNotificationsReadAsync(
+        int adminUserId,
+        long? notificationId = null,
+        int? supportTicketId = null,
+        CancellationToken cancellationToken = default);
 }

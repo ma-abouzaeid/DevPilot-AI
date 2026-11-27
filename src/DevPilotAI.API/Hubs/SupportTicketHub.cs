@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using DevPilotAI.Application.Common;
+using DevPilotAI.Application.Common.Interfaces;
 using DevPilotAI.Application.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -10,10 +11,12 @@ namespace DevPilotAI.API.Hubs;
 public class SupportTicketHub : Hub
 {
     private readonly ISupportTicketService _tickets;
+    private readonly ISupportTicketPresence _presence;
 
-    public SupportTicketHub(ISupportTicketService tickets)
+    public SupportTicketHub(ISupportTicketService tickets, ISupportTicketPresence presence)
     {
         _tickets = tickets;
+        _presence = presence;
     }
 
     public static string TicketGroup(int ticketId) => "ticket-" + ticketId;
@@ -35,16 +38,26 @@ public class SupportTicketHub : Hub
         await base.OnConnectedAsync();
     }
 
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        _presence.RemoveConnection(Context.ConnectionId);
+        await base.OnDisconnectedAsync(exception);
+    }
+
     public async Task JoinTicket(int ticketId)
     {
         var userId = GetRequiredUserId();
         var isAdmin = IsAdmin(Context.User);
         await _tickets.EnsureCanAccessChatAsync(ticketId, userId, isAdmin, Context.ConnectionAborted);
         await Groups.AddToGroupAsync(Context.ConnectionId, TicketGroup(ticketId));
+        _presence.JoinTicket(userId, ticketId, Context.ConnectionId);
     }
 
     public async Task LeaveTicket(int ticketId)
     {
+        var userId = GetUserId();
+        if (userId.HasValue)
+            _presence.LeaveTicket(userId.Value, ticketId, Context.ConnectionId);
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, TicketGroup(ticketId));
     }
 

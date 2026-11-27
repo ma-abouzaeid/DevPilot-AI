@@ -78,9 +78,16 @@
             const ticketId = msg.supportTicketId || msg.SupportTicketId;
             if (Number(ticketId) !== Number(activeTicketId)) return;
             appendMessage(msg);
+            // Chat is open — clear any race-created unread for this ticket.
+            markTicketNotificationsRead(ticketId);
         });
 
-        hubConnection.on("userNotification", function () {
+        hubConnection.on("userNotification", function (note) {
+            var ticketId = note && (note.supportTicketId || note.SupportTicketId);
+            if (activeTicketId && ticketId && Number(ticketId) === Number(activeTicketId)) {
+                markTicketNotificationsRead(activeTicketId);
+                return;
+            }
             if (window.DevPilotNotifications && typeof window.DevPilotNotifications.refresh === "function") {
                 window.DevPilotNotifications.refresh();
             }
@@ -276,6 +283,18 @@
         }
     }
 
+    async function markTicketNotificationsRead(ticketId) {
+        if (!ticketId) return;
+        try {
+            await api("/api/support-tickets/notifications/read?ticketId=" + encodeURIComponent(ticketId), {
+                method: "POST"
+            });
+            if (window.DevPilotNotifications && typeof window.DevPilotNotifications.refresh === "function") {
+                window.DevPilotNotifications.refresh();
+            }
+        } catch (e) { /* ignore */ }
+    }
+
     async function openTicket(ticketId, joinChat) {
         clearAlert();
         activeTicketId = ticketId;
@@ -294,6 +313,7 @@
             }
             renderDetail(ticket, messages);
             loadTickets();
+            markTicketNotificationsRead(ticketId);
             if (canChat && joinChat) {
                 joinTicketRoom(ticketId).catch(function () { /* REST chat still works */ });
             }

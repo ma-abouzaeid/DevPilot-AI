@@ -143,9 +143,12 @@ public class SupportTicketsController : ControllerBase
 
     [HttpPost("admin/notifications/read")]
     [Authorize(Policy = AppRoles.AdminPolicy)]
-    public async Task<IActionResult> MarkNotificationsRead([FromQuery] long? id, CancellationToken cancellationToken)
+    public async Task<IActionResult> MarkNotificationsRead(
+        [FromQuery] long? id,
+        [FromQuery] int? ticketId,
+        CancellationToken cancellationToken)
     {
-        await _tickets.MarkAdminNotificationsReadAsync(GetRequiredUserId(), id, cancellationToken);
+        await _tickets.MarkAdminNotificationsReadAsync(GetRequiredUserId(), id, ticketId, cancellationToken);
         return Ok(ApiResponse<object?>.SuccessResult(null, "Notifications marked read.", GetTraceId()));
     }
 
@@ -159,9 +162,12 @@ public class SupportTicketsController : ControllerBase
     }
 
     [HttpPost("notifications/read")]
-    public async Task<IActionResult> MarkUserNotificationsRead([FromQuery] long? id, CancellationToken cancellationToken)
+    public async Task<IActionResult> MarkUserNotificationsRead(
+        [FromQuery] long? id,
+        [FromQuery] int? ticketId,
+        CancellationToken cancellationToken)
     {
-        await _tickets.MarkAdminNotificationsReadAsync(GetRequiredUserId(), id, cancellationToken);
+        await _tickets.MarkAdminNotificationsReadAsync(GetRequiredUserId(), id, ticketId, cancellationToken);
         return Ok(ApiResponse<object?>.SuccessResult(null, "Notifications marked read.", GetTraceId()));
     }
 }

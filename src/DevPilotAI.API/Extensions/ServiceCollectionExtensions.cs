@@ -63,6 +63,7 @@ public static class ServiceCollectionExtensions
         services.AddCorsPolicy(configuration);
         services.AddSignalR();
         services.AddSingleton<ISupportTicketRealtime, SupportTicketRealtime>();
+        services.AddSingleton<ISupportTicketPresence, SupportTicketPresence>();
 
         services.Configure<ForwardedHeadersOptions>(options =>
         {

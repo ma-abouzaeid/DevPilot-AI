@@ -1176,13 +1176,19 @@
             .withAutomaticReconnect()
             .build();
 
-        ticketsState.hub.on("adminNotification", function () {
+        ticketsState.hub.on("adminNotification", function (note) {
+            var ticketId = note && (note.supportTicketId || note.SupportTicketId);
+            if (ticketsState.activeId && ticketId && Number(ticketId) === Number(ticketsState.activeId)) {
+                markAdminTicketNotificationsRead(ticketsState.activeId);
+                return;
+            }
             refreshTicketNotifications().catch(function () { /* ignore */ });
         });
         ticketsState.hub.on("messageReceived", function (msg) {
             var ticketId = msg.supportTicketId || msg.SupportTicketId;
             if (Number(ticketId) !== Number(ticketsState.activeId)) return;
             appendAdminChatMessage(msg);
+            markAdminTicketNotificationsRead(ticketId);
         });
         ticketsState.hub.on("ticketUpdated", function () {
             if (ticketsState.activeId) openAdminTicket(ticketsState.activeId, false);
@@ -1431,6 +1437,16 @@
         }
     }
 
+    async function markAdminTicketNotificationsRead(ticketId) {
+        if (!ticketId) return;
+        try {
+            await api("/api/support-tickets/admin/notifications/read?ticketId=" + encodeURIComponent(ticketId), {
+                method: "POST"
+            });
+            await refreshTicketNotifications();
+        } catch (e) { /* ignore */ }
+    }
+
     async function openAdminTicket(ticketId, joinChat) {
         ticketsState.activeId = ticketId;
         var detail = document.getElementById("admin-ticket-detail");
@@ -1447,6 +1463,7 @@
             }
             renderAdminTicketDetail(ticket, messages);
             await loadAdminTicketsList();
+            markAdminTicketNotificationsRead(ticketId);
             // SignalR join is optional; don't clear the ticket UI on failure.
             if (canChat && joinChat) {
                 joinAdminTicketRoom(ticketId).catch(function () { /* REST chat still works */ });
