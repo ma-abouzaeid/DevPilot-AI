@@ -1,4 +1,4 @@
--- Unlimited credits flag on users + plan sale fields
+-- Unlimited credits + plan sale columns
 IF COL_LENGTH(N'dbo.Users', N'HasUnlimitedCredits') IS NULL
 BEGIN
     ALTER TABLE [dbo].[Users]

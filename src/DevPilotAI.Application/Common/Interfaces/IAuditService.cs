@@ -13,7 +13,7 @@ public static class SecurityAuditEventTypes
     public const string SecurityFailure = "SECURITY_FAILURE";
 }
 
-/// <summary>Product/system activity events for admin observability (credits, AI, workflows).</summary>
+/// <summary>Admin activity log (credits, AI, etc.).</summary>
 public static class SystemAuditEventTypes
 {
     public const string AiRequestCompleted = "AI_REQUEST_COMPLETED";

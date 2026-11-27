@@ -1,6 +1,6 @@
 namespace DevPilotAI.Domain.Entities;
 
-/// <summary>Admin-configurable credit deduction for a billable AI action.</summary>
+/// <summary>Credits charged per AI action (admin-editable).</summary>
 public class CreditActionCost
 {
     public string ActionKey { get; set; } = string.Empty;

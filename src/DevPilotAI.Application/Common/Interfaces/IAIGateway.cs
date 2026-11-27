@@ -7,7 +7,7 @@ public record AIGatewayRequest(
     int? UserId = null,
     int? DebuggingAttemptId = null,
     int? ProblemId = null,
-    /// <summary>Human-readable purpose for admin/audit trails (e.g. "Debug NullReference in AuthController").</summary>
+    // Short label for admin/audit (e.g. "Debug NRE in AuthController").
     string? Purpose = null,
     string? CorrelationId = null,
     int MaxTokens = 2048,

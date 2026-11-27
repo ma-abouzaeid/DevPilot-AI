@@ -16,7 +16,7 @@ public class CreateSupportTicketDto
 public class ResolveSupportTicketDto
 {
     [Required]
-    [StringLength(4000, MinimumLength = 5)]
+    [StringLength(4000, MinimumLength = 2)]
     public string ResolutionSummary { get; set; } = string.Empty;
 }
 
@@ -26,7 +26,7 @@ public class SendSupportMessageDto
     [StringLength(4000, MinimumLength = 1)]
     public string Body { get; set; } = string.Empty;
 
-    /// <summary>True when the message is sent from the admin tickets UI.</summary>
+    // Sent from admin tickets UI.
     public bool AsAdmin { get; set; }
 }
 

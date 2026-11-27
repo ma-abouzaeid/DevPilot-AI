@@ -101,7 +101,7 @@ public class ChallengeService : IChallengeService
             }
             catch
             {
-                // Soft-fail: solving a problem should not break because credits ran out.
+                // No credits: skip challenge, still mark solved.
                 return null;
             }
         }
@@ -119,7 +119,7 @@ public class ChallengeService : IChallengeService
 
         if (!ai.IsSuccess || string.IsNullOrWhiteSpace(ai.Content))
         {
-            // Soft-fail: solving a problem should not break because challenge generation failed.
+            // AI failed: skip challenge, still mark solved.
             return null;
         }
 
@@ -145,7 +145,7 @@ public class ChallengeService : IChallengeService
             }
             catch
             {
-                // Soft-fail if charge races to empty; challenge still useful.
+                // Charge failed (race): keep the challenge anyway.
             }
         }
 
@@ -300,7 +300,7 @@ public class ChallengeService : IChallengeService
                 solved = attempts.Any(a => a.IsPassed);
                 best = attempts.Max(a => a.PointsAwarded);
 
-                // Prefer best passed attempt; otherwise the highest-scoring attempt.
+                // Best pass, else top score.
                 var reviewSource = attempts
                     .OrderByDescending(a => a.IsPassed)
                     .ThenByDescending(a => a.PointsAwarded)

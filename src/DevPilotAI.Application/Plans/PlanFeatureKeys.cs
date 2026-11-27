@@ -13,7 +13,7 @@ public static class PlanCodes
     public const string Pro = "PRO";
 }
 
-/// <summary>UX-facing credit costs. Token usage stays internal to the AI gateway.</summary>
+/// <summary>Credit costs shown on plans UI (tokens are internal).</summary>
 public static class CreditCosts
 {
     public const int Debugging = 5;

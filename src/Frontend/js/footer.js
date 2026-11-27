@@ -1,4 +1,4 @@
-// footer — site + legal links
+// footer: site + legal links
 const footerBox = document.querySelector("#footer");
 
 if (footerBox) {
@@ -19,7 +19,7 @@ if (footerBox) {
     </footer>`;
 }
 
-// Guided tour (floating Tour button) — load once on every page that includes footer.js
+// Load tour.js once from pages that include footer.
 (function loadTourScript() {
     if (window.DevPilotTour) return;
     if (document.querySelector('script[src*="tour.js"]')) return;

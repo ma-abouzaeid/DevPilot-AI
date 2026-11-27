@@ -1,8 +1,6 @@
 namespace DevPilotAI.Domain.Entities;
 
-/// <summary>
-/// Non-AI request failures captured for admin diagnostics.
-/// </summary>
+/// <summary>API errors for the admin error log.</summary>
 public class SystemErrorLog
 {
     public long SystemErrorLogId { get; set; }

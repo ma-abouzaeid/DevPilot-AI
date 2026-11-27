@@ -146,6 +146,53 @@
         return res;
     }
 
+    async function downloadExcel(path, params, fallbackFileName) {
+        var url = apiUrl(path, params);
+        var token = window.DevPilotApi.getAccessToken();
+        var headers = { "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" };
+        if (token) headers["Authorization"] = "Bearer " + token;
+
+        var response = await fetch(url, { method: "GET", headers: headers });
+        if (response.status === 401 && window.DevPilotApi.getRefreshToken) {
+            try {
+                await window.DevPilotApi.request(apiUrl("/api/Admin/dashboard"), {});
+                token = window.DevPilotApi.getAccessToken();
+                if (token) headers["Authorization"] = "Bearer " + token;
+                response = await fetch(url, { method: "GET", headers: headers });
+            } catch (refreshErr) { /* fall through */ }
+        }
+
+        if (!response.ok) {
+            var errText = "";
+            try { errText = await response.text(); } catch (e) { /* ignore */ }
+            var msg = "Export failed (" + response.status + ").";
+            try {
+                var parsed = JSON.parse(errText);
+                if (parsed && parsed.message) msg = parsed.message;
+            } catch (e) { /* ignore */ }
+            throw new Error(msg);
+        }
+
+        var blob = await response.blob();
+        var fileName = fallbackFileName || "export.xlsx";
+        var disposition = response.headers.get("Content-Disposition") || response.headers.get("content-disposition") || "";
+        var match = /filename\*?=(?:UTF-8'')?["']?([^"';]+)/i.exec(disposition);
+        if (match && match[1]) {
+            try { fileName = decodeURIComponent(match[1].trim()); } catch (e) { fileName = match[1].trim(); }
+        }
+
+        var objectUrl = URL.createObjectURL(blob);
+        var link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 1500);
+        showAlert("Excel exported: " + fileName, "success");
+        setTimeout(clearAlert, 2500);
+    }
+
     function renderPager(el, page, pageSize, total, onPage) {
         var pages = Math.max(1, Math.ceil(total / pageSize));
         el.innerHTML =
@@ -639,13 +686,36 @@
         state.aiPage = 1;
         loadAi().catch(onError);
     });
+    document.getElementById("ai-export").addEventListener("click", function () {
+        clearAlert();
+        downloadExcel("/api/Admin/ai-usage/export", {
+            userId: document.getElementById("ai-user-id").value || undefined,
+            status: document.getElementById("ai-status").value || undefined
+        }, "ai-usage.xlsx").catch(onError);
+    });
     document.getElementById("audit-refresh").addEventListener("click", function () {
         state.auditPage = 1;
         loadAudit().catch(onError);
     });
+    document.getElementById("audit-export").addEventListener("click", function () {
+        clearAlert();
+        downloadExcel("/api/Admin/audit-logs/export", {
+            userId: document.getElementById("audit-user-id").value || undefined,
+            action: document.getElementById("audit-action").value.trim() || undefined
+        }, "audit-logs.xlsx").catch(onError);
+    });
     document.getElementById("errors-refresh").addEventListener("click", function () {
         state.errorsPage = 1;
         loadErrors().catch(onError);
+    });
+    document.getElementById("errors-export").addEventListener("click", function () {
+        clearAlert();
+        downloadExcel("/api/Admin/system-errors/export", {
+            userId: document.getElementById("errors-user-id").value || undefined,
+            pathContains: document.getElementById("errors-path").value.trim() || undefined,
+            errorCode: document.getElementById("errors-code").value.trim() || undefined,
+            minStatusCode: document.getElementById("errors-min-status").value || undefined
+        }, "system-errors.xlsx").catch(onError);
     });
 
     function closeDetailsPopup() {
@@ -981,7 +1051,7 @@
             accessTokenFactory: function () { return window.DevPilotApi.getAccessToken(); }
         };
         if (window.DEVPILOT_SIGNALR_LONG_POLLING) {
-            // Vercel rewrites proxy HTTP; WebSockets usually 404/fail — LongPolling works.
+            // On Vercel use LongPolling; WebSockets often fail behind rewrites.
             hubOptions.transport = signalR.HttpTransportType.LongPolling;
         }
 
@@ -1033,7 +1103,7 @@
         if (!box) return;
         var empty = box.querySelector(".empty-state");
         if (empty) empty.remove();
-        // Side by role (not sender id) so same-account tests still split left/right.
+        // Bubble side from role, not sender id (same-account tests).
         var fromAdmin = !!(msg.isFromAdmin || msg.IsFromAdmin);
         var row = document.createElement("div");
         row.className = "support-chat-bubble " + (fromAdmin ? "is-admin is-mine" : "is-user");
@@ -1098,7 +1168,7 @@
         var status = document.getElementById("tickets-status").value;
         var res = await api("/api/support-tickets", null, status ? { status: status } : null);
         var items = res.data || [];
-        // Fallback badge: open tickets should always surface a count even if notifications lagged.
+        // Show open-ticket count even if notifications are late.
         var openCount = items.filter(function (t) {
             return String(t.status || t.Status || "").toLowerCase() === "open";
         }).length;
@@ -1136,7 +1206,7 @@
         var id = ticket.supportTicketId || ticket.SupportTicketId;
         var status = ticket.status || ticket.Status || "";
         var statusLower = String(status).toLowerCase();
-        // Admin page: Open tickets are always acceptable even if API flag lagged.
+        // Allow accept when status is open even if canAccept lags.
         var canAccept = !!(ticket.canAccept || ticket.CanAccept) || statusLower === "open";
         var canResolve = !!(ticket.canResolve || ticket.CanResolve);
         var canChat = !!(ticket.canChat || ticket.CanChat);
@@ -1148,12 +1218,12 @@
         if (canAccept && statusLower === "open") {
             actions += '<button type="button" class="btn btn-primary btn-sm" id="admin-accept-ticket">Accept ticket</button>';
         }
-        if (canResolve) {
+        if (canResolve || statusLower === "assigned" || statusLower === "open") {
             actions +=
-                '<form id="admin-resolve-form" class="support-resolve-box">' +
+                '<form id="admin-resolve-form" class="support-resolve-box w-100">' +
                 '<label class="form-label" for="admin-resolution">How was it resolved?</label>' +
-                '<textarea class="form-control mb-2" id="admin-resolution" rows="3" maxlength="4000" required placeholder="Write the problem outcome and fix summary."></textarea>' +
-                '<button type="submit" class="btn btn-success btn-sm">Resolve ticket</button>' +
+                '<textarea class="form-control mb-2" id="admin-resolution" rows="3" minlength="2" maxlength="4000" required placeholder="مثال: اتحل — تم تفعيل الباقة / Fixed CORS config"></textarea>' +
+                '<button type="submit" class="btn btn-success btn-sm" id="admin-resolve-btn">Resolve ticket</button>' +
                 "</form>";
         }
 
@@ -1218,7 +1288,14 @@
         if (resolveForm) {
             resolveForm.addEventListener("submit", async function (e) {
                 e.preventDefault();
-                var summary = document.getElementById("admin-resolution").value.trim();
+                e.stopPropagation();
+                var summary = (document.getElementById("admin-resolution").value || "").trim();
+                if (summary.length < 2) {
+                    showAlert("Write at least a short resolution note before closing.", "warning");
+                    return;
+                }
+                var btn = document.getElementById("admin-resolve-btn");
+                if (btn) btn.disabled = true;
                 try {
                     await api("/api/support-tickets/" + id + "/resolve", {
                         method: "POST",
@@ -1227,7 +1304,10 @@
                     showAlert("Ticket resolved.", "success");
                     await openAdminTicket(id, false);
                     await loadAdminTicketsList();
-                } catch (err) { onError(err); }
+                } catch (err) {
+                    onError(err);
+                    if (btn) btn.disabled = false;
+                }
             });
         }
 
@@ -1280,7 +1360,7 @@
             }
             renderAdminTicketDetail(ticket, messages);
             await loadAdminTicketsList();
-            // Realtime join is best-effort — never wipe the ticket UI if SignalR fails.
+            // SignalR join is optional; don't clear the ticket UI on failure.
             if (canChat && joinChat) {
                 joinAdminTicketRoom(ticketId).catch(function () { /* REST chat still works */ });
             }

@@ -1,29 +1,12 @@
-/* ============================================================
-   DevPilot AI - Motion Controller
-   Lightweight, dependency-free.
-
-   Responsibilities:
-   1. Scroll-reveal system (IntersectionObserver, staggered)
-   2. "AI network" canvas backdrops (nodes, light-flow pulses,
-      node pulses, pointer parallax; pause off-screen)
-   3. Code window typing animation (.code-box)
-   4. Testimonial word-by-word reveal (.quote-box)
-   5. Statistic count-up (.hero-stats)
-   6. Off-screen pausing for decorative CSS motion
-   7. Teardown / instant finish when prefers-reduced-motion is
-      enabled (at load or mid-session)
-
-   Decorative motion never blocks interaction and is fully
-   disabled under prefers-reduced-motion.
-   ============================================================ */
+// Page motion: scroll reveal, canvas backdrops, typing, quotes, counters.
+// Respects prefers-reduced-motion.
 (function () {
     "use strict";
 
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     const prefersReduced = function () { return motionQuery.matches; };
 
-    /* Elements that start hidden and animate in on scroll.
-       Kept in CSS + JS sync; loaded only on content pages. */
+    // Scroll-reveal targets (synced with CSS).
     const REVEAL_SELECTOR =
         ".workflow-col, .feature-col, .article-col, .why-item, .code-box, " +
         ".section-badge, .section-title, .section-text, " +
@@ -41,9 +24,7 @@
         window.addEventListener("pagehide", fn, { once: true });
     };
 
-    /* ------------------------------------------------------------
-       1. Scroll reveal
-       ------------------------------------------------------------ */
+    // --- scroll reveal ---
     function initReveal() {
         if (prefersReduced() || !("IntersectionObserver" in window)) return;
 
@@ -63,7 +44,7 @@
 
         targets.forEach(function (el) { el.classList.add("reveal"); });
 
-        // One coordinated stagger per section (not per element globally).
+        // Stagger per section, not globally.
         const sections = [];
         targets.forEach(function (el) {
             const section = el.closest("section") || document.body;
@@ -93,8 +74,7 @@
 
         targets.forEach(function (el) { observer.observe(el); });
 
-        // Safety net: never leave content permanently hidden, even if the
-        // observer is interrupted (bfcache restore, unusual embedding...).
+        // If the observer dies, show everything after 3s.
         const fallback = setTimeout(function () {
             document.querySelectorAll(".reveal:not(.is-visible)")
                 .forEach(function (el) { el.classList.add("is-visible"); });
@@ -110,13 +90,7 @@
         });
     }
 
-    /* ------------------------------------------------------------
-       2. Network backdrop
-       A restrained mesh of drifting nodes connected by faint lines,
-       with slow light-flow pulses and occasional node rings.
-       Pauses when off-screen or the tab is hidden; never runs under
-       prefers-reduced-motion.
-       ------------------------------------------------------------ */
+    // --- network canvas backdrop ---
     function initNetworkBackdrop(target, options) {
         if (!target || prefersReduced()) return null;
 
@@ -409,14 +383,7 @@
         });
     }
 
-    /* ------------------------------------------------------------
-       3. Code window typing
-       Types the existing, author-written code character by
-       character, preserving markup, classes and indentation.
-       The full text stays available to assistive technologies in a
-       visually hidden copy; the animated box is aria-hidden so no
-       partial code is announced character by character.
-       ------------------------------------------------------------ */
+    // --- code box typing ---
     function initCodeTyping() {
         const codeBox = document.querySelector(".code-box");
         if (!codeBox || codeBox.dataset.typed === "true") return;
@@ -430,7 +397,7 @@
         );
         if (!sourceLines.length) return;
 
-        /* --- parse the authored markup into a char stream per block --- */
+        // Flatten each <p> into typed characters.
         function parseBlock(p) {
             const raw = [];
 
@@ -452,8 +419,7 @@
                 }
             });
 
-            /* normalize whitespace exactly like the browser renders it
-               (collapse runs, then trim line-leading/trailing spaces) */
+            // Collapse whitespace like the browser would.
             const collapsed = [];
             for (let i = 0; i < raw.length; i++) {
                 const item = raw[i];
@@ -559,20 +525,16 @@
             timer = setTimeout(typeStep, delayFor(item.ch, !!item.br));
         }
 
-        /* Swap the authored markup for the typed blocks. Runs at trigger
-           time so the untouched code stays rendered (and visible to
-           assistive tech) until the animation actually starts. */
+        // Replace markup when typing starts (SR text seeded first).
         function beginTyping() {
             if (started) return;
             started = true;
 
-            // reserve the exact height of the untouched rendering so the
-            // surrounding layout never moves while characters appear
+            // Lock height so layout doesn't jump.
             codeBox.style.minHeight =
                 Math.ceil(codeBox.getBoundingClientRect().height) + "px";
 
-            // complete code for assistive technologies (the animated box is
-            // aria-hidden, so partial code is never announced)
+            // Full code for screen readers; box is aria-hidden while typing.
             const seeded = [];
             blocks.forEach(function (block, bi) {
                 if (bi > 0) seeded.push("\n");
@@ -626,9 +588,7 @@
             setTimeout(function () { cursor.remove(); }, 500);
         }
 
-        // watchdog: only force the final state if the typing has genuinely
-        // stalled (throttled timers, interrupted frame) and the window is on
-        // screen - never to cut a healthy animation short
+        // Finish early only if typing stalled while on screen.
         function guardCheck() {
             if (finished) return;
             const stalled = Date.now() - lastProgressAt > 4000;
@@ -642,7 +602,7 @@
             guard = setTimeout(guardCheck, 2000);
         }
 
-        /* --- trigger at ~30% visibility, once --- */
+        // Start when ~30% visible.
         let observer = null;
 
         if (!("IntersectionObserver" in window)) {
@@ -659,7 +619,7 @@
 
         observer.observe(codeBox);
 
-        // keep the final state safe if the page is hidden mid-animation
+        // Finish if user leaves mid-typing.
         onPageHide(function () {
             if (observer) observer.disconnect();
             finish();
@@ -671,12 +631,7 @@
         });
     }
 
-    /* ------------------------------------------------------------
-       4. Testimonial reveal
-       Quote mark first, then word-by-word text, then attribution.
-       Words keep their inline flow so wrapping is untouched, and
-       only opacity/transform change, so heights never jump.
-       ------------------------------------------------------------ */
+    // --- testimonial word fade ---
     function initTestimonials() {
         if (prefersReduced() || !("IntersectionObserver" in window)) return;
 
@@ -697,7 +652,7 @@
             const startDelay =
                 (box.closest(".login-section") ? AUTH_BASE : BASE) + groupDelay;
 
-            /* wrap words in fading spans; keep the text untouched */
+            // One span per word for staggered opacity.
             let wordCount = 0;
             const frag = document.createDocumentFragment();
             Array.prototype.forEach.call(text.childNodes, function (node) {
@@ -746,8 +701,7 @@
 
             observer.observe(box);
 
-            // safety net: text must never stay hidden, but only force the
-            // reveal once the card really is on screen
+            // Show quote if reveal observer never fired but card is visible.
             function guardCheck() {
                 const rect = box.getBoundingClientRect();
                 const onScreen = rect.width > 0 &&
@@ -761,7 +715,7 @@
             }
             let guard = setTimeout(guardCheck, 6000);
 
-            // never leave text hidden if motion is turned off later
+            // Reduced motion: drop armed state.
             pickMotion(function () {
                 if (!prefersReduced()) return;
                 observer.disconnect();
@@ -772,12 +726,7 @@
         });
     }
 
-    /* ------------------------------------------------------------
-       5. Statistic count-up
-       Animates the existing presentation targets (10K+, 5K+, 2K+,
-       1K+) from zero once per visit. These are display values, not
-       live data. The final string is always written verbatim.
-       ------------------------------------------------------------ */
+    // --- hero stat count-up (display numbers, not live API) ---
     function initCounters() {
         const stats = document.querySelector(".hero-stats");
         if (!stats || prefersReduced() || !("IntersectionObserver" in window)) return;
@@ -877,9 +826,7 @@
         });
     }
 
-    /* ------------------------------------------------------------
-       6. Pause decorative CSS motion for off-screen sections
-       ------------------------------------------------------------ */
+    // --- pause CSS motion off-screen ---
     function initOffscreenPause() {
         if (prefersReduced() || !("IntersectionObserver" in window)) return;
 
@@ -901,9 +848,7 @@
         onPageHide(function () { observer.disconnect(); });
     }
 
-    /* ------------------------------------------------------------
-       Boot + live reduced-motion handling
-       ------------------------------------------------------------ */
+    // --- init ---
     function finishAllMotion() {
         document.querySelectorAll(".reveal")
             .forEach(function (el) { el.classList.add("is-visible"); });

@@ -6,7 +6,7 @@ BEGIN
 END
 GO
 
--- Best-effort backfill for messages sent by someone other than the ticket creator.
+-- Mark older messages from non-creators as admin.
 UPDATE m
 SET m.[IsFromAdmin] = 1
 FROM [dbo].[SupportTicketMessages] m

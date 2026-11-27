@@ -1,6 +1,6 @@
--- Creates similarity tables required by AI debugging (migration 20261106123513).
--- Run on the MonsterASP SQL database if Analyze with AI returns 500 after saving the problem
--- and DebuggingAttempts stay empty. Safe to re-run.
+-- Similarity tables (migration 20261106123513).
+-- Use on MonsterASP if Analyze AI returns 500 and DebuggingAttempts stay empty.
+-- Safe to re-run.
 
 IF OBJECT_ID(N'dbo.ProblemEmbeddings', N'U') IS NULL
 BEGIN

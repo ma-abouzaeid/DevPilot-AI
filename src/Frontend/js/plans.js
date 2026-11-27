@@ -78,7 +78,7 @@
         }
         const code = String(planCode || "").toUpperCase();
         try {
-            // Paid plans go through Paymob checkout (EGP charge at $1 = 50 EGP).
+            // Pro checkout via Paymob ($1 ≈ 50 EGP).
             if (code === "PRO") {
                 const url = new URL("/api/Payments/paymob/checkout", API_BASE).href;
                 const res = await window.DevPilotApi.request(url, {
@@ -149,7 +149,7 @@
             if (isCurrent) {
                 cta = '<button type="button" class="btn btn-outline-card w-100" disabled>Current plan</button>';
             } else if (!isPro && currentPlanCode === "PRO") {
-                // Paid Pro must not be cancelled by a one-click Free switch.
+                // Can't downgrade Pro to Free in one click.
                 cta = '<button type="button" class="btn btn-outline-card w-100" disabled>Pro is active — contact Support to cancel</button>';
             } else {
                 cta = '<button type="button" class="btn ' + (isPro ? "btn-primary" : "btn-outline-card") +

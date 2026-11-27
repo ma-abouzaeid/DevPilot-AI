@@ -71,7 +71,7 @@ public class GitHubService : IGitHubService
 
         if (!TryReadAccessToken(account, out _))
         {
-            // Token was encrypted with ephemeral keys (app recycle) — clear so the user can reconnect.
+            // Stale encryption after recycle; force reconnect.
             await RemoveGitHubAccountAsync(account, cancellationToken);
             return new GitHubConnectionStatusDto(false, null, null, null);
         }
@@ -189,8 +189,7 @@ public class GitHubService : IGitHubService
         }
         catch (Exception)
         {
-            // Fall back to public repos for the connected username so the UI is not empty
-            // when the OAuth token is missing/invalid for private listing.
+            // Bad token? list public repos so the page isn't empty.
             repos = await _gitHub.ListPublicRepositoriesAsync(account.GitHubUsername, cancellationToken);
             if (repos.Count == 0)
             {
@@ -214,7 +213,7 @@ public class GitHubService : IGitHubService
         }
         catch
         {
-            // Listing must not fail just because local cache upsert failed.
+            // Cache upsert failed; still return the list.
         }
 
         return repos.Select(r => new GitHubRepoDto(
@@ -647,7 +646,7 @@ public class GitHubService : IGitHubService
 
     private async Task RemoveGitHubAccountAsync(GitHubAccount account, CancellationToken cancellationToken)
     {
-        // Hard-delete repos (soft-delete leaves FK rows that block account removal with DeleteBehavior.NoAction).
+        // Hard delete: soft delete blocks user delete (NoAction FK).
         var repos = await _db.GitHubRepositories
             .IgnoreQueryFilters()
             .Where(r => r.GitHubAccountId == account.GitHubAccountId)

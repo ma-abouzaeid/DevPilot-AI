@@ -88,7 +88,7 @@ public class AuthenticationFlowAndSwaggerTests : IClassFixture<WebApplicationFac
         var client = CreateRealAuthClient();
         var token = GenerateValidToken(userId: 1, email: "user1@devpilot.ai");
 
-        // Send raw JWT directly in Authorization header without the "Bearer " scheme prefix
+        // Auth header without the "Bearer " prefix
         var request = new HttpRequestMessage(HttpMethod.Delete, "/api/users/me");
         request.Headers.TryAddWithoutValidation("Authorization", token);
 

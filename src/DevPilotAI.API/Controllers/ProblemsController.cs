@@ -129,7 +129,7 @@ public class ProblemsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetProblemHistory(int problemId, CancellationToken cancellationToken)
     {
-        // Owners receive source/logs; anonymous/public viewers get sanitized history.
+        // Non-owners get history without source/logs.
         var history = await _problemService.GetProblemHistoryAsync(problemId, TryGetAuthenticatedUserId(), cancellationToken);
         var response = ApiResponse<ProblemHistoryDto>.SuccessResult(history, "Problem history retrieved successfully.", GetTraceId());
         return Ok(response);

@@ -283,7 +283,12 @@
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <button type="button" class="btn btn-primary w-100" id="ai-refresh">Refresh</button>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-primary flex-grow-1" id="ai-refresh">Refresh</button>
+                                <button type="button" class="btn btn-outline-card" id="ai-export" style="width:auto;" title="Export to Excel">
+                                    <i class="fa-solid fa-file-excel"></i> Export
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -323,7 +328,12 @@
                             <input type="text" class="form-control" id="audit-action" placeholder="e.g. CREDITS_CHARGED">
                         </div>
                         <div class="col-md-3">
-                            <button type="button" class="btn btn-primary w-100" id="audit-refresh">Refresh</button>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-primary flex-grow-1" id="audit-refresh">Refresh</button>
+                                <button type="button" class="btn btn-outline-card" id="audit-export" style="width:auto;" title="Export to Excel">
+                                    <i class="fa-solid fa-file-excel"></i> Export
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -372,8 +382,13 @@
                                 <option value="500">500+</option>
                             </select>
                         </div>
-                        <div class="col-md-2">
-                            <button type="button" class="btn btn-primary w-100" id="errors-refresh">Refresh</button>
+                        <div class="col-md-3">
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-primary flex-grow-1" id="errors-refresh">Refresh</button>
+                                <button type="button" class="btn btn-outline-card" id="errors-export" style="width:auto;" title="Export to Excel">
+                                    <i class="fa-solid fa-file-excel"></i> Export
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

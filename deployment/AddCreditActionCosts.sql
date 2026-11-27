@@ -1,4 +1,4 @@
--- Credit action costs (admin-configurable deductions).
+-- Credit costs per action (editable from Admin).
 -- Safe to re-run.
 
 IF OBJECT_ID(N'dbo.CreditActionCosts', N'U') IS NULL

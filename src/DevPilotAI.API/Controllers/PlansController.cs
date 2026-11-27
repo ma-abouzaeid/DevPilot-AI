@@ -64,9 +64,7 @@ public class PlansController : ControllerBase
         return Ok(ApiResponse<MyPlanUsageDto>.SuccessResult(usage, "Plan usage retrieved.", GetTraceId()));
     }
 
-    /// <summary>
-    /// Self-serve activation for free plans only. Paid plans must use Paymob checkout.
-    /// </summary>
+    // Free plans only; paid goes through Paymob.
     [HttpPost("activate")]
     [Authorize]
     public async Task<IActionResult> Activate([FromBody] ActivatePlanRequestDto dto, CancellationToken cancellationToken)

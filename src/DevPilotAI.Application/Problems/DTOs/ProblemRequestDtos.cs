@@ -2,19 +2,15 @@ using System.ComponentModel.DataAnnotations;
 
 namespace DevPilotAI.Application.Problems.DTOs;
 
-/// <summary>
-/// Minimal user input: code + error are required. Title/framework/etc. are optional —
-/// the AI infers and persists them during analysis.
-/// </summary>
+/// <summary>Needs code + error; title/framework optional (AI fills in).</summary>
 public class CreateProblemDto
 {
     public int UserId { get; set; }
 
-    /// <summary>Optional. When omitted, AI generates a searchable title from the error/code.</summary>
+    // AI picks a title from error/code if empty.
     [StringLength(200, ErrorMessage = "Problem title cannot exceed 200 characters.")]
     public string? Title { get; set; }
 
-    /// <summary>Optional context from the developer.</summary>
     [StringLength(10000, ErrorMessage = "Problem description cannot exceed 10000 characters.")]
     public string? Description { get; set; }
 
@@ -60,9 +56,6 @@ public class AddProblemRequestDto
     public string? Logs { get; set; }
 }
 
-/// <summary>
-/// Continue debugging the same problem with updated code/error context.
-/// </summary>
 public class FollowUpProblemDto
 {
     [Required(ErrorMessage = "Error message is required.")]

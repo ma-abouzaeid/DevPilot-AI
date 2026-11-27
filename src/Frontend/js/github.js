@@ -242,7 +242,7 @@
             try {
                 await loadRepos();
             } catch (err) {
-                // Keep connection chrome visible; repos panel already shows the error + reconnect CTA.
+                // Stay connected in UI; repos panel shows the error.
                 showAlert(err.message || "Failed to load repositories", "danger");
             }
         } else {
@@ -280,7 +280,7 @@
         try {
             await disconnect();
         } catch (err) {
-            // Still attempt OAuth even if disconnect failed — connect will replace the token.
+            // Reconnect anyway; OAuth replaces a bad token.
             console.warn("Disconnect before reconnect failed:", err);
         }
         await connect();
@@ -303,7 +303,7 @@
                 "</div>";
             bindReconnectButton("btn-reconnect-repos");
             if (needsReconnect) {
-                // Broken/stale connection: show Connect again so user is not stuck on Disconnect-only UI.
+                // Stale token: show Connect so user isn't stuck on Disconnect only.
                 btnConnect.classList.remove("d-none");
             }
             throw new Error(res.message || "Failed to load repositories");

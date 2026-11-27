@@ -178,7 +178,7 @@ public class TelegramBotService : ITelegramBotService
             return;
         }
 
-        // Knowledge / free-form help
+        // Free-text question
         await HandleKnowledgeOrHelpAsync(chatId, convo, text, ct);
     }
 
@@ -461,7 +461,7 @@ public class TelegramBotService : ITelegramBotService
             return;
         }
 
-        // Not marked paid — ask for proof
+        // Not paid yet; ask for screenshot
         await SetStateAsync(convo, TelegramBotStates.PaymentAwaitProof,
             JsonSerializer.Serialize(new { merchantOrderId = merchantId, userId = order.UserId }), ct);
         await _bot.SendMessageAsync(new TelegramOutgoingMessage(chatId,

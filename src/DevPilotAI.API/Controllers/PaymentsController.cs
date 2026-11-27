@@ -40,7 +40,6 @@ public class PaymentsController : ControllerBase
         return id;
     }
 
-    /// <summary>Creates a Paymob Unified Checkout session for a paid plan (PRO).</summary>
     [HttpPost("paymob/checkout")]
     [Authorize]
     public async Task<IActionResult> CreateCheckout(
@@ -79,7 +78,6 @@ public class PaymentsController : ControllerBase
         return Ok(ApiResponse<IReadOnlyList<PaymentOrderListItemDto>>.SuccessResult(items, "Payments loaded.", GetTraceId()));
     }
 
-    /// <summary>Paymob server-to-server transaction callback.</summary>
     [HttpPost("paymob/webhook")]
     [AllowAnonymous]
     public async Task<IActionResult> Webhook(CancellationToken cancellationToken)
@@ -90,7 +88,7 @@ public class PaymentsController : ControllerBase
         return Ok(new { success = true });
     }
 
-    /// <summary>Browser return URL after Paymob checkout — verifies HMAC then redirects to plans page.</summary>
+    // Paymob browser return: verify HMAC, redirect to plans.
     [HttpGet("paymob/return")]
     [AllowAnonymous]
     public async Task<IActionResult> Return(CancellationToken cancellationToken)

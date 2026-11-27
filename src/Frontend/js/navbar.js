@@ -1,4 +1,4 @@
-// navbar + collapsible app sidebar
+// navbar and app sidebar
 const navbarBox = document.querySelector("#navbar");
 
 if (navbarBox) {
@@ -167,8 +167,7 @@ if (navbarBox) {
 
     renderNavbar(initialAdmin);
 
-    // After Admin role is assigned in DB, the current JWT may still be old.
-    // Refresh roles from profile so Admin appears in the sidebar.
+    // JWT may be stale after Admin grant; refresh roles for sidebar.
     if (isLoggedIn && window.DevPilotApi && typeof window.DevPilotApi.refreshRolesFromProfile === "function") {
         window.DevPilotApi.refreshRolesFromProfile().then(function () {
             if (window.DevPilotApi.isAdmin() && !initialAdmin) {

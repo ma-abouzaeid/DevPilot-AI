@@ -150,7 +150,7 @@ public static class ServiceCollectionExtensions
             {
                 OnMessageReceived = context =>
                 {
-                    // SignalR JS client sends JWT as ?access_token= on the WebSocket negotiate/connect.
+                    // SignalR passes JWT as ?access_token=
                     var accessToken = context.Request.Query["access_token"];
                     var path = context.HttpContext.Request.Path;
                     if (!string.IsNullOrWhiteSpace(accessToken) &&

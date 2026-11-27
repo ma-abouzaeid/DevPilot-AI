@@ -29,7 +29,6 @@ public class TelegramController : ControllerBase
             ? correlationId.ToString().Trim()
             : HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
 
-    /// <summary>Telegram Bot API webhook endpoint.</summary>
     [HttpPost("webhook")]
     [AllowAnonymous]
     public async Task<IActionResult> Webhook(CancellationToken cancellationToken)

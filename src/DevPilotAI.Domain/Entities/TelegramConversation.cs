@@ -1,6 +1,6 @@
 namespace DevPilotAI.Domain.Entities;
 
-/// <summary>Per-chat conversational state for the Smart Support Telegram bot.</summary>
+/// <summary>Telegram bot state per chat.</summary>
 public class TelegramConversation
 {
     public long TelegramConversationId { get; set; }

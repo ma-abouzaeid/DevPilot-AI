@@ -64,7 +64,7 @@
 
             document.getElementById("stat-open").textContent = String(openCount);
             document.getElementById("stat-solved").textContent = String(solvedCount);
-            // totalCount kept for future widgets
+            // totalCount reserved for later stats
             void totalCount;
 
             if (!items.length) {

@@ -372,7 +372,7 @@ public class ProblemService : IProblemService
                 }
                 catch
                 {
-                    // Challenge generation must not block marking a problem as solved.
+                    // Don't block solved if challenge gen fails.
                 }
             }
 
@@ -804,8 +804,7 @@ public class ProblemService : IProblemService
             }
             catch (Exception)
             {
-                // Similarity is an optimization only. Missing embedding tables or match failures
-                // must never block AI debugging or leave the ticket without a solution.
+                // Similarity is optional; don't block debugging if it fails.
                 DetachPendingSimilarityEntities(request.ProblemRequestId);
                 bestMatch = null;
             }
@@ -927,7 +926,7 @@ public class ProblemService : IProblemService
             }
         }
 
-        // Persist AI-inferred metadata so the user only needed code + error.
+        // Save AI-filled title/framework; user only sent code + error.
         var inferredTitle = !string.IsNullOrWhiteSpace(payload.Title)
             ? payload.Title.Trim()
             : payload.Problem?.Trim();

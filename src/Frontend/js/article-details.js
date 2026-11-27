@@ -115,7 +115,7 @@
     function normalizeArticleMarkdown(markdown) {
         let source = String(markdown || "").replace(/\r\n/g, "\n");
 
-        // Plain "Corrected code: ..." (with or without fences) → proper heading + fence.
+        // Normalize "Corrected code:" blocks into heading + fenced code.
         source = source.replace(
             /(^|\n)(?:##\s*)?Corrected code\s*:?\s*\n*(?:```[\w+-]*\n)?([\s\S]*?)(?:\n```[ \t]*)?(?=\n#{1,3}\s|\n*$)/gi,
             function (match, pre, body) {
@@ -202,7 +202,7 @@
                 flushParagraph();
                 flushList();
                 const heading = trimmed.replace(/^##\s+/, "");
-                // Heading is decorative when the next token is the IDE block.
+                // Special style when heading is only for the IDE block.
                 if (/^corrected code$/i.test(heading)) {
                     html.push('<h2 class="article-code-heading">' + inlineFormat(heading) + "</h2>");
                 } else {
@@ -213,7 +213,7 @@
             if (/^#\s+/.test(trimmed)) {
                 flushParagraph();
                 flushList();
-                // Skip page-level duplicate titles inside the body.
+                // Skip duplicate H1 in article body.
                 return;
             }
 

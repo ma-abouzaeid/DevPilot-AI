@@ -238,6 +238,32 @@ public class AdminController : ControllerBase
         return Ok(ApiResponse<PagedResultDto<AdminAiUsageDto>>.SuccessResult(data, "AI usage loaded.", GetTraceId()));
     }
 
+    [HttpGet("ai-usage/export")]
+    public async Task<IActionResult> ExportAiUsage(
+        [FromQuery] int? userId,
+        [FromQuery] string? status,
+        [FromQuery] DateTime? fromUtc,
+        [FromQuery] DateTime? toUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var bytes = await _adminService.ExportAiUsageExcelAsync(userId, status, fromUtc, toUtc, cancellationToken);
+        var fileName = $"ai-usage-{DateTime.UtcNow:yyyyMMdd-HHmmss}.xlsx";
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
+
+    [HttpGet("audit-logs/export")]
+    public async Task<IActionResult> ExportAuditLogs(
+        [FromQuery] int? userId,
+        [FromQuery] string? action,
+        [FromQuery] DateTime? fromUtc,
+        [FromQuery] DateTime? toUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var bytes = await _adminService.ExportAuditLogsExcelAsync(userId, action, fromUtc, toUtc, cancellationToken);
+        var fileName = $"audit-logs-{DateTime.UtcNow:yyyyMMdd-HHmmss}.xlsx";
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
+
     [HttpGet("system-errors")]
     public async Task<IActionResult> ListSystemErrors(
         [FromQuery] int? userId,
@@ -251,5 +277,19 @@ public class AdminController : ControllerBase
         var data = await _adminService.ListSystemErrorsAsync(
             userId, pathContains, errorCode, minStatusCode, page, pageSize, cancellationToken);
         return Ok(ApiResponse<PagedResultDto<AdminSystemErrorDto>>.SuccessResult(data, "System errors loaded.", GetTraceId()));
+    }
+
+    [HttpGet("system-errors/export")]
+    public async Task<IActionResult> ExportSystemErrors(
+        [FromQuery] int? userId,
+        [FromQuery] string? pathContains,
+        [FromQuery] string? errorCode,
+        [FromQuery] int? minStatusCode,
+        CancellationToken cancellationToken = default)
+    {
+        var bytes = await _adminService.ExportSystemErrorsExcelAsync(
+            userId, pathContains, errorCode, minStatusCode, cancellationToken);
+        var fileName = $"system-errors-{DateTime.UtcNow:yyyyMMdd-HHmmss}.xlsx";
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
 }

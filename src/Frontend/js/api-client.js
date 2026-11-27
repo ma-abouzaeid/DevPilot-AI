@@ -1,4 +1,4 @@
-// DevPilot AI — Centralized API Client & Response Handler
+// API client
 (function (window) {
     "use strict";
 
@@ -54,36 +54,24 @@
     }
 
     const DevPilotApi = {
-        /**
-         * Storage keys used by DevPilot authentication.
-         */
+        /** Auth token keys in localStorage. */
         STORAGE_KEYS: STORAGE_KEYS,
 
-        /**
-         * Gets the current access token from localStorage.
-         * @returns {string}
-         */
+        /** @returns {string} */
         getAccessToken() {
             return (safeGetItem(STORAGE_KEYS.ACCESS_TOKEN) || "").trim();
         },
 
-        /**
-         * Gets the current refresh token from localStorage.
-         * @returns {string}
-         */
+        /** @returns {string} */
         getRefreshToken() {
             return (safeGetItem(STORAGE_KEYS.REFRESH_TOKEN) || "").trim();
         },
 
-        /**
-         * Persists access and optional refresh tokens in localStorage.
-         * @param {string} accessToken 
-         * @param {string} [refreshToken] 
-         */
+        /** Store access token; optional refresh token. */
         setTokens(accessToken, refreshToken) {
             if (accessToken) {
                 safeSetItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken.trim());
-                // Re-read roles from the fresh JWT (important after Admin role assignment).
+                // Refresh cached roles from the new JWT.
                 safeRemoveItem("userRoles");
                 const rolesFromToken = this.getRoles();
                 if (rolesFromToken.length) {
@@ -95,27 +83,19 @@
             }
         },
 
-        /**
-         * Clears all stored authentication tokens.
-         */
+        /** Drop tokens from localStorage. */
         clearTokens() {
             safeRemoveItem(STORAGE_KEYS.ACCESS_TOKEN);
             safeRemoveItem(STORAGE_KEYS.REFRESH_TOKEN);
             safeRemoveItem("userRoles");
         },
 
-        /**
-         * Checks whether an access token is present.
-         * @returns {boolean}
-         */
+        /** @returns {boolean} */
         isAuthenticated() {
             return Boolean(this.getAccessToken());
         },
 
-        /**
-         * Decodes JWT payload claims without verifying signature (client gating only).
-         * @returns {object|null}
-         */
+        /** JWT payload only (not verified). @returns {object|null} */
         getTokenClaims() {
             const token = this.getAccessToken();
             if (!token) return null;
@@ -130,9 +110,7 @@
             }
         },
 
-        /**
-         * @returns {string[]}
-         */
+        /** Roles from cache or JWT. @returns {string[]} */
         getRoles() {
             const cached = safeGetItem("userRoles");
             if (cached) {
@@ -166,10 +144,7 @@
             return roles;
         },
 
-        /**
-         * Persist roles from login/profile so the navbar can show Admin immediately.
-         * @param {string[]|null|undefined} roles
-         */
+        /** Cache roles for navbar. */
         setRoles(roles) {
             if (!roles || !roles.length) {
                 safeRemoveItem("userRoles");
@@ -178,19 +153,14 @@
             safeSetItem("userRoles", JSON.stringify(roles.map(function (r) { return String(r); })));
         },
 
-        /**
-         * @returns {boolean}
-         */
+        /** @returns {boolean} */
         isAdmin() {
             return this.getRoles().some(function (r) {
                 return String(r).toLowerCase() === "admin";
             });
         },
 
-        /**
-         * Loads roles from /api/Users/me and caches them.
-         * @returns {Promise<string[]>}
-         */
+        /** Fetch /api/Users/me roles. @returns {Promise<string[]>} */
         async refreshRolesFromProfile() {
             try {
                 const base = (typeof window !== "undefined" && window.API_BASE) ? window.API_BASE : "";
@@ -207,22 +177,14 @@
             }
         },
 
-        /**
-         * Ensures a token is formatted with the standard "Bearer <token>" scheme exactly once.
-         * @param {string} token 
-         * @returns {string}
-         */
+        /** Prefix Bearer once. @returns {string} */
         formatBearer(token) {
             return formatBearer(token);
         },
 
         /**
-         * Dispatches a fetch request and returns a normalized ApiResponse structure.
-         * Automatically attaches Authorization: Bearer <token> for authenticated calls,
-         * and attempts transparent refresh token rotation on 401 when eligible.
-         * @param {string} url 
-         * @param {RequestInit & {_isRetry?: boolean, skipAuth?: boolean}} options 
-         * @returns {Promise<{ok: boolean, status: number, success: boolean, message: string, data: any, errors: Array<{field: string, message: string, code: string}>, errorCode: string|null, traceId: string|null}>}
+         * fetch wrapper: JSON shape, Bearer auth, refresh on 401.
+         * options.skipAuth skips the header; _isRetry is internal.
          */
         async request(url, options = {}) {
             const correlationId = "client-" + Date.now() + "-" + Math.random().toString(36).substring(2, 9);
@@ -235,7 +197,7 @@
                 headers["X-Correlation-ID"] = correlationId;
             }
 
-            // Handle Authorization header
+            // Bearer token when logged in
             let authHeaderKey = Object.keys(headers).find(k => k.toLowerCase() === "authorization");
             if (authHeaderKey && headers[authHeaderKey]) {
                 headers[authHeaderKey] = formatBearer(headers[authHeaderKey]);
@@ -249,7 +211,7 @@
             try {
                 const response = await fetch(url, Object.assign({}, options, { headers }));
 
-                // Handle 401 Unauthorized with token refresh if eligible
+                // 401: try refresh once, then retry
                 const isAuthLifecycleEndpoint = /\/api\/auth\/(login|register|verify-email|resend-verification|refresh|refresh-token|logout|forgot-password|reset-password)/i.test(url);
                 if (response.status === 401 && !options._isRetry && !isAuthLifecycleEndpoint) {
                     const refreshToken = this.getRefreshToken();
@@ -269,7 +231,7 @@
                             if (refreshResponse.ok && refreshJson && refreshJson.success && refreshJson.data && refreshJson.data.accessToken) {
                                 this.setTokens(refreshJson.data.accessToken, refreshJson.data.refreshToken || refreshToken);
 
-                                // Retry original request with newly acquired access token
+                                // Retry with new access token
                                 const retryHeaders = Object.assign({}, headers, {
                                     "Authorization": formatBearer(refreshJson.data.accessToken)
                                 });
@@ -281,7 +243,7 @@
 
                                 return await this.request(url, retryOptions);
                             } else {
-                                // Refresh failed or expired: clear tokens
+                                // Refresh failed; clear tokens
                                 this.clearTokens();
                                 window.dispatchEvent(new CustomEvent("devpilot:unauthorized", { detail: { reason: "session_expired" } }));
                             }
@@ -359,11 +321,7 @@
             }
         },
 
-        /**
-         * Logs out the user by notifying the backend and purging local storage.
-         * @param {string} [redirectUrl]
-         * @returns {Promise<void>}
-         */
+        /** POST logout, clear storage, redirect. */
         async logout(redirectUrl = "login.html") {
             const refreshToken = this.getRefreshToken();
             if (refreshToken) {
@@ -383,12 +341,7 @@
             }
         },
 
-        /**
-         * Renders field-level validation errors next to input elements.
-         * @param {Object.<string, HTMLElement>} fieldMap Map of lowercase field names to input elements
-         * @param {Array<{field: string, message: string, code: string}>} errors 
-         * @returns {boolean} True if any field error was matched and rendered
-         */
+        /** Paint API field errors onto form inputs. @returns {boolean} */
         renderFieldErrors(fieldMap, errors) {
             if (!Array.isArray(errors) || errors.length === 0) {
                 return false;
@@ -415,10 +368,7 @@
             return rendered;
         },
 
-        /**
-         * Clears all error states from a form.
-         * @param {HTMLElement} formElement 
-         */
+        /** Reset form error UI. */
         clearFieldErrors(formElement) {
             if (!formElement) return;
             formElement.querySelectorAll(".form-group.has-error").forEach(function (group) {
@@ -429,11 +379,7 @@
             });
         },
 
-        /**
-         * Builds a user-friendly error message, appending the trace reference when appropriate.
-         * @param {Object} apiResult 
-         * @returns {string}
-         */
+        /** Message for alerts; adds trace id on 500. */
         getDisplayMessage(apiResult) {
             if (!apiResult) {
                 return "An unexpected error occurred. Please try again.";

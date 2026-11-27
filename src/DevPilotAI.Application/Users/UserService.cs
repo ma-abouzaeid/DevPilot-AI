@@ -22,7 +22,7 @@ public class UserService : IUserService
         _auditService = auditService;
     }
 
-    // Keep overload used by tests that still pass IEmailService.
+    // Test ctor still passes IEmailService.
     public UserService(
         IApplicationDbContext dbContext,
         IEmailService emailService,
@@ -139,7 +139,7 @@ public class UserService : IUserService
 
         user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
 
-        // Keep other sessions from using the old password via refresh tokens.
+        // Revoke refresh tokens on password change.
         var activeTokens = await _dbContext.RefreshTokens
             .Where(rt => rt.UserId == userId && !rt.IsRevoked)
             .ToListAsync(cancellationToken);

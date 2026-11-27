@@ -54,7 +54,7 @@ public static class DependencyInjection
 
         services.AddHttpContextAccessor();
         services.AddDataProtection();
-        // Stable AES key (Jwt:Key / Security:TokenProtectionKey) so GitHub tokens survive app recycles.
+        // Fixed AES key so GitHub tokens survive restarts.
         services.AddSingleton<ITokenProtector, AesTokenProtector>();
         services.AddScoped<ITurnstileService, TurnstileService>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();

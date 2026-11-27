@@ -54,7 +54,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         foreach (var role in rolesList)
         {
             claims.Add(new Claim(ClaimTypes.Role, role));
-            // Short claim name so [Authorize(Roles=...)] and client JWT decoding both see "role".
+            // "role" claim for [Authorize] and clients.
             claims.Add(new Claim("role", role));
         }
 

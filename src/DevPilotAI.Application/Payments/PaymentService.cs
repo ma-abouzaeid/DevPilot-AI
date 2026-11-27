@@ -264,7 +264,7 @@ public class PaymentService : IPaymentService
             flat.TryGetValue("special_reference", out var sr) ? sr :
             null;
 
-        // Paymob sometimes only returns order id — fall back to matching PaymobOrderId.
+        // Sometimes only order id; match PaymobOrderId.
         PaymentOrder? order = null;
         if (!string.IsNullOrWhiteSpace(merchantOrderId))
         {

@@ -37,7 +37,7 @@ public class GitHubClient : IGitHubClient
             ["scope"] = _options.Scopes,
             ["state"] = state,
             ["allow_signup"] = "true",
-            // Force the consent screen so reconnecting re-grants the repo scope.
+            // consent prompt on reconnect for repo scope
             ["prompt"] = "consent"
         };
 
@@ -100,7 +100,7 @@ public class GitHubClient : IGitHubClient
 
     public async Task<IReadOnlyList<GitHubRepoInfo>> ListRepositoriesAsync(string accessToken, CancellationToken cancellationToken = default)
     {
-        // Keep the query simple — affiliation filters have returned empty lists for some OAuth tokens.
+        // Simple list; affiliation filter was empty for some tokens.
         using var doc = await SendGitHubJsonAsync(
             HttpMethod.Get,
             "user/repos?per_page=100&sort=updated&direction=desc&visibility=all",

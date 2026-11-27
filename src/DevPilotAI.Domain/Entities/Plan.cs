@@ -13,9 +13,8 @@ public class Plan
     public int CreditsPerPeriod { get; set; } = 100;
     public decimal? Price { get; set; }
     public string? Currency { get; set; }
-    /// <summary>When true, <see cref="SaleDiscountPercent"/> is applied to the listed price.</summary>
     public bool SaleEnabled { get; set; }
-    /// <summary>Discount percent 0–100 when <see cref="SaleEnabled"/> is true.</summary>
+    // 0-100 when SaleEnabled
     public decimal SaleDiscountPercent { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -33,9 +32,7 @@ public class Plan
         return Math.Round(price * (1m - pct / 100m), 2, MidpointRounding.AwayFromZero);
     }
 
-    /// <summary>
-    /// Paid plans get a scheduled end (monthly/yearly). Free plans stay open-ended (null).
-    /// </summary>
+    // Paid: monthly end date. Free: null.
     public DateTime? ComputeSubscriptionEndDate(DateTime startUtc)
     {
         if ((Price ?? 0m) <= 0m)

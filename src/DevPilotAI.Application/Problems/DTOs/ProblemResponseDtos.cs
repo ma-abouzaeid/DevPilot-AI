@@ -6,10 +6,7 @@ public record DebugStepDto(
     string Detail
 );
 
-/// <summary>
-/// Fixed, ordered debugging result shown for every problem.
-/// Field order is part of the product contract.
-/// </summary>
+/// <summary>Debugging payload; keep field order stable for the UI.</summary>
 public record DebuggingResultDto(
     int ProblemId,
     string ProblemCode,
@@ -22,7 +19,7 @@ public record DebuggingResultDto(
     string CorrectedCode,
     string? Notes,
     string ProviderUsed,
-    /// <summary>Legacy/compat: full proposed solution text (summary + steps + code).</summary>
+    // Old shape: one big proposed-solution string.
     string ProposedSolution
 );
 

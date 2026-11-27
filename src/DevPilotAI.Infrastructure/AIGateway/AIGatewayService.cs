@@ -201,7 +201,7 @@ public class AIGatewayService : IAIGateway
                 }
                 catch (Exception telemetryEx)
                 {
-                    // Telemetry must never convert a recoverable provider failure into a 500.
+                    // Don't 500 the request if telemetry save fails.
                     _logger.LogWarning(telemetryEx, "Failed to persist failure telemetry for {ProviderName}", provider.Name);
                     try
                     {

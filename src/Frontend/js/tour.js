@@ -1,12 +1,11 @@
-// DevPilot AI — guided page tours (Tour / Next / Skip / Close)
-// Only on Debug + GitHub, with detailed control explanations.
+// Guided tours on Debug and GitHub pages.
 (function (window, document) {
     "use strict";
 
     if (window.DevPilotTour) return;
 
     function pageName() {
-        // Vercel cleanUrls serves /submit-problem and /github (no .html).
+        // Vercel cleanUrls: /submit-problem and /github without .html.
         let name = (window.location.pathname || "").split("/").pop() || "";
         name = decodeURIComponent(name).toLowerCase().trim();
         if (!name || name === "/") return "index.html";
@@ -14,9 +13,7 @@
         return name;
     }
 
-    /**
-     * Tours ONLY on Debug and GitHub — every important field/button explained in detail.
-     */
+    /** Step defs keyed by page filename. */
     /** @type {Record<string, Array<{selector:string,title:string,body:string,includeHidden?:boolean}>>} */
     const PAGE_TOURS = {
         "submit-problem.html": [
@@ -305,7 +302,7 @@
                 el.setAttribute("data-tour-revealed", "1");
                 state.revealed.push(el);
             }
-            // Enable disabled fields so the spotlight can focus meaningfully
+            // Temporarily enable disabled controls for the spotlight.
             if (el.matches && (el.matches("textarea, input, button") || el.querySelector)) {
                 el.querySelectorAll("textarea[disabled], input[disabled], button[disabled]").forEach(function (ctrl) {
                     if (!ctrl.hasAttribute("data-tour-was-disabled")) {
@@ -320,7 +317,7 @@
             }
         });
 
-        // On GitHub: show both panels for the tour so each control can be visited
+        // GitHub tour: unhide both workspace panels.
         if (name === "github.html") {
             ["#panel-debug", "#panel-review"].forEach(function (sel) {
                 const panel = document.querySelector(sel);
@@ -551,7 +548,7 @@
         if (!defs.length) return;
 
         revealForTour(name);
-        // Let layout settle after revealing hidden panels
+        // Brief pause after unhiding panels.
         setTimeout(function () {
             beginWithSteps(resolveSteps(defs));
         }, 80);

@@ -29,7 +29,7 @@ public class CreditCostService : ICreditCostService
         }
         catch
         {
-            // Table may not exist yet on older environments — fall back to defaults.
+            // Old DB without table; use defaults.
         }
 
         return CreditCosts.ForTaskType(key);

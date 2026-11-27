@@ -79,10 +79,7 @@ public static partial class DebuggingResultParser
         return CreateFallback(fallbackProblemTitle, trimmed);
     }
 
-    /// <summary>
-    /// Rebuilds structured fields from persisted attempt columns.
-    /// ProposedSolution is human-readable text (not AI JSON), so ParseOrFallback must not be used on it.
-    /// </summary>
+    // Build DTO from DB columns. ProposedSolution is plain text, not JSON.
     public static StructuredDebugPayload FromPersistedAttempt(
         string? explanation,
         string? rootCause,

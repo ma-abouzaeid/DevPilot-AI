@@ -210,7 +210,7 @@ public class PlanUsageService : IPlanUsageService
 
         var period = await EnsureCurrentPeriodAsync(userId, cancellationToken);
 
-        // Unlimited accounts keep balance; still record usage for audit/AI tracking.
+        // Unlimited: don't deduct credits, still log usage.
         if (!unlimited)
         {
             period.CreditsUsed += amount;
@@ -297,7 +297,7 @@ public class PlanUsageService : IPlanUsageService
             .FirstOrDefaultAsync(p => p.Code == code && p.Status == "Active" && p.IsPublic, cancellationToken)
             ?? throw AppError.NotFound($"Plan '{code}' was not found.");
 
-        // Paid plans cannot be activated via plain self-serve activate — must go through Paymob.
+        // Paid plans need Paymob checkout, not plain activate.
         if ((plan.Price ?? 0m) > 0m &&
             string.Equals(source, "SelfServe", StringComparison.OrdinalIgnoreCase))
         {
@@ -415,7 +415,7 @@ public class PlanUsageService : IPlanUsageService
 
         if (subscription != null)
         {
-            // Paid period ended → expire and fall through to Free/default.
+            // Subscription ended; drop to default plan.
             if (subscription.EndDate.HasValue && subscription.EndDate.Value <= now)
             {
                 subscription.Status = "Expired";

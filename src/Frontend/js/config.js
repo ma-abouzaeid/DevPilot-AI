@@ -5,8 +5,7 @@
     const configured = window.DEVPILOT_API_BASE;
     const productionApi = "http://devpilot-ai.runasp.net";
 
-    // On Vercel HTTPS keep same-origin so /api and /hubs use vercel.json rewrites
-    // (avoids mixed-content blocks to the HTTP MonsterASP host).
+    // Vercel HTTPS: same-origin /api and /hubs via rewrites (no mixed content).
     window.API_BASE = configured
         || (isLocalHost ? "http://localhost:5281" : (
             window.location.protocol === "https:"
@@ -14,7 +13,7 @@
                 : productionApi
         ));
 
-    // SignalR over Vercel proxy: prefer LongPolling (WebSockets usually fail through rewrites).
+    // SignalR on Vercel: LongPolling (WebSockets often fail).
     window.DEVPILOT_SIGNALR_LONG_POLLING =
         !isLocalHost && window.location.protocol === "https:" && !configured;
 })(window);

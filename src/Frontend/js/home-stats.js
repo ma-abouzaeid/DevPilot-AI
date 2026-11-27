@@ -68,7 +68,7 @@
             nodes.articles.textContent = formatStat(d.knowledgeArticles ?? d.KnowledgeArticles);
             nodes.challenges.textContent = formatStat(d.codingChallenges ?? d.CodingChallenges);
         } catch (e) {
-            // Keep placeholders if the public stats call fails.
+            // Leave default placeholders on fetch error.
         }
     }
 

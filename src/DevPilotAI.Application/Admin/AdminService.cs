@@ -583,7 +583,7 @@ public class AdminService : IAdminService
         }
         else
         {
-            // Keep credit limit feature in sync with allocation.
+            // Sync credit limit with allocation.
             var creditsFeature = await _db.Features.FirstOrDefaultAsync(f => f.Key == PlanFeatureKeys.MonthlyAiCredits, cancellationToken);
             if (creditsFeature != null)
             {
@@ -600,7 +600,7 @@ public class AdminService : IAdminService
 
         await _db.SaveChangesAsync(cancellationToken);
 
-        // Reload features for response.
+        // Reload features.
         plan = await _db.Plans
             .Include(p => p.PlanFeatures)
                 .ThenInclude(pf => pf.Feature)
@@ -934,7 +934,7 @@ public class AdminService : IAdminService
             .Where(r => requestIds.Contains(r.AIRequestId))
             .ToDictionaryAsync(r => r.AIRequestId, cancellationToken);
 
-        // Fallback: resolve provider/model via AIRequest FKs when usage-event nav ids are sparse.
+        // Fill in provider/model from AIRequest when usage row ids are missing.
         var requestProviderIds = requests.Values.Select(r => r.AIProviderId).Distinct().ToList();
         var requestModelIds = requests.Values.Select(r => r.AIModelId).Distinct().ToList();
         var missingProviderIds = requestProviderIds.Where(id => !providers.ContainsKey(id)).ToList();
@@ -967,7 +967,7 @@ public class AdminService : IAdminService
             var errorMessage = !string.IsNullOrWhiteSpace(aiRequest?.ErrorMessage)
                 ? aiRequest!.ErrorMessage
                 : e.ErrorCode;
-            // Prefer resolved names; fall back to ids so admin UI never looks "empty" when FK exists.
+            // Show names when we have them; otherwise provider/model ids.
             var providerLabel = !string.IsNullOrWhiteSpace(providerName)
                 ? providerName
                 : (providerId > 0 ? $"Provider #{providerId}" : null);
@@ -1091,7 +1091,7 @@ public class AdminService : IAdminService
         }
         catch (Exception)
         {
-            // Table may not exist yet before AddSystemErrorLogs.sql is applied.
+            // Table missing until AddSystemErrorLogs.sql is applied.
             return new PagedResultDto<AdminSystemErrorDto>([], 0, page, pageSize);
         }
 
@@ -1150,6 +1150,110 @@ public class AdminService : IAdminService
         }).ToList();
 
         return new PagedResultDto<AdminSystemErrorDto>(items, total, page, pageSize);
+    }
+
+    public async Task<byte[]> ExportAiUsageExcelAsync(
+        int? userId,
+        string? status,
+        DateTime? fromUtc,
+        DateTime? toUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var data = await ListAiUsageAsync(userId, status, fromUtc, toUtc, page: 1, pageSize: 5000, cancellationToken);
+        var headers = new[]
+        {
+            "When (UTC)", "User Id", "User Email", "Operation", "Status", "Provider", "Model",
+            "Input Tokens", "Output Tokens", "Total Tokens", "Credits", "Estimated Cost",
+            "Duration Ms", "Error Code", "Error Message", "Correlation Id", "AI Request Id", "Problem Id"
+        };
+        var rows = data.Items.Select(e => (IReadOnlyList<object?>)new object?[]
+        {
+            e.CreatedAt,
+            e.UserId,
+            e.UserEmail,
+            e.OperationType,
+            e.Status,
+            e.ProviderName,
+            e.ModelName,
+            e.InputTokens,
+            e.OutputTokens,
+            e.TotalTokens,
+            e.CreditsCharged,
+            e.EstimatedCost,
+            e.DurationMs,
+            e.ErrorCode,
+            e.ErrorMessage,
+            e.CorrelationId,
+            e.AIRequestId,
+            e.ProblemId
+        }).ToList();
+
+        return AdminExcelExport.ToXlsx("AI Usage", headers, rows);
+    }
+
+    public async Task<byte[]> ExportAuditLogsExcelAsync(
+        int? userId,
+        string? action,
+        DateTime? fromUtc,
+        DateTime? toUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var data = await ListAuditLogsAsync(userId, action, fromUtc, toUtc, page: 1, pageSize: 5000, cancellationToken);
+        var headers = new[]
+        {
+            "When (UTC)", "Action", "User Id", "User Email", "Entity", "Entity Id",
+            "Old Values", "New Values", "IP", "User Agent", "Request Id"
+        };
+        var rows = data.Items.Select(e => (IReadOnlyList<object?>)new object?[]
+        {
+            e.CreatedAt,
+            e.Action,
+            e.UserId,
+            e.UserEmail,
+            e.EntityName,
+            e.EntityId,
+            e.OldValues,
+            e.NewValues,
+            e.IpAddress,
+            e.UserAgent,
+            e.RequestId
+        }).ToList();
+
+        return AdminExcelExport.ToXlsx("Audit Logs", headers, rows);
+    }
+
+    public async Task<byte[]> ExportSystemErrorsExcelAsync(
+        int? userId,
+        string? pathContains,
+        string? errorCode,
+        int? minStatusCode,
+        CancellationToken cancellationToken = default)
+    {
+        var data = await ListSystemErrorsAsync(
+            userId, pathContains, errorCode, minStatusCode, page: 1, pageSize: 5000, cancellationToken);
+        var headers = new[]
+        {
+            "When (UTC)", "Status", "Error Code", "Method", "Path", "Action", "Message",
+            "User Id", "User Email", "Exception Type", "Exception Message", "Trace Id", "IP"
+        };
+        var rows = data.Items.Select(e => (IReadOnlyList<object?>)new object?[]
+        {
+            e.CreatedAt,
+            e.StatusCode,
+            e.ErrorCode,
+            e.HttpMethod,
+            e.Path,
+            e.Action,
+            e.Message,
+            e.UserId,
+            e.UserEmail,
+            e.ExceptionType,
+            e.ExceptionMessage,
+            e.TraceId,
+            e.IpAddress
+        }).ToList();
+
+        return AdminExcelExport.ToXlsx("System Errors", headers, rows);
     }
 
     private static string BuildJson(object value) =>

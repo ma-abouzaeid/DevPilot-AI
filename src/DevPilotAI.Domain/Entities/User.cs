@@ -9,7 +9,7 @@ public class User : ISoftDeletable
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public DateTime? EmailVerifiedAt { get; set; }
-    /// <summary>When true, AI credit checks are skipped (same billing bypass as Admin role).</summary>
+    // Skip credit checks (like admin).
     public bool HasUnlimitedCredits { get; set; }
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }

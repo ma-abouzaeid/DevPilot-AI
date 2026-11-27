@@ -6,10 +6,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace DevPilotAI.Infrastructure.Security;
 
-/// <summary>
-/// Stable AES-GCM protector for secrets that must survive app recycles.
-/// Falls back to ASP.NET Data Protection for legacy payloads.
-/// </summary>
+// AES-GCM for tokens across restarts; v1 payloads use Data Protection.
 public sealed class AesTokenProtector : ITokenProtector
 {
     private const string Prefix = "v2.";

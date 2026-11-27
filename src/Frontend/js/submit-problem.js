@@ -125,7 +125,7 @@
             return text;
         }
 
-        // Recover readable formatting from minified AI output.
+        // Pretty-print minified code in AI replies.
         let out = "";
         let indent = 0;
         let inString = false;

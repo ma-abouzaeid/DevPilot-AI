@@ -10,10 +10,7 @@ public sealed class AdminRoleRequirement : IAuthorizationRequirement
 {
 }
 
-/// <summary>
-/// Allows Admin access from JWT role claims OR the current UserRoles row in the database.
-/// This covers the case where Admin was assigned after the access token was issued.
-/// </summary>
+// Admin via JWT role or DB UserRoles (handles role granted after login).
 public sealed class AdminRoleHandler : AuthorizationHandler<AdminRoleRequirement>
 {
     private readonly IServiceScopeFactory _scopeFactory;

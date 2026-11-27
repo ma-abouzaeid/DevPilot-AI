@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -189,7 +190,7 @@ public class StandardizedValidationAndErrorHandlingTests
         httpContext.Response.Body = new MemoryStream();
         httpContext.TraceIdentifier = "trace-test-409";
 
-        await middleware.InvokeAsync(httpContext);
+        await middleware.InvokeAsync(httpContext, Mock.Of<IServiceScopeFactory>());
 
         Assert.Equal(StatusCodes.Status409Conflict, httpContext.Response.StatusCode);
         httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
@@ -215,7 +216,7 @@ public class StandardizedValidationAndErrorHandlingTests
         var httpContext = new DefaultHttpContext();
         httpContext.Response.Body = new MemoryStream();
 
-        await middleware.InvokeAsync(httpContext);
+        await middleware.InvokeAsync(httpContext, Mock.Of<IServiceScopeFactory>());
 
         Assert.Equal(StatusCodes.Status401Unauthorized, httpContext.Response.StatusCode);
         httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
@@ -239,7 +240,7 @@ public class StandardizedValidationAndErrorHandlingTests
         var httpContext = new DefaultHttpContext();
         httpContext.Response.Body = new MemoryStream();
 
-        await middleware.InvokeAsync(httpContext);
+        await middleware.InvokeAsync(httpContext, Mock.Of<IServiceScopeFactory>());
 
         Assert.Equal(StatusCodes.Status404NotFound, httpContext.Response.StatusCode);
         httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
@@ -264,7 +265,7 @@ public class StandardizedValidationAndErrorHandlingTests
         var httpContext = new DefaultHttpContext();
         httpContext.Response.Body = new MemoryStream();
 
-        await middleware.InvokeAsync(httpContext);
+        await middleware.InvokeAsync(httpContext, Mock.Of<IServiceScopeFactory>());
 
         Assert.Equal(StatusCodes.Status500InternalServerError, httpContext.Response.StatusCode);
         httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
@@ -346,7 +347,7 @@ public class StandardizedValidationAndErrorHandlingTests
         }, "TestAuth"));
         httpContext.Response.Body = new MemoryStream();
 
-        await middleware.InvokeAsync(httpContext);
+        await middleware.InvokeAsync(httpContext, Mock.Of<IServiceScopeFactory>());
 
         Assert.Equal(StatusCodes.Status403Forbidden, httpContext.Response.StatusCode);
         httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
@@ -371,7 +372,7 @@ public class StandardizedValidationAndErrorHandlingTests
         var httpContext = new DefaultHttpContext(); // Anonymous user
         httpContext.Response.Body = new MemoryStream();
 
-        await middleware.InvokeAsync(httpContext);
+        await middleware.InvokeAsync(httpContext, Mock.Of<IServiceScopeFactory>());
 
         Assert.Equal(StatusCodes.Status401Unauthorized, httpContext.Response.StatusCode);
         httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
@@ -395,7 +396,7 @@ public class StandardizedValidationAndErrorHandlingTests
         var httpContext = new DefaultHttpContext();
         httpContext.Response.Body = new MemoryStream();
 
-        await middleware.InvokeAsync(httpContext);
+        await middleware.InvokeAsync(httpContext, Mock.Of<IServiceScopeFactory>());
 
         Assert.Equal(StatusCodes.Status409Conflict, httpContext.Response.StatusCode);
         httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
@@ -419,7 +420,7 @@ public class StandardizedValidationAndErrorHandlingTests
         var httpContext = new DefaultHttpContext();
         httpContext.Response.Body = new MemoryStream();
 
-        await middleware.InvokeAsync(httpContext);
+        await middleware.InvokeAsync(httpContext, Mock.Of<IServiceScopeFactory>());
 
         Assert.Equal(StatusCodes.Status500InternalServerError, httpContext.Response.StatusCode);
         httpContext.Response.Body.Seek(0, SeekOrigin.Begin);

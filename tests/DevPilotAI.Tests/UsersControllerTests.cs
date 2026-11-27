@@ -167,7 +167,7 @@ public class UsersControllerTests
         _userServiceMock.Verify(s => s.UpdateCurrentProfileAsync(It.IsAny<int>(), It.IsAny<UpdateUserProfileRequestDto>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    // Ensure a user cannot update another user's profile because the endpoint derives the ID from the token.
+    // Profile id comes from the token, so you can't edit someone else.
     [Fact]
     public async Task UpdateCurrentProfile_AttemptToUpdateOtherUser_IgnoredBecauseIdFromClaim()
     {

@@ -60,7 +60,7 @@ public class GitHubController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Callback([FromQuery] string? code, [FromQuery] string? state, [FromQuery] string? error, CancellationToken cancellationToken)
     {
-        // Always send the browser back to the frontend — never dump raw JSON on cancel/deny.
+        // OAuth cancel/deny: redirect to frontend, not JSON.
         if (!string.IsNullOrWhiteSpace(error))
         {
             var deniedUrl = _gitHubService.BuildFrontendReturnUrl(new Dictionary<string, string?>

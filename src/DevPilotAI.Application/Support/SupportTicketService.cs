@@ -61,7 +61,7 @@ public class SupportTicketService : ISupportTicketService
         }
         catch
         {
-            // Ticket is already saved — never fail create because notifications/SignalR failed.
+            // Ticket already saved; ignore notify/SignalR errors.
         }
 
         return await MapDetailsAsync(ticket.SupportTicketId, userId, isAdmin: false, cancellationToken);
@@ -179,20 +179,28 @@ public class SupportTicketService : ISupportTicketService
             .FirstOrDefaultAsync(t => t.SupportTicketId == ticketId, cancellationToken)
             ?? throw AppError.NotFound("Support ticket was not found.");
 
-        if (ticket.AssignedAdminUserId != adminUserId)
-        {
-            throw AppError.Forbidden("Only the assigned admin can resolve this ticket.");
-        }
-
         if (ticket.Status == SupportTicketStatus.Resolved)
         {
             throw AppError.Conflict("Ticket is already resolved.", "TICKET_RESOLVED");
         }
 
-        var resolution = (dto.ResolutionSummary ?? string.Empty).Trim();
-        if (resolution.Length < 5)
+        // Still open? assign to this admin (avoid Accept/Resolve race).
+        if (ticket.Status == SupportTicketStatus.Open)
         {
-            throw AppError.InvalidRequest("Resolution summary is required.", "INVALID_REQUEST");
+            ticket.Status = SupportTicketStatus.Assigned;
+            ticket.AssignedAdminUserId = adminUserId;
+            ticket.AcceptedAt ??= DateTime.UtcNow;
+        }
+
+        if (ticket.AssignedAdminUserId != adminUserId)
+        {
+            throw AppError.Forbidden("Only the assigned admin can resolve this ticket.");
+        }
+
+        var resolution = (dto.ResolutionSummary ?? string.Empty).Trim();
+        if (resolution.Length < 2)
+        {
+            throw AppError.InvalidRequest("Write a short resolution note before closing the ticket.", "INVALID_REQUEST");
         }
 
         ticket.Status = SupportTicketStatus.Resolved;
@@ -203,7 +211,36 @@ public class SupportTicketService : ISupportTicketService
         await _db.SaveChangesAsync(cancellationToken);
 
         var details = await MapDetailsAsync(ticketId, adminUserId, isAdmin: true, cancellationToken);
-        await _realtime.TicketResolvedAsync(ticketId, details, cancellationToken);
+
+        try
+        {
+            await NotifyAdminAsync(
+                ticket.CreatedByUserId,
+                ticketId,
+                "TICKET_RESOLVED",
+                "Ticket resolved",
+                $"{ticket.TicketCode} was marked resolved.",
+                cancellationToken);
+
+            await _realtime.UserNotificationAsync(
+                ticket.CreatedByUserId,
+                new AdminNotificationDto(
+                    0,
+                    ticketId,
+                    "TICKET_RESOLVED",
+                    "Ticket resolved",
+                    $"{ticket.TicketCode} was marked resolved.",
+                    false,
+                    DateTime.UtcNow),
+                cancellationToken);
+
+            await _realtime.TicketResolvedAsync(ticketId, details, cancellationToken);
+        }
+        catch
+        {
+            // Already resolved; ignore notify/SignalR errors.
+        }
+
         return details;
     }
 
@@ -257,7 +294,7 @@ public class SupportTicketService : ISupportTicketService
             throw AppError.Conflict("Cannot chat on a resolved ticket.", "TICKET_RESOLVED");
         }
 
-        // Prefer explicit UI context so the same account can play user + admin in tests.
+        // AsAdmin flag: same login can act as user or admin in tests.
         var fromAdmin = isAdmin && asAdmin;
         if (!fromAdmin && isAdmin && userId != ticket.CreatedByUserId)
         {
@@ -324,7 +361,7 @@ public class SupportTicketService : ISupportTicketService
             }
             catch
             {
-                // best-effort realtime
+                // Realtime optional
             }
         }
 
@@ -482,7 +519,9 @@ public class SupportTicketService : ISupportTicketService
         var isAssignee = t.AssignedAdminUserId == viewerUserId;
         var canChat = t.StatusEnum == SupportTicketStatus.Assigned && (isOwner || isAssignee);
         var canAccept = isAdmin && t.StatusEnum == SupportTicketStatus.Open;
-        var canResolve = isAdmin && isAssignee && t.StatusEnum == SupportTicketStatus.Assigned;
+        var canResolve = isAdmin && (
+            (isAssignee && t.StatusEnum == SupportTicketStatus.Assigned) ||
+            t.StatusEnum == SupportTicketStatus.Open);
 
         return new SupportTicketDetailsDto(
             t.SupportTicketId,
@@ -577,13 +616,11 @@ public class SupportTicketService : ISupportTicketService
         }
         catch
         {
-            // Persisted notification is enough; live push is best-effort.
+            // DB row is enough; push is optional.
         }
     }
 
-    /// <summary>
-    /// Creates missing TICKET_OPENED notifications for open tickets (covers tickets created before notify worked).
-    /// </summary>
+    // Backfill TICKET_OPENED for open tickets created before notify worked.
     private async Task BackfillOpenTicketNotificationsAsync(int adminUserId, CancellationToken cancellationToken)
     {
         try
@@ -618,7 +655,7 @@ public class SupportTicketService : ISupportTicketService
         }
         catch
         {
-            // Don't break the notifications/tickets UI if backfill fails.
+            // Backfill failed; UI still loads.
         }
     }
 

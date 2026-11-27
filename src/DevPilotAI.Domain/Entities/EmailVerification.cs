@@ -11,7 +11,7 @@ public class EmailVerification
 
     public string CodeHash { get; set; } = string.Empty;
     public string? TokenHash { get; set; }
-    /// <summary>Target email for Method = EmailChange (OTP sent to this address).</summary>
+    // New email during EmailChange flow
     public string? PendingEmail { get; set; }
     public string Method { get; set; } = "OTP";
     public DateTime ExpiresAt { get; set; }

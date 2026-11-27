@@ -56,9 +56,7 @@ public class SupportTicketsController : ControllerBase
              c.Type.EndsWith("/claims/role", StringComparison.OrdinalIgnoreCase)) &&
             string.Equals(c.Value, AppRoles.Admin, StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>
-    /// Matches AdminPolicy: JWT Admin claim OR Admin row in UserRoles.
-    /// </summary>
+    // Same as AdminPolicy: JWT role or UserRoles row.
     private async Task<bool> IsAdminAsync(CancellationToken cancellationToken)
     {
         if (HasAdminClaim(User)) return true;
@@ -151,7 +149,6 @@ public class SupportTicketsController : ControllerBase
         return Ok(ApiResponse<object?>.SuccessResult(null, "Notifications marked read.", GetTraceId()));
     }
 
-    /// <summary>User notifications (same AdminNotifications table, recipient = current user).</summary>
     [HttpGet("notifications")]
     public async Task<IActionResult> UserNotifications(CancellationToken cancellationToken)
     {

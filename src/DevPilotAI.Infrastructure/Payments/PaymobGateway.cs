@@ -115,7 +115,7 @@ public class PaymobGateway : IPaymobGateway
         string Val(string key) =>
             flatFields.TryGetValue(key, out var v) ? (v ?? string.Empty) : string.Empty;
 
-        // Official Paymob transaction HMAC field order.
+        // Paymob HMAC concat order
         var concatenated =
             Val("amount_cents") +
             Val("created_at") +

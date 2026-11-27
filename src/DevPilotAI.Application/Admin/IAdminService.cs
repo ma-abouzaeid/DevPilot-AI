@@ -66,4 +66,25 @@ public interface IAdminService
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+
+    Task<byte[]> ExportAiUsageExcelAsync(
+        int? userId,
+        string? status,
+        DateTime? fromUtc,
+        DateTime? toUtc,
+        CancellationToken cancellationToken = default);
+
+    Task<byte[]> ExportAuditLogsExcelAsync(
+        int? userId,
+        string? action,
+        DateTime? fromUtc,
+        DateTime? toUtc,
+        CancellationToken cancellationToken = default);
+
+    Task<byte[]> ExportSystemErrorsExcelAsync(
+        int? userId,
+        string? pathContains,
+        string? errorCode,
+        int? minStatusCode,
+        CancellationToken cancellationToken = default);
 }

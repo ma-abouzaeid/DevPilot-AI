@@ -43,7 +43,7 @@ public class GitHubCodeReviewRequestDto
     [StringLength(200)]
     public string? Branch { get; set; }
 
-    /// <summary>Specific files to review. Empty = auto-select top source files.</summary>
+    // Empty = pick files automatically.
     public IReadOnlyList<string>? Paths { get; set; }
 
     [Range(1, 12)]

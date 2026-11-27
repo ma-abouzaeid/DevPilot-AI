@@ -61,7 +61,7 @@ public class CurrentUserProfileIntegrationTests : IClassFixture<WebApplicationFa
 
     static CurrentUserProfileIntegrationTests()
     {
-        // Provide DefaultConnection in test process environment for WebApplicationFactory host building
+        // WebApplicationFactory needs DefaultConnection in env
         System.Environment.SetEnvironmentVariable(
             "ConnectionStrings__DefaultConnection",
             "Server=(localdb)\\mssqllocaldb;Database=DevPilotTestDB;Trusted_Connection=True;");

@@ -12,8 +12,8 @@ public class PaymobOptions
     public string BaseUrl { get; set; } = "https://accept.paymob.com";
     public string CheckoutBaseUrl { get; set; } = "https://eg.checkout.paymob.com";
     public decimal UsdToEgpRate { get; set; } = 50m;
-    /// <summary>Public base URL of the API used for Paymob callbacks (e.g. https://devpilot-ai.runasp.net).</summary>
+    // API URL Paymob calls (webhook/return).
     public string WebhookBaseUrl { get; set; } = "http://devpilot-ai.runasp.net";
-    /// <summary>Where the browser lands after payment (plans page).</summary>
+    // Browser redirect after checkout
     public string FrontendReturnUrl { get; set; } = "https://devpilot-ai-three.vercel.app/plans.html";
 }
