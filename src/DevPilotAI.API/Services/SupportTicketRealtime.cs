@@ -37,4 +37,10 @@ public class SupportTicketRealtime : ISupportTicketRealtime
         return _hub.Clients.Group(SupportTicketHub.AdminGroup(adminUserId))
             .SendAsync("adminNotification", notification, cancellationToken);
     }
+
+    public Task UserNotificationAsync(int userId, AdminNotificationDto notification, CancellationToken cancellationToken = default)
+    {
+        return _hub.Clients.Group(SupportTicketHub.UserGroup(userId))
+            .SendAsync("userNotification", notification, cancellationToken);
+    }
 }

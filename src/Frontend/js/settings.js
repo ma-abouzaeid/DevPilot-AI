@@ -132,7 +132,90 @@
         }
     });
 
+    async function loadPayments() {
+        var host = document.getElementById("payments-list");
+        if (!host) return;
+        try {
+            var url = new URL("/api/Payments/mine", API_BASE).href;
+            var res = await window.DevPilotApi.request(url);
+            var items = res.data || [];
+            if (!items.length) {
+                host.innerHTML = '<p class="mb-0 text-gray">No payment attempts yet.</p>';
+                return;
+            }
+            host.innerHTML = '<div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr>' +
+                "<th>Code</th><th>Plan</th><th>Status</th><th>Amount</th><th>Date</th></tr></thead><tbody>" +
+                items.map(function (p) {
+                    return "<tr><td><code>" + (p.merchantOrderId || p.MerchantOrderId) + "</code></td>" +
+                        "<td>" + (p.planCode || p.PlanCode) + "</td>" +
+                        "<td>" + (p.status || p.Status) + "</td>" +
+                        "<td>$" + Number(p.amountUsd ?? p.AmountUsd ?? 0).toFixed(2) + "</td>" +
+                        "<td class='small text-gray'>" + new Date(p.createdAt || p.CreatedAt).toLocaleString() + "</td></tr>";
+                }).join("") + "</tbody></table></div>";
+        } catch (err) {
+            host.textContent = err.message || "Could not load payments.";
+        }
+    }
+
+    async function loadNotifications() {
+        var host = document.getElementById("user-notifications");
+        if (!host) return;
+        try {
+            var url = new URL("/api/support-tickets/notifications", API_BASE).href;
+            var res = await window.DevPilotApi.request(url);
+            var data = res.data || {};
+            var items = data.items || data.Items || [];
+            if (!items.length) {
+                host.innerHTML = '<p class="mb-0 text-gray">No notifications yet.</p>';
+                return;
+            }
+            host.innerHTML = items.map(function (n) {
+                var title = n.title || n.Title || "Notification";
+                var body = n.body || n.Body || "";
+                var read = n.isRead || n.IsRead;
+                return '<div class="mb-2' + (read ? "" : " fw-semibold") + '"><div>' + title +
+                    '</div><div class="small text-gray">' + body + "</div></div>";
+            }).join("");
+            await window.DevPilotApi.request(new URL("/api/support-tickets/notifications/read", API_BASE).href, {
+                method: "POST"
+            });
+        } catch (err) {
+            host.textContent = err.message || "Could not load notifications.";
+        }
+    }
+
+    var feedbackForm = document.getElementById("feedback-form");
+    if (feedbackForm) {
+        feedbackForm.addEventListener("submit", async function (e) {
+            e.preventDefault();
+            clearAlert();
+            var msg = (document.getElementById("feedback-message").value || "").trim();
+            if (msg.length < 5) {
+                showAlert("Please write a bit more feedback.", "danger");
+                return;
+            }
+            var btn = document.getElementById("btn-feedback");
+            btn.disabled = true;
+            try {
+                var url = new URL("/api/Feedback", API_BASE).href;
+                var res = await window.DevPilotApi.request(url, {
+                    method: "POST",
+                    body: JSON.stringify({ message: msg, category: "General" })
+                });
+                if (!res.ok) throw new Error(res.message || "Could not send feedback");
+                document.getElementById("feedback-message").value = "";
+                showAlert("Thanks — feedback sent.", "success");
+            } catch (err) {
+                showAlert(err.message || "Could not send feedback", "danger");
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    }
+
     loadProfile().catch(function (err) {
         showAlert(err.message || "Failed to load profile", "danger");
     });
+    loadPayments();
+    loadNotifications();
 })();

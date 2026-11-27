@@ -58,6 +58,9 @@ public interface IApplicationDbContext
 
     DbSet<PaymentOrder> PaymentOrders { get; }
 
+    DbSet<TelegramConversation> TelegramConversations { get; }
+    DbSet<UserFeedback> UserFeedbacks { get; }
+
     void SoftDelete<TEntity>(TEntity entity) where TEntity : class, ISoftDeletable;
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

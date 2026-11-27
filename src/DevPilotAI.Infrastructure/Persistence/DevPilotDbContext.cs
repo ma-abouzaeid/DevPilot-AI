@@ -61,6 +61,8 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
     public DbSet<SupportTicketMessage> SupportTicketMessages => Set<SupportTicketMessage>();
     public DbSet<AdminNotification> AdminNotifications => Set<AdminNotification>();
     public DbSet<PaymentOrder> PaymentOrders => Set<PaymentOrder>();
+    public DbSet<TelegramConversation> TelegramConversations => Set<TelegramConversation>();
+    public DbSet<UserFeedback> UserFeedbacks => Set<UserFeedback>();
 
     public void SoftDelete<TEntity>(TEntity entity) where TEntity : class, ISoftDeletable
     {
@@ -220,6 +222,8 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
             b.HasKey(x => x.SupportTicketMessageId);
             b.Property(x => x.Body).HasMaxLength(4000).IsRequired();
             b.Property(x => x.IsFromAdmin).HasDefaultValue(false);
+            b.Property(x => x.AttachmentUrl).HasMaxLength(500);
+            b.Property(x => x.AttachmentContentType).HasMaxLength(100);
             b.HasIndex(x => x.SupportTicketId);
             b.HasIndex(x => x.CreatedAt);
             b.HasOne(x => x.SupportTicket)
@@ -277,6 +281,37 @@ public class DevPilotDbContext : DbContext, IApplicationDbContext
             b.HasOne(x => x.Plan)
                 .WithMany()
                 .HasForeignKey(x => x.PlanId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<TelegramConversation>(b =>
+        {
+            b.HasKey(x => x.TelegramConversationId);
+            b.Property(x => x.State).HasMaxLength(80).IsRequired();
+            b.Property(x => x.PayloadJson).HasColumnType("nvarchar(max)");
+            b.HasIndex(x => x.ChatId).IsUnique();
+            b.HasOne(x => x.LinkedUser)
+                .WithMany()
+                .HasForeignKey(x => x.LinkedUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<UserFeedback>(b =>
+        {
+            b.HasKey(x => x.UserFeedbackId);
+            b.Property(x => x.Source).HasMaxLength(40).IsRequired();
+            b.Property(x => x.Category).HasMaxLength(80).IsRequired();
+            b.Property(x => x.Message).HasMaxLength(4000).IsRequired();
+            b.Property(x => x.Status).HasMaxLength(40).IsRequired();
+            b.HasIndex(x => x.CreatedAt);
+            b.HasIndex(x => x.Status);
+            b.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(x => x.ReviewedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.ReviewedByUserId)
                 .OnDelete(DeleteBehavior.NoAction);
         });
 

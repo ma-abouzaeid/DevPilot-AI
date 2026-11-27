@@ -1,11 +1,13 @@
 using DevPilotAI.Application.Admin;
 using DevPilotAI.Application.Authentication;
 using DevPilotAI.Application.Challenges;
+using DevPilotAI.Application.Feedback;
 using DevPilotAI.Application.GitHub;
 using DevPilotAI.Application.Payments;
 using DevPilotAI.Application.Plans;
 using DevPilotAI.Application.Problems;
 using DevPilotAI.Application.Support;
+using DevPilotAI.Application.Telegram;
 using DevPilotAI.Application.Users;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,6 +27,8 @@ public static class DependencyInjection
         services.AddScoped<IAdminService, AdminService>();
         services.AddScoped<ISupportTicketService, SupportTicketService>();
         services.AddScoped<IPaymentService, PaymentService>();
+        services.AddScoped<IFeedbackService, FeedbackService>();
+        services.AddScoped<ITelegramBotService, TelegramBotService>();
 
         return services;
     }

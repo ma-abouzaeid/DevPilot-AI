@@ -178,6 +178,8 @@
         if (tab === "audit") loadAudit();
         if (tab === "errors") loadErrors();
         if (tab === "tickets") loadTicketsTab();
+        if (tab === "payments") loadPaymentsAdmin();
+        if (tab === "feedback") loadFeedbackAdmin();
     }
 
     async function loadCreditCosts() {
@@ -1295,6 +1297,60 @@
         ]);
     }
 
+    async function loadPaymentsAdmin() {
+        var tbody = document.getElementById("payments-tbody");
+        if (!tbody) return;
+        var res = await api("/api/Payments");
+        var items = res.data || [];
+        if (!items.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-gray">No payment orders.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = items.map(function (p) {
+            var code = escapeHtml(val(p, "merchantOrderId", "MerchantOrderId"));
+            var plan = escapeHtml(val(p, "planCode", "PlanCode"));
+            var status = String(val(p, "status", "Status") || "");
+            var paid = val(p, "paidAt", "PaidAt");
+            var userId = val(p, "userId", "UserId");
+            var email = escapeHtml(val(p, "userEmail", "UserEmail") || ("#" + userId));
+            var activate = "<button type='button' class='btn btn-sm btn-primary' data-act='activate-plan' data-plan='" + plan +
+                "' data-user='" + userId + "'>Activate " + plan + "</button>";
+            return "<tr><td><code>" + code + "</code><div class='small text-gray'>" + email + "</div></td><td>" + plan +
+                "</td><td>" + escapeHtml(status) + "</td>" +
+                "<td>$" + Number(val(p, "amountUsd", "AmountUsd") || 0).toFixed(2) + "</td>" +
+                "<td class='small'>" + new Date(val(p, "createdAt", "CreatedAt")).toLocaleString() + "</td>" +
+                "<td class='small'>" + (paid ? new Date(paid).toLocaleString() : "—") + "</td>" +
+                "<td>" + activate + "</td></tr>";
+        }).join("");
+    }
+
+    async function loadFeedbackAdmin() {
+        var host = document.getElementById("feedback-list");
+        if (!host) return;
+        var res = await api("/api/Feedback");
+        var items = res.data || [];
+        if (!items.length) {
+            host.innerHTML = '<div class="empty-state">No feedback yet.</div>';
+            return;
+        }
+        host.innerHTML = items.map(function (f) {
+            var id = val(f, "userFeedbackId", "UserFeedbackId");
+            var status = val(f, "status", "Status");
+            return '<div class="border-bottom py-3">' +
+                "<div class='d-flex justify-content-between gap-2'><strong>" +
+                escapeHtml(val(f, "category", "Category") || "General") +
+                "</strong><span class='badge-soft'>" + escapeHtml(status) + "</span></div>" +
+                "<div class='small text-gray mb-1'>" + escapeHtml(val(f, "userEmail", "UserEmail") || "Anonymous") +
+                " · " + escapeHtml(val(f, "source", "Source")) +
+                " · " + new Date(val(f, "createdAt", "CreatedAt")).toLocaleString() + "</div>" +
+                "<p class='mb-2'>" + escapeHtml(val(f, "message", "Message")) + "</p>" +
+                (String(status).toLowerCase() === "open"
+                    ? "<button type='button' class='btn btn-sm btn-outline-card' data-act='review-feedback' data-id='" + id + "'>Mark reviewed</button>"
+                    : "") +
+                "</div>";
+        }).join("");
+    }
+
     var ticketsRefresh = document.getElementById("tickets-refresh");
     if (ticketsRefresh) {
         ticketsRefresh.addEventListener("click", function () {
@@ -1313,6 +1369,48 @@
             try {
                 await api("/api/support-tickets/admin/notifications/read", { method: "POST" });
                 await refreshTicketNotifications();
+            } catch (err) { onError(err); }
+        });
+    }
+
+    var paymentsRefresh = document.getElementById("payments-refresh");
+    if (paymentsRefresh) {
+        paymentsRefresh.addEventListener("click", function () {
+            loadPaymentsAdmin().catch(onError);
+        });
+    }
+    var paymentsTbody = document.getElementById("payments-tbody");
+    if (paymentsTbody) {
+        paymentsTbody.addEventListener("click", async function (e) {
+            var btn = e.target.closest("button[data-act='activate-plan']");
+            if (!btn) return;
+            try {
+                var userId = btn.getAttribute("data-user");
+                var planCode = btn.getAttribute("data-plan");
+                await api("/api/Admin/users/" + userId + "/plan", {
+                    method: "POST",
+                    body: JSON.stringify({ planCode: planCode })
+                });
+                showAlert("Plan " + planCode + " assigned to user #" + userId + ".", "success");
+            } catch (err) { onError(err); }
+        });
+    }
+
+    var feedbackRefresh = document.getElementById("feedback-refresh");
+    if (feedbackRefresh) {
+        feedbackRefresh.addEventListener("click", function () {
+            loadFeedbackAdmin().catch(onError);
+        });
+    }
+    var feedbackList = document.getElementById("feedback-list");
+    if (feedbackList) {
+        feedbackList.addEventListener("click", async function (e) {
+            var btn = e.target.closest("button[data-act='review-feedback']");
+            if (!btn) return;
+            try {
+                await api("/api/Feedback/" + btn.getAttribute("data-id") + "/reviewed", { method: "POST" });
+                showAlert("Feedback marked reviewed.", "success");
+                await loadFeedbackAdmin();
             } catch (err) { onError(err); }
         });
     }

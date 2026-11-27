@@ -4,6 +4,7 @@ using DevPilotAI.API.Middleware;
 using DevPilotAI.Application;
 using DevPilotAI.Infrastructure;
 using DevPilotAI.Infrastructure.AIGateway;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,6 +55,15 @@ app.MapGet("/", () => Results.Ok(new
 
 app.UseCors("DevPilotCorsPolicy");
 app.UseHttpsRedirection();
+
+var ticketAttachmentsRoot = Path.Combine(app.Environment.ContentRootPath, "App_Data", "ticket-attachments");
+Directory.CreateDirectory(ticketAttachmentsRoot);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(ticketAttachmentsRoot),
+    RequestPath = "/ticket-attachments"
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();

@@ -1771,6 +1771,14 @@ namespace DevPilotAI.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("SupportTicketMessageId"));
 
+                    b.Property<string>("AttachmentContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("AttachmentUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("Body")
                         .IsRequired()
                         .HasMaxLength(4000)
@@ -1889,6 +1897,44 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("SystemErrorLogs");
+                });
+
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.TelegramConversation", b =>
+                {
+                    b.Property<long>("TelegramConversationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("TelegramConversationId"));
+
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("LinkedUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PayloadJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("TelegramConversationId");
+
+                    b.HasIndex("ChatId")
+                        .IsUnique();
+
+                    b.HasIndex("LinkedUserId");
+
+                    b.ToTable("TelegramConversations");
                 });
 
             modelBuilder.Entity("DevPilotAI.Domain.Entities.UsageLedger", b =>
@@ -2041,6 +2087,62 @@ namespace DevPilotAI.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.UserFeedback", b =>
+                {
+                    b.Property<long>("UserFeedbackId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("UserFeedbackId"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<long?>("TelegramChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("UserFeedbackId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserFeedbacks");
                 });
 
             modelBuilder.Entity("DevPilotAI.Domain.Entities.UserRole", b =>
@@ -2627,6 +2729,16 @@ namespace DevPilotAI.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.TelegramConversation", b =>
+                {
+                    b.HasOne("DevPilotAI.Domain.Entities.User", "LinkedUser")
+                        .WithMany()
+                        .HasForeignKey("LinkedUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("LinkedUser");
+                });
+
             modelBuilder.Entity("DevPilotAI.Domain.Entities.UsageLedger", b =>
                 {
                     b.HasOne("DevPilotAI.Domain.Entities.AIUsageEvent", "AIUsageEvent")
@@ -2668,6 +2780,23 @@ namespace DevPilotAI.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Plan");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DevPilotAI.Domain.Entities.UserFeedback", b =>
+                {
+                    b.HasOne("DevPilotAI.Domain.Entities.User", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("DevPilotAI.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("ReviewedByUser");
 
                     b.Navigation("User");
                 });

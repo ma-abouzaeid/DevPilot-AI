@@ -11,4 +11,6 @@ public interface IPaymentService
         IReadOnlyDictionary<string, string> query,
         CancellationToken cancellationToken = default);
     Task<PaymentOrderStatusDto?> GetOrderStatusAsync(int userId, string merchantOrderId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PaymentOrderListItemDto>> ListMyOrdersAsync(int userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PaymentOrderListItemDto>> ListAllOrdersAsync(CancellationToken cancellationToken = default);
 }

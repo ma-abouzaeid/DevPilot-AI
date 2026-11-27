@@ -57,6 +57,12 @@
                         Tickets <span class="badge text-bg-danger d-none" id="tickets-unread-badge">0</span>
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-tab="payments" type="button">Payments</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-tab="feedback" type="button">Feedback</button>
+                </li>
             </ul>
 
             <div id="tab-overview" class="admin-panel">
@@ -432,6 +438,43 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div id="tab-payments" class="admin-panel d-none">
+                <div class="surface-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0">Subscriptions & payments</h2>
+                        <button type="button" class="btn btn-outline-card btn-sm" id="payments-refresh" style="width:auto;">Refresh</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Plan</th>
+                                    <th>Status</th>
+                                    <th>Amount</th>
+                                    <th>Created</th>
+                                    <th>Paid</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="payments-tbody">
+                                <tr><td colspan="7" class="text-gray">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-feedback" class="admin-panel d-none">
+                <div class="surface-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="h5 mb-0">User feedback</h2>
+                        <button type="button" class="btn btn-outline-card btn-sm" id="feedback-refresh" style="width:auto;">Refresh</button>
+                    </div>
+                    <div id="feedback-list" class="text-gray">Loading…</div>
                 </div>
             </div>
         </div>

@@ -68,9 +68,33 @@
                 </form>
             </div>
 
+            <div class="surface-card mb-4">
+                <h2 class="h5 mb-3">Payments</h2>
+                <p class="text-gray small mb-3">Payment codes (DP-…) for Telegram Smart Support if a paid plan didn’t activate.</p>
+                <div id="payments-list" class="text-gray">Loading…</div>
+            </div>
+
+            <div class="surface-card mb-4">
+                <h2 class="h5 mb-3">Feedback</h2>
+                <form id="feedback-form" class="debug-form" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label" for="feedback-message">Suggestion or issue</label>
+                        <textarea class="form-control" id="feedback-message" rows="3" minlength="5" maxlength="4000" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="btn-feedback">
+                        <i class="fa-solid fa-paper-plane"></i> Send feedback
+                    </button>
+                </form>
+            </div>
+
+            <div class="surface-card mb-4">
+                <h2 class="h5 mb-3">Notifications</h2>
+                <div id="user-notifications" class="text-gray">Loading…</div>
+            </div>
+
             <div class="surface-card border-danger-subtle">
                 <h2 class="h5 mb-2 text-danger">Danger zone</h2>
-                <p class="text-gray mb-3">Deactivating soft-deletes your account and signs you out. You will lose access to your tickets and GitHub link.</p>
+                <p class="text-gray mb-3">Deactivating soft-deletes your account and signs you out. You will lose access to your tickets and GitHub link. Restore later via Telegram Smart Support.</p>
                 <button type="button" class="btn btn-outline-danger" id="btn-delete-account">
                     <i class="fa-solid fa-trash"></i> Deactivate account
                 </button>

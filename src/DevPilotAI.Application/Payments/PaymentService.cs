@@ -198,6 +198,58 @@ public class PaymentService : IPaymentService
         return new PaymentOrderStatusDto(order.MerchantOrderId, order.Status, order.Plan.Code, order.PaidAt);
     }
 
+    public async Task<IReadOnlyList<PaymentOrderListItemDto>> ListMyOrdersAsync(
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _db.PaymentOrders.AsNoTracking()
+            .Include(o => o.Plan)
+            .Include(o => o.User)
+            .Where(o => o.UserId == userId)
+            .OrderByDescending(o => o.CreatedAt)
+            .Take(50)
+            .Select(o => new PaymentOrderListItemDto(
+                o.PaymentOrderId,
+                o.MerchantOrderId,
+                o.Status,
+                o.Plan.Code,
+                o.Plan.Name,
+                o.AmountUsd,
+                o.AmountEgp,
+                o.Currency,
+                o.CreatedAt,
+                o.PaidAt,
+                o.FailureReason,
+                o.UserId,
+                o.User.Email))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<PaymentOrderListItemDto>> ListAllOrdersAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return await _db.PaymentOrders.AsNoTracking()
+            .Include(o => o.Plan)
+            .Include(o => o.User)
+            .OrderByDescending(o => o.CreatedAt)
+            .Take(200)
+            .Select(o => new PaymentOrderListItemDto(
+                o.PaymentOrderId,
+                o.MerchantOrderId,
+                o.Status,
+                o.Plan.Code,
+                o.Plan.Name,
+                o.AmountUsd,
+                o.AmountEgp,
+                o.Currency,
+                o.CreatedAt,
+                o.PaidAt,
+                o.FailureReason,
+                o.UserId,
+                o.User.Email))
+            .ToListAsync(cancellationToken);
+    }
+
     private async Task ApplyTransactionAsync(
         IReadOnlyDictionary<string, string> flat,
         CancellationToken cancellationToken)

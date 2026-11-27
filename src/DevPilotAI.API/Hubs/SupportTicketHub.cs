@@ -18,13 +18,18 @@ public class SupportTicketHub : Hub
 
     public static string TicketGroup(int ticketId) => "ticket-" + ticketId;
     public static string AdminGroup(int adminUserId) => "admin-" + adminUserId;
+    public static string UserGroup(int userId) => "user-" + userId;
 
     public override async Task OnConnectedAsync()
     {
         var userId = GetUserId();
-        if (userId.HasValue && IsAdmin(Context.User))
+        if (userId.HasValue)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, AdminGroup(userId.Value));
+            await Groups.AddToGroupAsync(Context.ConnectionId, UserGroup(userId.Value));
+            if (IsAdmin(Context.User))
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, AdminGroup(userId.Value));
+            }
         }
 
         await base.OnConnectedAsync();

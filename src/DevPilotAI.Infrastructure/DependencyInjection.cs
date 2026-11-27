@@ -6,6 +6,8 @@ using DevPilotAI.Infrastructure.GitHub;
 using DevPilotAI.Infrastructure.Payments;
 using DevPilotAI.Infrastructure.Persistence;
 using DevPilotAI.Infrastructure.Security;
+using DevPilotAI.Infrastructure.Storage;
+using DevPilotAI.Infrastructure.Telegram;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,6 +36,13 @@ public static class DependencyInjection
         services.Configure<FrontendOptions>(configuration.GetSection(FrontendOptions.SectionName));
         services.Configure<PaymobOptions>(configuration.GetSection(PaymobOptions.SectionName));
         services.AddHttpClient<IPaymobGateway, PaymobGateway>();
+
+        services.Configure<TelegramOptions>(configuration.GetSection(TelegramOptions.SectionName));
+        services.AddHttpClient<ITelegramBotClient, TelegramBotClient>(client =>
+        {
+            client.BaseAddress = new Uri("https://api.telegram.org/");
+        });
+        services.AddScoped<ITicketAttachmentStorage, TicketAttachmentStorage>();
 
         services.AddHttpClient<IEmailService, BrevoEmailService>((serviceProvider, client) =>
         {

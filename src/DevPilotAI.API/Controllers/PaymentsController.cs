@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using DevPilotAI.Application.Common;
 using DevPilotAI.Application.Common.Exceptions;
 using DevPilotAI.Application.Common.Models;
 using DevPilotAI.Application.Payments;
@@ -60,6 +61,22 @@ public class PaymentsController : ControllerBase
         var result = await _payments.GetOrderStatusAsync(GetRequiredUserId(), merchantOrderId, cancellationToken);
         if (result == null) throw AppError.NotFound("Payment order was not found.");
         return Ok(ApiResponse<PaymentOrderStatusDto>.SuccessResult(result, "Payment order loaded.", GetTraceId()));
+    }
+
+    [HttpGet("mine")]
+    [Authorize]
+    public async Task<IActionResult> ListMine(CancellationToken cancellationToken)
+    {
+        var items = await _payments.ListMyOrdersAsync(GetRequiredUserId(), cancellationToken);
+        return Ok(ApiResponse<IReadOnlyList<PaymentOrderListItemDto>>.SuccessResult(items, "Payments loaded.", GetTraceId()));
+    }
+
+    [HttpGet]
+    [Authorize(Policy = AppRoles.AdminPolicy)]
+    public async Task<IActionResult> ListAll(CancellationToken cancellationToken)
+    {
+        var items = await _payments.ListAllOrdersAsync(cancellationToken);
+        return Ok(ApiResponse<IReadOnlyList<PaymentOrderListItemDto>>.SuccessResult(items, "Payments loaded.", GetTraceId()));
     }
 
     /// <summary>Paymob server-to-server transaction callback.</summary>

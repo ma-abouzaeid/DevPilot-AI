@@ -293,7 +293,7 @@ public class SupportTicketService : ISupportTicketService
         await _realtime.MessageReceivedAsync(ticketId, dto, cancellationToken);
 
         // Notify assigned admin when the user sends a message.
-        if (userId == ticket.CreatedByUserId && ticket.AssignedAdminUserId.HasValue)
+        if (!fromAdmin && userId == ticket.CreatedByUserId && ticket.AssignedAdminUserId.HasValue)
         {
             await NotifyAdminAsync(
                 ticket.AssignedAdminUserId.Value,
@@ -302,6 +302,30 @@ public class SupportTicketService : ISupportTicketService
                 "New ticket message",
                 $"{senderName} replied on {ticket.TicketCode}",
                 cancellationToken);
+        }
+
+        // Notify the ticket owner when an admin replies (same AdminNotifications table).
+        if (fromAdmin && ticket.CreatedByUserId != userId)
+        {
+            await NotifyAdminAsync(
+                ticket.CreatedByUserId,
+                ticketId,
+                "TICKET_ADMIN_REPLY",
+                "Support replied",
+                $"Admin replied on {ticket.TicketCode}",
+                cancellationToken);
+            try
+            {
+                await _realtime.UserNotificationAsync(
+                    ticket.CreatedByUserId,
+                    new AdminNotificationDto(0, ticketId, "TICKET_ADMIN_REPLY", "Support replied",
+                        $"Admin replied on {ticket.TicketCode}", false, DateTime.UtcNow),
+                    cancellationToken);
+            }
+            catch
+            {
+                // best-effort realtime
+            }
         }
 
         return dto;

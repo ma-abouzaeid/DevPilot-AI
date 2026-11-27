@@ -150,4 +150,21 @@ public class SupportTicketsController : ControllerBase
         await _tickets.MarkAdminNotificationsReadAsync(GetRequiredUserId(), id, cancellationToken);
         return Ok(ApiResponse<object?>.SuccessResult(null, "Notifications marked read.", GetTraceId()));
     }
+
+    /// <summary>User notifications (same AdminNotifications table, recipient = current user).</summary>
+    [HttpGet("notifications")]
+    public async Task<IActionResult> UserNotifications(CancellationToken cancellationToken)
+    {
+        var userId = GetRequiredUserId();
+        var items = await _tickets.ListAdminNotificationsAsync(userId, 40, cancellationToken);
+        var unread = await _tickets.CountUnreadAdminNotificationsAsync(userId, cancellationToken);
+        return Ok(ApiResponse<object>.SuccessResult(new { items, unread }, "Notifications loaded.", GetTraceId()));
+    }
+
+    [HttpPost("notifications/read")]
+    public async Task<IActionResult> MarkUserNotificationsRead([FromQuery] long? id, CancellationToken cancellationToken)
+    {
+        await _tickets.MarkAdminNotificationsReadAsync(GetRequiredUserId(), id, cancellationToken);
+        return Ok(ApiResponse<object?>.SuccessResult(null, "Notifications marked read.", GetTraceId()));
+    }
 }

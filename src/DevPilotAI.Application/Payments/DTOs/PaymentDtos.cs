@@ -25,3 +25,19 @@ public record PaymentOrderStatusDto(
     string PlanCode,
     DateTime? PaidAt
 );
+
+public record PaymentOrderListItemDto(
+    long PaymentOrderId,
+    string MerchantOrderId,
+    string Status,
+    string PlanCode,
+    string PlanName,
+    decimal AmountUsd,
+    decimal AmountEgp,
+    string Currency,
+    DateTime CreatedAt,
+    DateTime? PaidAt,
+    string? FailureReason,
+    int UserId = 0,
+    string? UserEmail = null
+);
