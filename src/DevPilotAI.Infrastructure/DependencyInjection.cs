@@ -41,8 +41,8 @@ public static class DependencyInjection
         services.AddHttpClient<ITelegramBotClient, TelegramBotClient>(client =>
         {
             client.BaseAddress = new Uri("https://api.telegram.org/");
-            // Long polling getUpdates uses timeout up to 50s.
-            client.Timeout = TimeSpan.FromSeconds(100);
+            // Long polling uses up to ~20s server-side; keep client headroom.
+            client.Timeout = TimeSpan.FromSeconds(60);
         });
         services.AddScoped<ITicketAttachmentStorage, TicketAttachmentStorage>();
 

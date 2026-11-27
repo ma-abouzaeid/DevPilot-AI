@@ -25,6 +25,14 @@ public class TelegramBotClient : ITelegramBotClient
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(_options.BotToken);
 
+    /// <summary>
+    /// Leading slash is required: bot tokens contain ':' and HttpClient otherwise treats
+    /// "bot123:AA..." as an unknown URI scheme (NotSupportedException).
+    /// </summary>
+    private string Api(string method) => $"/bot{_options.BotToken}/{method}";
+
+    private string FileApi(string filePath) => $"/file/bot{_options.BotToken}/{filePath}";
+
     public async Task SendMessageAsync(TelegramOutgoingMessage message, CancellationToken cancellationToken = default)
     {
         if (!IsConfigured) return;
@@ -42,7 +50,7 @@ public class TelegramBotClient : ITelegramBotClient
         }
 
         using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-        var response = await _http.PostAsync($"bot{_options.BotToken}/sendMessage", content, cancellationToken);
+        var response = await _http.PostAsync(Api("sendMessage"), content, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -59,14 +67,14 @@ public class TelegramBotClient : ITelegramBotClient
             ["callback_query_id"] = callbackQueryId,
             ["text"] = text
         };
-        await _http.PostAsJsonAsync($"bot{_options.BotToken}/answerCallbackQuery", payload, cancellationToken);
+        await _http.PostAsJsonAsync(Api("answerCallbackQuery"), payload, cancellationToken);
     }
 
     public async Task<TelegramDownloadedFile?> DownloadFileAsync(string fileId, CancellationToken cancellationToken = default)
     {
         if (!IsConfigured || string.IsNullOrWhiteSpace(fileId)) return null;
 
-        var metaRes = await _http.GetAsync($"bot{_options.BotToken}/getFile?file_id={Uri.EscapeDataString(fileId)}", cancellationToken);
+        var metaRes = await _http.GetAsync(Api($"getFile?file_id={Uri.EscapeDataString(fileId)}"), cancellationToken);
         if (!metaRes.IsSuccessStatusCode) return null;
 
         using var metaDoc = JsonDocument.Parse(await metaRes.Content.ReadAsStringAsync(cancellationToken));
@@ -74,7 +82,7 @@ public class TelegramBotClient : ITelegramBotClient
         var filePath = result.TryGetProperty("file_path", out var fp) ? fp.GetString() : null;
         if (string.IsNullOrWhiteSpace(filePath)) return null;
 
-        var fileRes = await _http.GetAsync($"file/bot{_options.BotToken}/{filePath}", cancellationToken);
+        var fileRes = await _http.GetAsync(FileApi(filePath), cancellationToken);
         if (!fileRes.IsSuccessStatusCode) return null;
 
         var bytes = await fileRes.Content.ReadAsByteArrayAsync(cancellationToken);
@@ -99,7 +107,7 @@ public class TelegramBotClient : ITelegramBotClient
             payload["secret_token"] = secretToken;
 
         using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-        var response = await _http.PostAsync($"bot{_options.BotToken}/setWebhook", content, cancellationToken);
+        var response = await _http.PostAsync(Api("setWebhook"), content, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
             return (false, body);
@@ -116,6 +124,16 @@ public class TelegramBotClient : ITelegramBotClient
         }
     }
 
+    public async Task<(bool Ok, string Detail)> GetMeAsync(CancellationToken cancellationToken = default)
+    {
+        if (!IsConfigured)
+            return (false, "BotToken is not configured.");
+
+        var response = await _http.GetAsync(Api("getMe"), cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        return (response.IsSuccessStatusCode, body);
+    }
+
     public async Task<(bool Ok, string Detail)> DeleteWebhookAsync(
         bool dropPendingUpdates = true,
         CancellationToken cancellationToken = default)
@@ -128,7 +146,7 @@ public class TelegramBotClient : ITelegramBotClient
             ["drop_pending_updates"] = dropPendingUpdates
         };
         using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-        var response = await _http.PostAsync($"bot{_options.BotToken}/deleteWebhook", content, cancellationToken);
+        var response = await _http.PostAsync(Api("deleteWebhook"), content, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         return (response.IsSuccessStatusCode, body);
     }
@@ -138,7 +156,7 @@ public class TelegramBotClient : ITelegramBotClient
         if (!IsConfigured)
             return (false, "BotToken is not configured.");
 
-        var response = await _http.GetAsync($"bot{_options.BotToken}/getWebhookInfo", cancellationToken);
+        var response = await _http.GetAsync(Api("getWebhookInfo"), cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         return (response.IsSuccessStatusCode, body);
     }
@@ -159,7 +177,7 @@ public class TelegramBotClient : ITelegramBotClient
         };
 
         using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-        var response = await _http.PostAsync($"bot{_options.BotToken}/getUpdates", content, cancellationToken);
+        var response = await _http.PostAsync(Api("getUpdates"), content, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
             return (false, Array.Empty<JsonElement>(), body);

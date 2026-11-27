@@ -46,12 +46,27 @@ if (enableSwagger)
     app.UseSwaggerDocumentation();
 }
 
-app.MapGet("/", () => Results.Ok(new
+app.MapGet("/", async (DevPilotAI.API.Services.TelegramUpdatePump telegramPump, CancellationToken ct) =>
 {
-    status = "Online",
-    service = "DevPilot AI API",
-    version = "v1"
-}));
+    // Shared hosts unload idle apps; draining on wake keeps Smart Support responsive.
+    try
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(8));
+        await telegramPump.PollOnceAsync(timeoutSeconds: 0, cts.Token);
+    }
+    catch
+    {
+        // Root health must stay available even if Telegram is down.
+    }
+
+    return Results.Ok(new
+    {
+        status = "Online",
+        service = "DevPilot AI API",
+        version = "v1"
+    });
+});
 
 app.UseCors("DevPilotCorsPolicy");
 app.UseHttpsRedirection();

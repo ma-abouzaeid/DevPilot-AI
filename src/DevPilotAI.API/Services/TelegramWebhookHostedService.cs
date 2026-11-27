@@ -1,33 +1,34 @@
-using DevPilotAI.Application.Common.Interfaces;
-using DevPilotAI.Application.Telegram;
 using DevPilotAI.Infrastructure.Telegram;
 using Microsoft.Extensions.Options;
 
 namespace DevPilotAI.API.Services;
 
 /// <summary>
-/// Telegram ingress: HTTPS public URL → setWebhook; otherwise deleteWebhook + getUpdates long polling
-/// (Telegram rejects HTTP webhook URLs).
+/// Telegram ingress: HTTPS public URL → setWebhook; otherwise getUpdates long polling
+/// (Telegram rejects HTTP webhook URLs). Shared hosting may unload the process; request
+/// drains via <see cref="TelegramUpdatePump"/> keep the bot responsive while awake.
 /// </summary>
 public sealed class TelegramWebhookHostedService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly TelegramUpdatePump _pump;
     private readonly IOptions<TelegramOptions> _options;
     private readonly ILogger<TelegramWebhookHostedService> _logger;
 
     public TelegramWebhookHostedService(
         IServiceScopeFactory scopeFactory,
+        TelegramUpdatePump pump,
         IOptions<TelegramOptions> options,
         ILogger<TelegramWebhookHostedService> logger)
     {
         _scopeFactory = scopeFactory;
+        _pump = pump;
         _options = options;
         _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // IIS/MonsterASP may start the host before the site is fully warm — brief delay avoids racing deploy.
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
@@ -69,16 +70,11 @@ public sealed class TelegramWebhookHostedService : BackgroundService
         }
 
         var baseUrl = (opts.PublicApiBaseUrl ?? string.Empty).Trim().TrimEnd('/');
-        if (string.IsNullOrWhiteSpace(baseUrl))
-        {
-            _logger.LogWarning("Telegram PublicApiBaseUrl is empty; cannot register webhook.");
-            return;
-        }
-
-        if (!baseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrWhiteSpace(baseUrl) ||
+            !baseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
             _logger.LogWarning(
-                "Telegram PublicApiBaseUrl must be HTTPS for webhook mode. Falling back to long polling. Current value: {BaseUrl}",
+                "Telegram webhook mode requires HTTPS PublicApiBaseUrl. Falling back to long polling. Current value: {BaseUrl}",
                 baseUrl);
             await RunLongPollingAsync(cancellationToken);
             return;
@@ -89,15 +85,12 @@ public sealed class TelegramWebhookHostedService : BackgroundService
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
-            var bot = scope.ServiceProvider.GetRequiredService<ITelegramBotClient>();
+            var bot = scope.ServiceProvider.GetRequiredService<DevPilotAI.Application.Common.Interfaces.ITelegramBotClient>();
             var (ok, detail) = await bot.SetWebhookAsync(webhookUrl, opts.WebhookSecret, cancellationToken);
             if (ok)
                 _logger.LogInformation("Telegram webhook registered: {WebhookUrl}", webhookUrl);
             else
                 _logger.LogError("Telegram setWebhook failed for {WebhookUrl}: {Detail}", webhookUrl, detail);
-
-            var info = await bot.GetWebhookInfoAsync(cancellationToken);
-            _logger.LogInformation("Telegram getWebhookInfo: {Info}", info.Detail);
         }
         catch (Exception ex)
         {
@@ -107,83 +100,36 @@ public sealed class TelegramWebhookHostedService : BackgroundService
 
     private async Task RunLongPollingAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation(
-            "Telegram long polling enabled (HTTP/public webhook unavailable). Deleting any existing webhook…");
+        _logger.LogInformation("Telegram long polling loop starting.");
+        _pump.LoopAlive = true;
 
         try
         {
-            await using (var scope = _scopeFactory.CreateAsyncScope())
-            {
-                var bot = scope.ServiceProvider.GetRequiredService<ITelegramBotClient>();
-                var (ok, detail) = await bot.DeleteWebhookAsync(dropPendingUpdates: true, stoppingToken);
-                if (ok)
-                    _logger.LogInformation("Telegram webhook cleared for long polling.");
-                else
-                    _logger.LogWarning("Telegram deleteWebhook failed: {Detail}", detail);
-            }
-        }
-        catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
-        {
-            _logger.LogError(ex, "Telegram deleteWebhook threw; continuing with getUpdates.");
-        }
+            await _pump.EnsureWebhookClearedAsync(stoppingToken);
 
-        long offset = 0;
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
+            // Short polls survive MonsterASP/IIS idle kills better than 50s holds.
+            while (!stoppingToken.IsCancellationRequested)
             {
-                bool ok;
-                IReadOnlyList<System.Text.Json.JsonElement> updates;
-                string detail;
-                await using (var pollScope = _scopeFactory.CreateAsyncScope())
-                {
-                    var botClient = pollScope.ServiceProvider.GetRequiredService<ITelegramBotClient>();
-                    (ok, updates, detail) = await botClient.GetUpdatesAsync(offset, timeoutSeconds: 50, stoppingToken);
-                }
-
+                var (ok, processed, detail) = await _pump.PollOnceAsync(timeoutSeconds: 20, stoppingToken);
                 if (!ok)
                 {
                     _logger.LogWarning("Telegram getUpdates failed: {Detail}", detail);
                     await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
-                    continue;
                 }
-
-                foreach (var update in updates)
+                else if (processed > 0)
                 {
-                    var updateId = update.TryGetProperty("update_id", out var idEl) ? idEl.GetInt64() : 0;
-                    if (updateId >= offset)
-                        offset = updateId + 1;
-
-                    try
-                    {
-                        await using var handleScope = _scopeFactory.CreateAsyncScope();
-                        var botService = handleScope.ServiceProvider.GetRequiredService<ITelegramBotService>();
-                        await botService.HandleUpdateAsync(update, stoppingToken);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Telegram update {UpdateId} handling failed.", updateId);
-                    }
-                }
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Telegram long polling loop error; retrying…");
-                try
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
-                }
-                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-                {
-                    break;
+                    _logger.LogInformation("Telegram processed {Count} update(s).", processed);
                 }
             }
         }
-
-        _logger.LogInformation("Telegram long polling stopped.");
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            // shut down
+        }
+        finally
+        {
+            _pump.LoopAlive = false;
+            _logger.LogInformation("Telegram long polling stopped.");
+        }
     }
 }
