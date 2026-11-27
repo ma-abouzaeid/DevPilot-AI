@@ -587,7 +587,7 @@
             '<div class="col-6 col-lg-3"><div class="surface-card stat-card h-100">' +
             '<div class="stat-label">Plan credits</div>' +
             '<p class="stat-value">F ' + freeCredits + " / P " + proCredits + "</p>" +
-            '<div class="small text-gray">Free / Pro per period</div>" +
+            '<div class="small text-gray">Free / Pro per period</div>' +
             "</div></div>";
 
         var opRows = ops.map(function (o) {
